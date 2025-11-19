@@ -1,7 +1,7 @@
 # Sieve - NBA Archetype Salary Analysis
 
 ## Overview
-Sieve is a Python project that analyzes NBA player salaries relative to their on-court impact based on archetype classifications. It combines statistical performance metrics (LEBRON and WAR metrics) with contract data scraped from Basketball Reference to identify value gaps—players who may be overpaid or underpaid compared to their impact.
+Sieve is a Python project that analyzes NBA player salaries relative to their on-court impact based on archetype classifications. It combines statistical performance metrics (LEBRON and WAR metrics) with contract data scraped from Basketball Reference to identify value gaps, players who may be overpaid or underpaid compared to their impact.
 
 ## Features
 - Scrapes NBA player contract data from Basketball Reference.
