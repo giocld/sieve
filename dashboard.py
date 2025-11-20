@@ -190,6 +190,7 @@ else:
 # ==========================================
 
 app = Dash(__name__, external_stylesheets=[dbc.themes.DARKLY])
+server = app.server  # Expose Flask server for gunicorn
 
 
 # --- PLAYER TAB LAYOUT ---
