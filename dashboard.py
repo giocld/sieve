@@ -190,7 +190,6 @@ else:
 # ==========================================
 
 app = Dash(__name__, external_stylesheets=[dbc.themes.DARKLY])
-server = app.server
 
 
 # --- PLAYER TAB LAYOUT ---
@@ -256,11 +255,11 @@ player_tab = dbc.Container([
     
     dbc.Row([
         dbc.Col([
-            html.H5("Top Underpaid (Green = Best Value)", className="text-success mt-3 mb-2"),
+            html.H5("Top Underpaid Players (Green = Best Value)", className="text-success mt-3 mb-2"),
             html.Div(id='table-underpaid', style={"maxHeight": "300px", "overflowY": "auto"})
         ], md=6),
         dbc.Col([
-            html.H5("Top Overpaid (Red = Worst Value)", className="text-danger mt-3 mb-2"),
+            html.H5("Top Overpaid Players (Red = Worst Value)", className="text-danger mt-3 mb-2"),
             html.Div(id='table-overpaid', style={"maxHeight": "300px", "overflowY": "auto"})
         ], md=6)
     ], className="mb-5"),
@@ -383,6 +382,21 @@ app.layout = html.Div([
 # 6. CALLBACKS
 # ==========================================
 
+# Callback to enforce min-salary <= max-salary constraint
+@callback(
+    [Output('min-salary', 'value'),
+     Output('max-salary', 'value')],
+    [Input('min-salary', 'value'),
+     Input('max-salary', 'value')]
+)
+def enforce_salary_constraints(min_val, max_val):
+    """Ensure max salary is always >= min salary."""
+    if min_val > max_val:
+        # If min exceeds max, set max to min
+        return min_val, min_val
+    return min_val, max_val
+
+
 @callback(
     [Output('chart-salary-impact', 'figure'),
      Output('chart-underpaid', 'figure'),
@@ -401,7 +415,34 @@ def update_dashboard(min_lebron, min_salary_m, max_salary_m):
     max_salary = max_salary_m * 1000000
     filtered = df[(df['LEBRON'] >= min_lebron) & 
                   (df['current_year_salary'] >= min_salary) &
-                  (df['current_year_salary'] <= max_salary)]
+                  (df['current_year_salary'] <= max_salary)].copy()
+    
+    # Recalculate value_gap based on filtered data for accurate underpaid/overpaid rankings
+    if len(filtered) > 0 and 'current_year_salary' in filtered.columns and 'LEBRON' in filtered.columns:
+        valid_salary = filtered['current_year_salary'].dropna()
+        valid_lebron = filtered['LEBRON'].dropna()
+        
+        if len(valid_salary) > 0 and len(valid_lebron) > 0:
+            salary_min = valid_salary.min()
+            salary_max = valid_salary.max()
+            salary_range = salary_max - salary_min
+            
+            lebron_min = valid_lebron.min()
+            lebron_max = valid_lebron.max()
+            lebron_range = lebron_max - lebron_min
+            
+            # Normalize to 0-100 scale
+            if salary_range > 0:
+                filtered['salary_norm'] = 100 * (filtered['current_year_salary'] - salary_min) / salary_range
+            else:
+                filtered['salary_norm'] = 50  # All same salary
+            
+            if lebron_range > 0:
+                filtered['impact_norm'] = 100 * (filtered['LEBRON'] - lebron_min) / lebron_range
+            else:
+                filtered['impact_norm'] = 50  # All same impact
+            
+            filtered['value_gap'] = filtered['impact_norm'] - filtered['salary_norm']
     
     # 1. Scatter: Salary vs LEBRON
     fig1 = go.Figure()
@@ -430,27 +471,33 @@ def update_dashboard(min_lebron, min_salary_m, max_salary_m):
         hovermode='closest'
     )
     
-    # 2. Bar: Top Underpaid
+    # 2. Bar: Top Underpaid (from filtered dataset, only positive value gaps)
     if 'value_gap' in filtered.columns and len(filtered) > 0:
-        top_under = filtered.nlargest(10, 'value_gap').sort_values('value_gap', ascending=True)
-        fig2 = go.Figure(go.Bar(
-            x=top_under['value_gap'],
-            y=top_under['player_name'],
-            orientation='h',
-            marker=dict(color='#28a745', opacity=0.9),
-            text=[f"{v:.1f}" for v in top_under['value_gap']],
-            textposition='outside'
-        ))
-        fig2.update_layout(
-            title='<b>Top 10 Underpaid</b>',
-            xaxis_title='Value Gap',
-            height=450,
-            template='plotly_dark',
-            margin=dict(l=200),
-            showlegend=False
-        )
+        underpaid_only = filtered[filtered['value_gap'] > 0]
+        if len(underpaid_only) > 0:
+            top_under = underpaid_only.nlargest(10, 'value_gap').sort_values('value_gap', ascending=True)
+            fig2 = go.Figure(go.Bar(
+                x=top_under['value_gap'],
+                y=top_under['player_name'],
+                orientation='h',
+                marker=dict(color='#28a745', opacity=0.9),
+                text=[f"{v:.1f}" for v in top_under['value_gap']],
+                textposition='outside'
+            ))
+            fig2.update_layout(
+                title='<b>Top 10 Underpaid</b>',
+                xaxis_title='Value Gap',
+                height=450,
+                template='plotly_dark',
+                margin=dict(l=200),
+                showlegend=False
+            )
+        else:
+            fig2 = go.Figure().add_annotation(text="No underpaid players in current filter")
+            fig2.update_layout(height=450, template='plotly_dark')
     else:
         fig2 = go.Figure().add_annotation(text="No data")
+        fig2.update_layout(height=450, template='plotly_dark')
     
     # 3. Scatter: Off vs Def
     fig3 = go.Figure()
@@ -478,73 +525,87 @@ def update_dashboard(min_lebron, min_salary_m, max_salary_m):
         hovermode='closest'
     )
     
-    # 4. Bar: Top Overpaid
+    # 4. Bar: Top Overpaid (from filtered dataset, only negative value gaps)
     if 'value_gap' in filtered.columns and len(filtered) > 0:
-        top_over = filtered.nsmallest(10, 'value_gap').sort_values('value_gap', ascending=False)
-        fig4 = go.Figure(go.Bar(
-            x=top_over['value_gap'],
-            y=top_over['player_name'],
-            orientation='h',
-            marker=dict(color='#dc3545', opacity=0.9),
-            text=[f"{v:.1f}" for v in top_over['value_gap']],
-            textposition='outside'
-        ))
-        fig4.update_layout(
-            title='<b>Top 10 Overpaid</b>',
-            xaxis_title='Value Gap',
-            height=450,
-            template='plotly_dark',
-            margin=dict(l=200),
-            showlegend=False
-        )
+        overpaid_only = filtered[filtered['value_gap'] < 0]
+        if len(overpaid_only) > 0:
+            top_over = overpaid_only.nsmallest(10, 'value_gap').sort_values('value_gap', ascending=False)
+            fig4 = go.Figure(go.Bar(
+                x=top_over['value_gap'],
+                y=top_over['player_name'],
+                orientation='h',
+                marker=dict(color='#dc3545', opacity=0.9),
+                text=[f"{v:.1f}" for v in top_over['value_gap']],
+                textposition='outside'
+            ))
+            fig4.update_layout(
+                title='<b>Top 10 Overpaid</b>',
+                xaxis_title='Value Gap',
+                height=450,
+                template='plotly_dark',
+                margin=dict(l=200),
+                showlegend=False
+            )
+        else:
+            fig4 = go.Figure().add_annotation(text="No overpaid players in current filter")
+            fig4.update_layout(height=450, template='plotly_dark')
     else:
         fig4 = go.Figure().add_annotation(text="No data")
+        fig4.update_layout(height=450, template='plotly_dark')
     
-    # 5. Table: Underpaid
+    # 5. Table: Underpaid (from filtered dataset, only positive value gaps)
     if 'value_gap' in filtered.columns and len(filtered) > 0:
-        top_under_data = filtered.nlargest(10, 'value_gap')[
-            ['player_name', 'current_year_salary', 'LEBRON', 'value_gap']
-        ]
-        rows = []
-        for _, row in top_under_data.iterrows():
-            player_name = str(row['player_name']).strip() if pd.notna(row['player_name']) else 'Unknown'
-            rows.append(html.Tr([
-                html.Td(player_name, style={"fontWeight": "500", "width": "45%"}),
-                html.Td(f"${row['current_year_salary']:,.0f}", style={"width": "30%"}),
-                html.Td(f"{row['LEBRON']:.2f}", style={"width": "15%"}),
-                html.Td(f"{row['value_gap']:.1f}", className="text-success fw-bold", style={"width": "10%"})
-            ]))
-        
-        table_under = dbc.Table([
-            html.Thead(html.Tr([
-                html.Th("Player"), html.Th("Salary"), html.Th("LEBRON"), html.Th("Gap")
-            ], style={"fontSize": "12px"})),
-            html.Tbody(rows, style={"fontSize": "12px"})
-        ], striped=True, hover=True, bordered=True, size='sm')
+        underpaid_only = filtered[filtered['value_gap'] > 0]
+        if len(underpaid_only) > 0:
+            top_under_data = underpaid_only.nlargest(10, 'value_gap')[
+                ['player_name', 'current_year_salary', 'LEBRON', 'value_gap']
+            ]
+            rows = []
+            for _, row in top_under_data.iterrows():
+                player_name = str(row['player_name']).strip() if pd.notna(row['player_name']) else 'Unknown'
+                rows.append(html.Tr([
+                    html.Td(player_name, style={"fontWeight": "500", "width": "45%"}),
+                    html.Td(f"${row['current_year_salary']:,.0f}", style={"width": "30%"}),
+                    html.Td(f"{row['LEBRON']:.2f}", style={"width": "15%"}),
+                    html.Td(f"{row['value_gap']:.1f}", className="text-success fw-bold", style={"width": "10%"})
+                ]))
+            
+            table_under = dbc.Table([
+                html.Thead(html.Tr([
+                    html.Th("Player"), html.Th("Salary"), html.Th("LEBRON"), html.Th("Gap")
+                ], style={"fontSize": "12px"})),
+                html.Tbody(rows, style={"fontSize": "12px"})
+            ], striped=True, hover=True, bordered=True, size='sm')
+        else:
+            table_under = html.P("No underpaid players in current filter")
     else:
         table_under = html.P("No data available")
     
-    # 6. Table: Overpaid
+    # 6. Table: Overpaid (from filtered dataset, only negative value gaps)
     if 'value_gap' in filtered.columns and len(filtered) > 0:
-        top_over_data = filtered.nsmallest(10, 'value_gap')[
-            ['player_name', 'current_year_salary', 'LEBRON', 'value_gap']
-        ]
-        rows = []
-        for _, row in top_over_data.iterrows():
-            player_name = str(row['player_name']).strip() if pd.notna(row['player_name']) else 'Unknown'
-            rows.append(html.Tr([
-                html.Td(player_name, style={"fontWeight": "500", "width": "45%"}),
-                html.Td(f"${row['current_year_salary']:,.0f}", style={"width": "30%"}),
-                html.Td(f"{row['LEBRON']:.2f}", style={"width": "15%"}),
-                html.Td(f"{row['value_gap']:.1f}", className="text-danger fw-bold", style={"width": "10%"})
-            ]))
-        
-        table_over = dbc.Table([
-            html.Thead(html.Tr([
-                html.Th("Player"), html.Th("Salary"), html.Th("LEBRON"), html.Th("Gap")
-            ], style={"fontSize": "12px"})),
-            html.Tbody(rows, style={"fontSize": "12px"})
-        ], striped=True, hover=True, bordered=True, size='sm')
+        overpaid_only = filtered[filtered['value_gap'] < 0]
+        if len(overpaid_only) > 0:
+            top_over_data = overpaid_only.nsmallest(10, 'value_gap')[
+                ['player_name', 'current_year_salary', 'LEBRON', 'value_gap']
+            ]
+            rows = []
+            for _, row in top_over_data.iterrows():
+                player_name = str(row['player_name']).strip() if pd.notna(row['player_name']) else 'Unknown'
+                rows.append(html.Tr([
+                    html.Td(player_name, style={"fontWeight": "500", "width": "45%"}),
+                    html.Td(f"${row['current_year_salary']:,.0f}", style={"width": "30%"}),
+                    html.Td(f"{row['LEBRON']:.2f}", style={"width": "15%"}),
+                    html.Td(f"{row['value_gap']:.1f}", className="text-danger fw-bold", style={"width": "10%"})
+                ]))
+            
+            table_over = dbc.Table([
+                html.Thead(html.Tr([
+                    html.Th("Player"), html.Th("Salary"), html.Th("LEBRON"), html.Th("Gap")
+                ], style={"fontSize": "12px"})),
+                html.Tbody(rows, style={"fontSize": "12px"})
+            ], striped=True, hover=True, bordered=True, size='sm')
+        else:
+            table_over = html.P("No overpaid players in current filter")
     else:
         table_over = html.P("No data available")
     
