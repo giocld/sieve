@@ -1,33 +1,52 @@
 import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
-from dash import Dash, dcc, html, Input, Output, callback
+import plotly.express as px
+from dash import Dash, dcc, html, Input, Output, callback, dash_table
 import dash_bootstrap_components as dbc
 import os
 
 
+# ==========================================
+# 1. CONFIGURATION & DATA LOADING
+# ==========================================
+
 print("Loading and preparing data...")
 
 lebron_file = 'LEBRON.csv'
-contracts_file = 'basketball_reference_contracts.csv'  # Changed from hoopshype_contracts.csv
+contracts_file = 'basketball_reference_contracts.csv'
+standings_file = 'nba_standings_cache.csv'
+
+TEAM_ABBR_MAP = {
+    'Cleveland Cavaliers': 'CLE', 'Oklahoma City Thunder': 'OKC', 'Boston Celtics': 'BOS',
+    'Houston Rockets': 'HOU', 'Los Angeles Lakers': 'LAL', 'New York Knicks': 'NYK',
+    'Indiana Pacers': 'IND', 'Denver Nuggets': 'DEN', 'LA Clippers': 'LAC',
+    'Milwaukee Bucks': 'MIL', 'Detroit Pistons': 'DET', 'Minnesota Timberwolves': 'MIN',
+    'Orlando Magic': 'ORL', 'Golden State Warriors': 'GSW', 'Memphis Grizzlies': 'MEM',
+    'Atlanta Hawks': 'ATL', 'Chicago Bulls': 'CHI', 'Sacramento Kings': 'SAC',
+    'Dallas Mavericks': 'DAL', 'Miami Heat': 'MIA', 'Phoenix Suns': 'PHX',
+    'Toronto Raptors': 'TOR', 'Portland Trail Blazers': 'POR', 'Brooklyn Nets': 'BKN',
+    'Philadelphia 76ers': 'PHI', 'San Antonio Spurs': 'SAS', 'Charlotte Hornets': 'CHA',
+    'New Orleans Pelicans': 'NOP', 'Utah Jazz': 'UTA', 'Washington Wizards': 'WAS'
+}
+
+# ==========================================
+# 2. PLAYER DATA PROCESSING
+# ==========================================
 
 if not os.path.exists(lebron_file) or not os.path.exists(contracts_file):
     print(f"ERROR: Missing {lebron_file} or {contracts_file}")
     exit(1)
 
-# Load
 df_lebron = pd.read_csv(lebron_file)
 df_contracts = pd.read_csv(contracts_file)
 
-# Rename for consistency
 df_lebron = df_lebron.rename(columns={'Player': 'player_name'})
 
-# Convert to numeric
 for col in ['LEBRON WAR', 'LEBRON', 'O-LEBRON', 'D-LEBRON']:
     if col in df_lebron.columns:
         df_lebron[col] = pd.to_numeric(df_lebron[col], errors='coerce')
 
-# Create combined archetype label from existing columns
 if 'Offensive Archetype' in df_lebron.columns and 'Defensive Role' in df_lebron.columns:
     df_lebron['archetype'] = (
         df_lebron['Offensive Archetype'].fillna('Unknown').astype(str) + 
@@ -37,73 +56,159 @@ if 'Offensive Archetype' in df_lebron.columns and 'Defensive Role' in df_lebron.
 else:
     df_lebron['archetype'] = 'Unknown'
 
-# Merge - use inner join to only get players with both archetype and salary data
 df = pd.merge(df_lebron, df_contracts, on='player_name', how='inner')
 df = df.drop_duplicates(subset=['player_name'], keep='first')
 
-
-
-# Handle NaN in current_year_salary - fill with average_annual_value if available
 if 'current_year_salary' in df.columns:
     nan_mask = df['current_year_salary'].isna()
     if 'average_annual_value' in df.columns:
         df.loc[nan_mask, 'current_year_salary'] = df.loc[nan_mask, 'average_annual_value']
 
-# Calculate value gap: normalized salary vs normalized impact
 if 'current_year_salary' in df.columns and 'LEBRON' in df.columns:
-    # Remove NaN values for normalization
     valid_salary = df['current_year_salary'].dropna()
     valid_lebron = df['LEBRON'].dropna()
     
     if len(valid_salary) > 0 and len(valid_lebron) > 0:
-        # Normalize salary 0-100
         salary_min = valid_salary.min()
         salary_max = valid_salary.max()
         df['salary_norm'] = 100 * (df['current_year_salary'] - salary_min) / (salary_max - salary_min)
         
-        # Normalize LEBRON 0-100
         lebron_min = valid_lebron.min()
         lebron_max = valid_lebron.max()
         df['impact_norm'] = 100 * (df['LEBRON'] - lebron_min) / (lebron_max - lebron_min)
         
-        # Value gap: positive = underpaid, negative = overpaid
         df['value_gap'] = df['impact_norm'] - df['salary_norm']
     else:
         df['value_gap'] = 0
-
-
+else:
+    df['value_gap'] = 0
 
 print(f"Loaded {len(df)} players")
-print(f"Archetypes: {df['archetype'].nunique()}")
 
 
+# ==========================================
+# 3. TEAM DATA PROCESSING
+# ==========================================
 
-#creating the dashboard
+print("Processing Team Efficiency metrics...")
+
+df_standings = pd.read_csv(standings_file)
+df_standings.columns = df_standings.columns.str.strip()
+
+if 'FullName' not in df_standings.columns and 'TeamCity' in df_standings.columns and 'TeamName' in df_standings.columns:
+    df_standings['FullName'] = df_standings['TeamCity'] + ' ' + df_standings['TeamName']
+
+df_standings['Abbrev'] = df_standings['FullName'].map(TEAM_ABBR_MAP)
+df_standings = df_standings.dropna(subset=['Abbrev'])
+
+abbr_map = {'PHO': 'PHX', 'CHO': 'CHA', 'BRK': 'BKN', 'NOH': 'NOP', 'TOT': 'UNK'}
+if 'Team(s)' in df_lebron.columns:
+    df['Team_Abbr'] = df['Team(s)'].replace(abbr_map)
+    df['Team_Main'] = df['Team_Abbr'].apply(lambda x: str(x).split('/')[0].strip() if isinstance(x, str) else 'UNK')
+else:
+    df['Team_Main'] = 'UNK'
+
+df_teams = df.groupby('Team_Main').agg({
+    'current_year_salary': 'sum',
+    'LEBRON WAR': 'sum',
+    'LEBRON': 'mean',
+    'player_name': 'count'
+}).reset_index()
+
+df_teams = df_teams.rename(columns={
+    'current_year_salary': 'Total_Payroll',
+    'LEBRON WAR': 'Total_WAR',
+    'Team_Main': 'Abbrev'
+})
+
+df_teams = pd.merge(df_teams, df_standings[['Abbrev', 'WINS', 'LOSSES']], on='Abbrev', how='left')
+df_teams = df_teams[(df_teams['Total_Payroll'] > 0) & (df_teams['Abbrev'] != 'UNK') & (df_teams['WINS'].notna())].copy()
+
+if not df_teams.empty:
+    df_teams['Cost_Per_Win'] = df_teams.apply(
+        lambda row: row['Total_Payroll'] / row['WINS'] if row['WINS'] > 0 else 0, axis=1
+    )
+    
+    wins_std = df_teams['WINS'].std()
+    pay_std = df_teams['Total_Payroll'].std()
+    
+    if wins_std > 0 and pay_std > 0:
+        z_wins = (df_teams['WINS'] - df_teams['WINS'].mean()) / wins_std
+        z_pay = (df_teams['Total_Payroll'] - df_teams['Total_Payroll'].mean()) / pay_std
+        df_teams['Efficiency_Index'] = z_wins - z_pay
+    else:
+        df_teams['Efficiency_Index'] = 0
+
+df_teams['Payroll_Display'] = df_teams['Total_Payroll'].apply(lambda x: f"${x/1_000_000:.1f}M")
+df_teams['CPW_Display'] = df_teams['Cost_Per_Win'].apply(lambda x: f"${x/1_000_000:.2f}M" if x > 0 else "N/A")
+
+print(f"Loaded {len(df_teams)} teams")
+
+
+# ==========================================
+# 4. BUILD TEAM VISUALIZATIONS
+# ==========================================
+
+if not df_teams.empty:
+    avg_payroll = df_teams['Total_Payroll'].mean()
+    avg_wins = df_teams['WINS'].mean()
+    df_teams['WAR_Size'] = df_teams['Total_WAR'].clip(lower=0.5)
+
+    fig_quadrant = px.scatter(
+        df_teams, x='Total_Payroll', y='WINS',
+        text='Abbrev', color='Efficiency_Index', 
+        size='WAR_Size',
+        hover_data=['Total_WAR', 'LOSSES'],
+        color_continuous_scale='RdYlGn',
+        title='<b>Efficiency Quadrant: Wins vs. Payroll</b>',
+        labels={'Total_Payroll': 'Total Payroll ($)', 'WINS': 'Wins', 'Efficiency_Index': 'Eff Index'},
+        template='plotly_dark'
+    )
+    fig_quadrant.update_layout(height=480, margin=dict(l=80, r=80, t=70, b=70))
+    fig_quadrant.add_vline(x=avg_payroll, line_dash="dash", line_color="gray")
+    fig_quadrant.add_hline(y=avg_wins, line_dash="dash", line_color="gray")
+    fig_quadrant.update_traces(textposition='top center')
+
+    df_roi_sorted = df_teams.sort_values('Efficiency_Index', ascending=True)
+    fig_roi = px.bar(
+        df_roi_sorted, x='Efficiency_Index', y='Abbrev',
+        orientation='h', color='Efficiency_Index',
+        color_continuous_scale='RdYlGn',
+        title='<b>Team Efficiency Index</b>',
+        template='plotly_dark'
+    )
+    fig_roi.update_layout(height=480, margin=dict(l=80, r=80, t=70, b=70), showlegend=False)
+else:
+    fig_quadrant = go.Figure().add_annotation(text="No Team Data Available")
+    fig_quadrant.update_layout(height=480)
+    fig_roi = go.Figure().add_annotation(text="No Team Data Available")
+    fig_roi.update_layout(height=480)
+
+
+# ==========================================
+# 5. CREATE APP & LAYOUT
+# ==========================================
+
 app = Dash(__name__, external_stylesheets=[dbc.themes.DARKLY])
 
-app.layout = dbc.Container([
-    # Header
+
+# --- PLAYER TAB LAYOUT ---
+player_tab = dbc.Container([
     dbc.Row([
         dbc.Col([
-            html.H1("Sieve", className="display-4 text-center mt-4 mb-1",
-                   style={"fontWeight": "700"}),
-            html.H4("NBA Archetypes: Salary, Impact & Value", className="text-center mb-4 text-muted")
+            html.H2("Player Analysis", className="mt-3 mb-4", style={"color": "#e9ecef", "fontWeight": "700", "fontSize": "24px"})
         ])
     ]),
     
-    # Filters
     dbc.Row([
         dbc.Col([
-            html.Label("Min LEBRON Impact:", className="fw-bold mb-2"),
+            html.Label("Min Salary ($M):", className="fw-bold mb-2"),
             dcc.Slider(
-                id='min-lebron',
-                min=float(df['LEBRON'].min()),
-                max=float(df['LEBRON'].max()),
-                value=float(df['LEBRON'].min()),
-                marks={round(i, 1): f"{i:.1f}" for i in np.arange(
-                    float(df['LEBRON'].min()),
-                    float(df['LEBRON'].max()) + 0.5, 0.5
-                )},
+                id='min-salary',
+                min=0,
+                max=int(df['current_year_salary'].max() / 1000000) if 'current_year_salary' in df.columns else 50,
+                value=0,
+                marks={i: f"${i}" for i in range(0, int(df['current_year_salary'].max() / 1000000) + 1 if 'current_year_salary' in df.columns else 51, 10)},
                 tooltip={"placement": "bottom", "always_visible": True}
             )
         ], md=6, className="mb-4"),
@@ -119,29 +224,35 @@ app.layout = dbc.Container([
                 tooltip={"placement": "bottom", "always_visible": True}
             )
         ], md=6, className="mb-4")
-    ], className="mb-5"),
+    ], className="mb-3"),
     
-    # Charts Row 1
     dbc.Row([
         dbc.Col([
-            dcc.Graph(id='chart-salary-impact')
-        ], md=6),
-        dbc.Col([
-            dcc.Graph(id='chart-underpaid')
-        ], md=6)
-    ], className="mb-4"),
+            html.Label("Min LEBRON Impact:", className="fw-bold mb-2"),
+            dcc.Slider(
+                id='min-lebron',
+                min=float(df['LEBRON'].min()),
+                max=float(df['LEBRON'].max()),
+                value=float(df['LEBRON'].min()),
+                marks={round(i, 1): f"{i:.1f}" for i in np.arange(
+                    float(df['LEBRON'].min()),
+                    float(df['LEBRON'].max()) + 0.5, 0.5
+                )},
+                tooltip={"placement": "bottom", "always_visible": True}
+            )
+        ], md=12, className="mb-5")
+    ]),
     
-    # Charts Row 2
     dbc.Row([
-        dbc.Col([
-            dcc.Graph(id='chart-off-def')
-        ], md=6),
-        dbc.Col([
-            dcc.Graph(id='chart-overpaid')
-        ], md=6)
+        dbc.Col([dcc.Graph(id='chart-salary-impact')], md=6),
+        dbc.Col([dcc.Graph(id='chart-underpaid')], md=6)
     ], className="mb-4"),
     
-    # Tables Row 1: Top Underpaid/Overpaid
+    dbc.Row([
+        dbc.Col([dcc.Graph(id='chart-off-def')], md=6),
+        dbc.Col([dcc.Graph(id='chart-overpaid')], md=6)
+    ], className="mb-4"),
+    
     dbc.Row([
         dbc.Col([
             html.H5("Top Underpaid (Green = Best Value)", className="text-success mt-3 mb-2"),
@@ -153,15 +264,123 @@ app.layout = dbc.Container([
         ], md=6)
     ], className="mb-5"),
     
-    # Tables Row 2: All Filtered Players
     dbc.Row([
         dbc.Col([
-            html.H5(f"All {len(df)} Players (Sorted by Value Gap)", className="mt-3 mb-2"),
+            html.H5(f"All {len(df)} Players (Sorted by Value Gap)", className="mt-3 mb-2", style={"color": "#e9ecef"}),
             html.Div(id='table-all-players', style={"maxHeight": "800px", "overflowY": "auto"})
         ])
     ], className="mb-5")
+], fluid=True, style={"backgroundColor": "#1e1e1e", "padding": "20px"})
+
+
+# --- TEAM TAB LAYOUT ---
+team_tab = dbc.Container([
+    dbc.Row([
+        dbc.Col([
+            html.H2("Team Efficiency Analysis", className="mt-3 mb-4", style={"color": "#e9ecef", "fontWeight": "700", "fontSize": "24px"})
+        ])
+    ]),
     
-], fluid=True, style={"backgroundColor": "#1e1e1e", "minHeight": "100vh", "padding": "20px"})
+    dbc.Row([
+        dbc.Col([
+            dcc.Graph(figure=fig_quadrant)
+        ], lg=6, className="mb-4"),
+        
+        dbc.Col([
+            dcc.Graph(figure=fig_roi)
+        ], lg=6, className="mb-4")
+    ]),
+    
+    dbc.Row([
+        dbc.Col([
+            html.H5("Team Statistics", className="mb-3", style={"color": "#e9ecef"}),
+            dash_table.DataTable(
+                data=df_teams.sort_values('Efficiency_Index', ascending=False).to_dict('records') if not df_teams.empty else [],
+                columns=[
+                    {'name': 'Team', 'id': 'Abbrev'},
+                    {'name': 'Wins', 'id': 'WINS'},
+                    {'name': 'Losses', 'id': 'LOSSES'},
+                    {'name': 'Payroll', 'id': 'Payroll_Display'},
+                    {'name': 'Cost/Win', 'id': 'CPW_Display'},
+                    {'name': 'Eff Index', 'id': 'Efficiency_Index', 'type': 'numeric', 'format': {'specifier': '.2f'}},
+                    {'name': 'Total WAR', 'id': 'Total_WAR', 'type': 'numeric', 'format': {'specifier': '.1f'}},
+                ],
+                style_table={'overflowX': 'auto', 'maxHeight': '500px', 'overflowY': 'auto'},
+                style_cell={'backgroundColor': '#222', 'color': 'white', 'textAlign': 'left', 'padding': '10px', 'fontSize': '13px'},
+                style_header={'backgroundColor': '#444', 'fontWeight': 'bold', 'textAlign': 'center'},
+                sort_action='native',
+                filter_action='native',
+                page_size=15
+            )
+        ], width=12)
+    ])
+], fluid=True, style={"backgroundColor": "#1e1e1e", "padding": "20px"})
+
+
+# --- MAIN APP LAYOUT WITH TABS ---
+app.layout = html.Div([
+    dbc.Container([
+        dbc.Row([
+            dbc.Col([
+                html.H1("Sieve", className="display-4 text-center mt-4 mb-1", style={"fontWeight": "700", "color": "#e9ecef"}),
+                html.H4("NBA Archetypes: Salary, Impact & Value", className="text-center mb-5", style={"color": "#adb5bd", "fontWeight": "400", "fontSize": "14px"})
+            ])
+        ]),
+    ], fluid=True),
+    
+    dcc.Tabs(
+        id='main-tabs',
+        value='tab-players',
+        children=[
+            dcc.Tab(
+                label='Player Analysis',
+                value='tab-players',
+                children=player_tab,
+                style={
+                    'padding': '0px',
+                    'fontWeight': 'bold',
+                    'backgroundColor': '#1e1e1e',
+                    'color': '#adb5bd'
+                },
+                selected_style={
+                    'padding': '0px',
+                    'fontWeight': 'bold',
+                    'backgroundColor': '#1e1e1e',
+                    'color': '#e9ecef',
+                    'borderBottom': '3px solid #495057'
+                }
+            ),
+            dcc.Tab(
+                label='Team Efficiency',
+                value='tab-teams',
+                children=team_tab,
+                style={
+                    'padding': '0px',
+                    'fontWeight': 'bold',
+                    'backgroundColor': '#1e1e1e',
+                    'color': '#adb5bd'
+                },
+                selected_style={
+                    'padding': '0px',
+                    'fontWeight': 'bold',
+                    'backgroundColor': '#1e1e1e',
+                    'color': '#e9ecef',
+                    'borderBottom': '3px solid #495057'
+                }
+            ),
+        ],
+        style={
+            'backgroundColor': '#1e1e1e',
+            'borderBottom': '1px solid #333',
+            'padding': '0px 20px'
+        }
+    )
+], style={"backgroundColor": "#1e1e1e", "minHeight": "100vh", "padding": "0px"})
+
+
+# ==========================================
+# 6. CALLBACKS
+# ==========================================
 
 @callback(
     [Output('chart-salary-impact', 'figure'),
@@ -172,15 +391,18 @@ app.layout = dbc.Container([
      Output('table-overpaid', 'children'),
      Output('table-all-players', 'children')],
     [Input('min-lebron', 'value'),
+     Input('min-salary', 'value'),
      Input('max-salary', 'value')]
 )
-def update_dashboard(min_lebron, max_salary_m):
-    """Update all visualizations."""
+def update_dashboard(min_lebron, min_salary_m, max_salary_m):
+    """Update all player visualizations."""
+    min_salary = min_salary_m * 1000000
     max_salary = max_salary_m * 1000000
     filtered = df[(df['LEBRON'] >= min_lebron) & 
-                  ((df['current_year_salary'] <= max_salary) if 'current_year_salary' in df.columns else True)]
+                  (df['current_year_salary'] >= min_salary) &
+                  (df['current_year_salary'] <= max_salary)]
     
-    # 1. Scatter: Salary vs LEBRON (colored by value_gap)
+    # 1. Scatter: Salary vs LEBRON
     fig1 = go.Figure()
     fig1.add_trace(go.Scatter(
         x=filtered['LEBRON'],
@@ -207,8 +429,8 @@ def update_dashboard(min_lebron, max_salary_m):
         hovermode='closest'
     )
     
-    # 2. Bar: Top Underpaid (GREEN)
-    if 'value_gap' in filtered.columns:
+    # 2. Bar: Top Underpaid
+    if 'value_gap' in filtered.columns and len(filtered) > 0:
         top_under = filtered.nlargest(10, 'value_gap').sort_values('value_gap', ascending=True)
         fig2 = go.Figure(go.Bar(
             x=top_under['value_gap'],
@@ -219,7 +441,7 @@ def update_dashboard(min_lebron, max_salary_m):
             textposition='outside'
         ))
         fig2.update_layout(
-            title='<b>Top 10 Underpaid</b> ',
+            title='<b>Top 10 Underpaid</b>',
             xaxis_title='Value Gap',
             height=450,
             template='plotly_dark',
@@ -227,24 +449,25 @@ def update_dashboard(min_lebron, max_salary_m):
             showlegend=False
         )
     else:
-        fig2 = go.Figure().add_annotation(text="No value_gap data")
+        fig2 = go.Figure().add_annotation(text="No data")
     
-    # 3. Scatter: Offensive vs Defensive
+    # 3. Scatter: Off vs Def
     fig3 = go.Figure()
-    fig3.add_trace(go.Scatter(
-        x=filtered['O-LEBRON'],
-        y=filtered['D-LEBRON'],
-        mode='markers',
-        marker=dict(
-            size=filtered['LEBRON'].abs() * 3,
-            color=filtered['value_gap'] if 'value_gap' in filtered.columns else 0,
-            colorscale='RdYlGn',
-            line=dict(width=1, color='white'),
-            opacity=0.8
-        ),
-        text=[f"<b>{n}</b>" for n in filtered['player_name']],
-        hovertemplate='%{text}<extra></extra>'
-    ))
+    if len(filtered) > 0:
+        fig3.add_trace(go.Scatter(
+            x=filtered['O-LEBRON'],
+            y=filtered['D-LEBRON'],
+            mode='markers',
+            marker=dict(
+                size=filtered['LEBRON'].abs() * 3,
+                color=filtered['value_gap'] if 'value_gap' in filtered.columns else 0,
+                colorscale='RdYlGn',
+                line=dict(width=1, color='white'),
+                opacity=0.8
+            ),
+            text=[f"<b>{n}</b>" for n in filtered['player_name']],
+            hovertemplate='%{text}<extra></extra>'
+        ))
     fig3.update_layout(
         title='<b>Offensive vs Defensive Impact</b>',
         xaxis_title='Offensive LEBRON',
@@ -254,8 +477,8 @@ def update_dashboard(min_lebron, max_salary_m):
         hovermode='closest'
     )
     
-    # 4. Bar: Top Overpaid (RED)
-    if 'value_gap' in filtered.columns:
+    # 4. Bar: Top Overpaid
+    if 'value_gap' in filtered.columns and len(filtered) > 0:
         top_over = filtered.nsmallest(10, 'value_gap').sort_values('value_gap', ascending=False)
         fig4 = go.Figure(go.Bar(
             x=top_over['value_gap'],
@@ -266,7 +489,7 @@ def update_dashboard(min_lebron, max_salary_m):
             textposition='outside'
         ))
         fig4.update_layout(
-            title='<b>Top 10 Overpaid</b> ',
+            title='<b>Top 10 Overpaid</b>',
             xaxis_title='Value Gap',
             height=450,
             template='plotly_dark',
@@ -274,10 +497,10 @@ def update_dashboard(min_lebron, max_salary_m):
             showlegend=False
         )
     else:
-        fig4 = go.Figure().add_annotation(text="No value_gap data")
+        fig4 = go.Figure().add_annotation(text="No data")
     
     # 5. Table: Underpaid
-    if 'value_gap' in filtered.columns:
+    if 'value_gap' in filtered.columns and len(filtered) > 0:
         top_under_data = filtered.nlargest(10, 'value_gap')[
             ['player_name', 'current_year_salary', 'LEBRON', 'value_gap']
         ]
@@ -293,10 +516,7 @@ def update_dashboard(min_lebron, max_salary_m):
         
         table_under = dbc.Table([
             html.Thead(html.Tr([
-                html.Th("Player"),
-                html.Th("Salary"),
-                html.Th("LEBRON"),
-                html.Th("Gap")
+                html.Th("Player"), html.Th("Salary"), html.Th("LEBRON"), html.Th("Gap")
             ], style={"fontSize": "12px"})),
             html.Tbody(rows, style={"fontSize": "12px"})
         ], striped=True, hover=True, bordered=True, size='sm')
@@ -304,7 +524,7 @@ def update_dashboard(min_lebron, max_salary_m):
         table_under = html.P("No data available")
     
     # 6. Table: Overpaid
-    if 'value_gap' in filtered.columns:
+    if 'value_gap' in filtered.columns and len(filtered) > 0:
         top_over_data = filtered.nsmallest(10, 'value_gap')[
             ['player_name', 'current_year_salary', 'LEBRON', 'value_gap']
         ]
@@ -320,17 +540,14 @@ def update_dashboard(min_lebron, max_salary_m):
         
         table_over = dbc.Table([
             html.Thead(html.Tr([
-                html.Th("Player"),
-                html.Th("Salary"),
-                html.Th("LEBRON"),
-                html.Th("Gap")
+                html.Th("Player"), html.Th("Salary"), html.Th("LEBRON"), html.Th("Gap")
             ], style={"fontSize": "12px"})),
             html.Tbody(rows, style={"fontSize": "12px"})
         ], striped=True, hover=True, bordered=True, size='sm')
     else:
         table_over = html.P("No data available")
     
-    # 7. Table: ALL players in entire dataset (NOT filtered by sliders) - sorted by value_gap
+    # 7. Table: ALL players with color-coded gaps
     if 'value_gap' in df.columns:
         all_players_data = df.sort_values('value_gap', ascending=False)[
             ['player_name', 'current_year_salary', 'LEBRON', 'value_gap', 'archetype']
@@ -341,16 +558,17 @@ def update_dashboard(min_lebron, max_salary_m):
             archetype = str(row['archetype']).strip() if pd.notna(row['archetype']) else 'Unknown'
             gap_value = row['value_gap']
             
+            # Multi-tier coloring
             if gap_value > 20:
-                gap_color = '#28a745' #Green
+                gap_color = '#28a745'
             elif gap_value > 5:
-                gap_color = '#7dd97d'  #Lighter green
+                gap_color = '#7dd97d'
             elif gap_value < -20:
-                gap_color = '#dc3545' #Red
-            elif gap_value < -5:  
-                gap_color = '#e79595'#Lighter red
+                gap_color = '#dc3545'
+            elif gap_value < -5:
+                gap_color = '#e79595'
             else:
-                gap_color = '#ffc107'#yellow
+                gap_color = '#ffc107'
 
             rows.append(html.Tr([
                 html.Td(player_name, style={"fontWeight": "500", "width": "25%", "fontSize": "11px"}),
@@ -376,11 +594,11 @@ def update_dashboard(min_lebron, max_salary_m):
     return fig1, fig2, fig3, fig4, table_under, table_over, table_all
 
 
-#running
 if __name__ == '__main__':
     print("\n" + "=" * 70)
     print("SIEVE Dashboard Starting...")
     print("=" * 70)
-    print("\nOpen browser to: http://localhost:8050")
+    print(f"\nLoaded {len(df)} players and {len(df_teams)} teams")
+    print("Open browser to: http://localhost:8050")
     print("Press CTRL+C to stop\n")
     app.run(debug=True, port=8050)
