@@ -1,0 +1,566 @@
+"""
+Visualization module for Sieve NBA Analytics.
+This module contains functions to generate Plotly figures and Dash tables.
+It separates the view logic from the main application controller.
+"""
+
+import plotly.graph_objects as go
+import plotly.express as px
+import pandas as pd
+import numpy as np
+import dash_bootstrap_components as dbc
+from dash import html, dash_table
+
+# ==========================================
+# TEAM VISUALIZATIONS
+# ==========================================
+
+def create_efficiency_quadrant(df_teams):
+    """
+    Creates the Efficiency Quadrant Chart (Wins vs. Payroll).
+    
+    This scatter plot visualizes team performance relative to their spending.
+    It includes a background contour plot representing the 'Efficiency Index'
+    (Z-score of Wins minus Z-score of Payroll) to clearly demarcate 
+    efficient vs. inefficient zones.
+
+    Visual Elements:
+    - X-Axis: Total Payroll (USD).
+    - Y-Axis: Total Wins.
+    - Markers: Official NBA Team Logos.
+    - Background: Red-Yellow-Green gradient indicating efficiency relative to league average.
+
+    Args:
+        df_teams (pd.DataFrame): DataFrame containing team metrics (WINS, Total_Payroll, Logo_URL).
+
+    Returns:
+        go.Figure: A Plotly Graph Object containing the quadrant chart.
+    """
+    if df_teams.empty:
+        fig = go.Figure().add_annotation(text="No Team Data Available")
+        fig.update_layout(height=600, template='plotly_dark', paper_bgcolor='#0f1623')
+        return fig
+
+    avg_payroll = df_teams['Total_Payroll'].mean()
+    avg_wins = df_teams['WINS'].mean()
+    
+    # Initialize the figure
+    fig_quadrant = go.Figure()
+
+    # 1. Add Background Gradient (Relative to League Average)
+    # We calculate Z-scores for a meshgrid to create a contour plot.
+    # This ensures the gradient is centered on the "Average Team" (0,0 in Z-space).
+    
+    mean_pay = df_teams['Total_Payroll'].mean()
+    std_pay = df_teams['Total_Payroll'].std()
+    mean_wins = df_teams['WINS'].mean()
+    std_wins = df_teams['WINS'].std()
+    
+    # Define the grid range with some padding around the data points
+    x_range = np.linspace(df_teams['Total_Payroll'].min() * 0.85, df_teams['Total_Payroll'].max() * 1.15, 100)
+    y_range = np.linspace(df_teams['WINS'].min() * 0.85, df_teams['WINS'].max() * 1.15, 100)
+    
+    X, Y = np.meshgrid(x_range, y_range)
+    
+    # Calculate Z-scores for every point on the grid
+    # Z_score = (Value - Mean) / StdDev
+    Z_pay = (X - mean_pay) / std_pay
+    Z_wins = (Y - mean_wins) / std_wins
+    
+    # Efficiency = (2.0 * Win_Z_Score) - Payroll_Z_Score
+    # We weight Wins (2.0) higher than Payroll (1.0) to prioritize on-court success.
+    Z = (2.0 * Z_wins) - Z_pay
+    
+    # Add the contour plot as the background layer
+    fig_quadrant.add_trace(go.Contour(
+        z=Z, x=x_range, y=y_range,
+        colorscale='RdYlGn',  # Red to Green colormap
+        opacity=0.4,          # Semi-transparent to let grid lines show
+        showscale=False,      # Hide the color bar
+        hoverinfo='skip',     # Disable hover for the background
+        contours=dict(
+            coloring='heatmap',
+            start=-3,
+            end=3,
+            size=0.2
+        )
+    ))
+
+    # 2. Add Invisible Scatter for Hover Data
+    # Since we are using images for markers, we need a separate invisible scatter trace
+    # to handle the hover tooltips.
+    fig_quadrant.add_trace(go.Scatter(
+        x=df_teams['Total_Payroll'],
+        y=df_teams['WINS'],
+        mode='markers',
+        text=df_teams['Abbrev'],
+        customdata=np.stack((df_teams['Total_WAR'], df_teams['Efficiency_Index']), axis=-1),
+        hovertemplate='<b>%{text}</b><br>Wins: %{y}<br>Payroll: $%{x:,.0f}<br>WAR: %{customdata[0]:.1f}<br>Eff Index: %{customdata[1]:.2f}<extra></extra>',
+        marker=dict(opacity=0) # Fully transparent markers
+    ))
+
+    # 3. Add Team Logos as Images
+    logo_images = []
+    if 'Logo_URL' in df_teams.columns:
+        for _, row in df_teams.iterrows():
+            if pd.notna(row['Logo_URL']):
+                logo_images.append(dict(
+                    source=row['Logo_URL'],
+                    xref="x", yref="y",
+                    x=row['Total_Payroll'], y=row['WINS'],
+                    sizex=35000000, sizey=8, # Adjust size to be visible but not overwhelming
+                    xanchor="center", yanchor="middle",
+                    layer="above"
+                ))
+
+    # Calculate tighter bounds to "zoom in" on the relevant data area
+    x_min, x_max = df_teams['Total_Payroll'].min(), df_teams['Total_Payroll'].max()
+    y_min, y_max = df_teams['WINS'].min(), df_teams['WINS'].max()
+    x_padding = (x_max - x_min) * 0.1
+    y_padding = (y_max - y_min) * 0.1
+
+    # Configure the layout
+    fig_quadrant.update_layout(
+        title='<b>Efficiency Quadrant: Wins vs. Payroll</b><br><sub style="color:#adb5bd">Green = Outperforming Budget | Red = Underperforming Budget</sub>',
+        xaxis_title='<b>Total Payroll ($)</b>',
+        yaxis_title='<b>Wins</b>',
+        height=600,
+        margin=dict(l=80, r=40, t=80, b=70),
+        paper_bgcolor='#0f1623', # Deep Navy background
+        plot_bgcolor='#1a202c',  # Slightly lighter plot area
+        font=dict(size=12),
+        images=logo_images,
+        xaxis=dict(showgrid=True, gridcolor='#2c3e50', zeroline=False, range=[x_min - x_padding, x_max + x_padding]),
+        yaxis=dict(showgrid=True, gridcolor='#2c3e50', zeroline=False, range=[y_min - y_padding, y_max + y_padding]),
+        hoverlabel=dict(
+            bgcolor="#1a2332",
+            bordercolor="#ff6b35",
+            font=dict(color="#e4e6eb")
+        )
+    )
+    
+    # 4. Add Quadrant Lines (League Averages)
+    # These dashed lines indicate the average payroll and average wins.
+    fig_quadrant.add_vline(x=avg_payroll, line_dash="dash", line_color="rgba(255,255,255,0.6)", line_width=1.5,
+                          annotation_text="Avg Payroll", annotation_position="top right", annotation_font_color="#adb5bd")
+    fig_quadrant.add_hline(y=avg_wins, line_dash="dash", line_color="rgba(255,255,255,0.6)", line_width=1.5,
+                          annotation_text="Avg Wins", annotation_position="bottom right", annotation_font_color="#adb5bd")
+    
+    # Add Text Labels for Context (Quadrant Names)
+    fig_quadrant.add_annotation(x=df_teams['Total_Payroll'].min(), y=df_teams['WINS'].max(), 
+                               text="<b>ELITE</b><br>(High Wins / Low Pay)", showarrow=False, 
+                               font=dict(color="#06d6a0", size=14, weight="bold"), xanchor="left", yanchor="top",
+                               bgcolor="rgba(15, 22, 35, 0.7)", borderpad=4)
+                               
+    fig_quadrant.add_annotation(x=df_teams['Total_Payroll'].max(), y=df_teams['WINS'].max(), 
+                               text="<b>CONTENDERS</b><br>(High Wins / High Pay)", showarrow=False, 
+                               font=dict(color="#ffd166", size=14, weight="bold"), xanchor="right", yanchor="top",
+                               bgcolor="rgba(15, 22, 35, 0.7)", borderpad=4)
+                               
+    fig_quadrant.add_annotation(x=df_teams['Total_Payroll'].min(), y=df_teams['WINS'].min(), 
+                               text="<b>REBUILDING</b><br>(Low Wins / Low Pay)", showarrow=False, 
+                               font=dict(color="#e4e6eb", size=12), xanchor="left", yanchor="bottom",
+                               bgcolor="rgba(15, 22, 35, 0.7)", borderpad=4)
+                               
+    fig_quadrant.add_annotation(x=df_teams['Total_Payroll'].max(), y=df_teams['WINS'].min(), 
+                               text="<b>DISASTER</b><br>(Low Wins / High Pay)", showarrow=False, 
+                               font=dict(color="#ef476f", size=14, weight="bold"), xanchor="right", yanchor="bottom",
+                               bgcolor="rgba(15, 22, 35, 0.7)", borderpad=4)
+    
+    return fig_quadrant
+
+
+def create_team_grid(df_teams):
+    """
+    Creates the Team Efficiency Grid.
+    
+    This visualization displays all 30 teams as equal-sized tiles, sorted by their
+    Efficiency Index. It provides a quick "Power Ranking" view of front office performance.
+
+    Visual Elements:
+    - Layout: 6 columns x 5 rows grid.
+    - Sorting: Top-left is #1 (Most Efficient), Bottom-right is #30 (Least Efficient).
+    - Color: Tiles are colored by Efficiency Index (Green to Red).
+    - Content: Team Logo.
+
+    Args:
+        df_teams (pd.DataFrame): DataFrame containing team metrics.
+
+    Returns:
+        go.Figure: A Plotly Graph Object containing the grid.
+    """
+    if df_teams.empty:
+        fig = go.Figure().add_annotation(text="No Team Data Available")
+        fig.update_layout(height=500, template='plotly_dark', paper_bgcolor='#0f1623')
+        return fig
+
+    # Sort teams by Efficiency Index descending (Best to Worst)
+    df_grid = df_teams.sort_values('Efficiency_Index', ascending=False).reset_index(drop=True)
+    
+    # Create grid coordinates (6 columns, 5 rows)
+    cols = 6
+    df_grid['grid_x'] = df_grid.index % cols
+    df_grid['grid_y'] = df_grid.index // cols
+    # Invert Y so top rank is at top-left (visual convention)
+    df_grid['grid_y'] = df_grid['grid_y'].max() - df_grid['grid_y']
+    
+    fig_grid = go.Figure()
+    
+    # Add colored tiles (Heatmap-like effect using Scatter markers)
+    fig_grid.add_trace(go.Scatter(
+        x=df_grid['grid_x'],
+        y=df_grid['grid_y'],
+        mode='markers',
+        marker=dict(
+            symbol='square',
+            size=65,  # Large squares to form tiles
+            color=df_grid['Efficiency_Index'],
+            colorscale='RdYlGn',
+            cmin=-3, cmax=3, # Fixed scale for consistency with Quadrant chart
+            line=dict(width=2, color='#1a2332'),
+            opacity=0.9
+        ),
+        text=df_grid['Abbrev'],
+        customdata=np.stack((df_grid['Efficiency_Index'], df_grid['Total_Payroll'], df_grid['WINS']), axis=-1),
+        hovertemplate='<b>%{text}</b><br>Eff Index: %{customdata[0]:.2f}<br>Payroll: $%{customdata[1]:,.0f}<br>Wins: %{customdata[2]}<extra></extra>'
+    ))
+    
+    # Add Team Logos on top of the tiles
+    grid_images = []
+    if 'Logo_URL' in df_grid.columns:
+        for _, row in df_grid.iterrows():
+            if pd.notna(row['Logo_URL']):
+                grid_images.append(dict(
+                    source=row['Logo_URL'],
+                    xref="x", yref="y",
+                    x=row['grid_x'], y=row['grid_y'],
+                    sizex=0.7, sizey=0.7,
+                    xanchor="center", yanchor="middle",
+                    layer="above"
+                ))
+    
+    fig_grid.update_layout(
+        title='<b>Team Efficiency Rankings</b><br><sub style="color:#adb5bd">Equal Sized • Sorted by Efficiency • Green = Good</sub>',
+        height=500,
+        margin=dict(l=20, r=20, t=80, b=20),
+        paper_bgcolor='#0f1623',
+        plot_bgcolor='#0f1623',
+        # Hide axes for a clean grid look
+        xaxis=dict(showgrid=False, zeroline=False, showticklabels=False, range=[-0.5, 5.5]),
+        yaxis=dict(showgrid=False, zeroline=False, showticklabels=False, range=[-0.5, 4.5]),
+        images=grid_images,
+        hoverlabel=dict(
+            bgcolor="#1a2332",
+            bordercolor="#ff6b35",
+            font=dict(color="#e4e6eb")
+        )
+    )
+    return fig_grid
+
+
+# ==========================================
+# PLAYER VISUALIZATIONS
+# ==========================================
+
+def create_salary_impact_scatter(filtered):
+    """
+    Creates the Salary vs. Impact Scatter Plot.
+    
+    This chart helps identify outliers: players who provide high impact for low salary (top-left)
+    vs. players who provide low impact for high salary (bottom-right).
+
+    Args:
+        filtered (pd.DataFrame): Filtered DataFrame of players.
+
+    Returns:
+        go.Figure: A Plotly scatter plot.
+    """
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(
+        x=filtered['LEBRON'],
+        y=filtered['current_year_salary'] if 'current_year_salary' in filtered.columns else filtered['total_contract_value'],
+        mode='markers',
+        marker=dict(
+            # Size markers by WAR (Wins Above Replacement) to show total contribution
+            size=filtered['LEBRON WAR'].clip(lower=1) * 3.5 if 'LEBRON WAR' in filtered.columns else 6,
+            # Color markers by Value Gap to highlight efficiency
+            color=filtered['value_gap'] if 'value_gap' in filtered.columns else 0,
+            colorscale='RdYlGn',
+            colorbar=dict(
+                title=dict(text="<b>Value<br>Gap</b>", font=dict(size=11)),
+                thickness=15,
+                len=0.6,
+                tickfont=dict(size=10)
+            ),
+            line=dict(width=1.5, color='rgba(255,255,255,0.4)'),
+            opacity=0.85
+        ),
+        text=[f"<b>{n}</b><br>Gap: {g:.1f}" for n, g in 
+              zip(filtered['player_name'], filtered['value_gap'] if 'value_gap' in filtered.columns else [0]*len(filtered))],
+        hovertemplate='%{text}<extra></extra>'
+    ))
+    fig.update_layout(
+        title='<b style="font-size:16px">Salary vs Impact</b><br><sub style="color:#adb5bd">Size = WAR | Color = Value Gap</sub>',
+        xaxis_title='<b>LEBRON Total</b>',
+        yaxis_title='<b>Salary ($)</b>',
+        height=500,
+        template='plotly_dark',
+        hovermode='closest',
+        paper_bgcolor='#0f1623',
+        plot_bgcolor='#1a202c',
+        margin=dict(l=70, r=100, t=80, b=60)
+    )
+    return fig
+
+
+def create_underpaid_bar(filtered):
+    """
+    Creates a horizontal bar chart of the Top 10 Underpaid Players.
+    
+    Args:
+        filtered (pd.DataFrame): Filtered DataFrame of players.
+
+    Returns:
+        go.Figure: A Plotly bar chart.
+    """
+    if 'value_gap' in filtered.columns and len(filtered) > 0:
+        # Filter for positive value gaps only
+        underpaid_only = filtered[filtered['value_gap'] > 0]
+        if len(underpaid_only) > 0:
+            # Get top 10
+            top_under = underpaid_only.nlargest(10, 'value_gap').sort_values('value_gap', ascending=True)
+            fig = go.Figure(go.Bar(
+                x=top_under['value_gap'],
+                y=top_under['player_name'],
+                orientation='h',
+                marker=dict(
+                    color='#2ca02c',  # Vibrant green
+                    opacity=0.9,
+                    line=dict(color='#1e7b1e', width=1)
+                ),
+                text=[f"{v:.1f}" for v in top_under['value_gap']],
+                textposition='outside',
+                textfont=dict(size=11, color='white')
+            ))
+            fig.update_layout(
+                title='<b style="font-size:16px">Top 10 Underpaid Players</b>',
+                xaxis_title='<b>Value Gap</b>',
+                height=500,
+                template='plotly_dark',
+                margin=dict(l=200, r=40, t=70, b=60),
+                showlegend=False,
+                paper_bgcolor='#0f1623',
+                plot_bgcolor='#1a202c'
+            )
+            fig.update_xaxes(fixedrange=True)
+            fig.update_yaxes(fixedrange=True)
+            return fig
+            
+    # Fallback if no data meets criteria
+    fig = go.Figure().add_annotation(text="No underpaid players in current filter")
+    fig.update_layout(height=500, template='plotly_dark', paper_bgcolor='#0f1623')
+    return fig
+
+
+def create_age_impact_scatter(filtered):
+    """
+    Creates the Age vs. Impact Scatter Plot (Development Curve).
+    
+    This chart visualizes how player impact correlates with age, helping to identify
+    peak performance windows and aging curves.
+
+    Args:
+        filtered (pd.DataFrame): Filtered DataFrame of players.
+
+    Returns:
+        go.Figure: A Plotly scatter plot.
+    """
+    fig = go.Figure()
+    if len(filtered) > 0 and 'Age' in filtered.columns:
+        fig.add_trace(go.Scatter(
+            x=filtered['Age'],
+            y=filtered['LEBRON'],
+            mode='markers',
+            marker=dict(
+                # Size by Salary to show if expensive players are performing
+                size=filtered['current_year_salary'].fillna(0) / 2_000_000 if 'current_year_salary' in filtered.columns else 10,
+                color=filtered['value_gap'] if 'value_gap' in filtered.columns else 0,
+                colorscale='RdYlGn',
+                line=dict(width=1.5, color='rgba(255,255,255,0.4)'),
+                opacity=0.85,
+                sizemin=4
+            ),
+            text=[f"<b>{n}</b><br>Age: {a}<br>Impact: {i:.2f}<br>Gap: {g:.1f}" 
+                  for n, a, i, g in zip(
+                      filtered['player_name'], 
+                      filtered['Age'], 
+                      filtered['LEBRON'],
+                      filtered['value_gap'] if 'value_gap' in filtered.columns else [0]*len(filtered)
+                  )],
+            hovertemplate='%{text}<extra></extra>'
+        ))
+    fig.update_layout(
+        title='<b style="font-size:16px">Age vs Impact Curve</b><br><sub style="color:#adb5bd">Size = Salary | Color = Value Gap</sub>',
+        xaxis_title='<b>Player Age</b>',
+        yaxis_title='<b>LEBRON Impact</b>',
+        height=500,
+        template='plotly_dark',
+        hovermode='closest',
+        paper_bgcolor='#0f1623',
+        plot_bgcolor='#1a202c',
+        margin=dict(l=70, r=40, t=80, b=60)
+    )
+    # Add reference band for typical "Peak Years" (26-30)
+    fig.add_vrect(x0=26, x1=30, fillcolor="rgba(255,107,53,0.1)", 
+                   line_width=0, annotation_text="Peak Years", 
+                   annotation_position="top left")
+    return fig
+
+
+def create_overpaid_bar(filtered):
+    """
+    Creates a horizontal bar chart of the Top 10 Overpaid Players.
+    
+    Args:
+        filtered (pd.DataFrame): Filtered DataFrame of players.
+
+    Returns:
+        go.Figure: A Plotly bar chart.
+    """
+    if 'value_gap' in filtered.columns and len(filtered) > 0:
+        overpaid_only = filtered[filtered['value_gap'] < 0]
+        if len(overpaid_only) > 0:
+            top_over = overpaid_only.nsmallest(10, 'value_gap').sort_values('value_gap', ascending=False)
+            fig = go.Figure(go.Bar(
+                x=top_over['value_gap'],
+                y=top_over['player_name'],
+                orientation='h',
+                marker=dict(
+                    color='#d62728',  # Vibrant red
+                    opacity=0.9,
+                    line=dict(color='#a01d1d', width=1)
+                ),
+                text=[f"{v:.1f}" for v in top_over['value_gap']],
+                textposition='outside',
+                textfont=dict(size=11, color='white')
+            ))
+            fig.update_layout(
+                title='<b style="font-size:16px">Top 10 Overpaid Players</b>',
+                xaxis_title='<b>Value Gap</b>',
+                height=500,
+                template='plotly_dark',
+                margin=dict(l=200, r=40, t=70, b=60),
+                showlegend=False,
+                paper_bgcolor='#0f1623',
+                plot_bgcolor='#1a202c'
+            )
+            fig.update_xaxes(fixedrange=True)
+            fig.update_yaxes(fixedrange=True)
+            return fig
+            
+    # Fallback
+    fig = go.Figure().add_annotation(text="No overpaid players in current filter")
+    fig.update_layout(height=500, template='plotly_dark', paper_bgcolor='#0f1623')
+    return fig
+
+
+# ==========================================
+# TABLES
+# ==========================================
+
+def create_player_table(filtered, table_type='underpaid'):
+    """
+    Creates a Dash Bootstrap Table for displaying player lists.
+    
+    Args:
+        filtered (pd.DataFrame): Filtered DataFrame of players.
+        table_type (str): 'underpaid' or 'overpaid'. Determines sorting and coloring.
+
+    Returns:
+        dbc.Table: A styled HTML table component.
+    """
+    if 'value_gap' not in filtered.columns or len(filtered) == 0:
+        return html.P("No data available")
+
+    if table_type == 'underpaid':
+        data = filtered[filtered['value_gap'] > 0]
+        if len(data) == 0: return html.P("No underpaid players in filter")
+        top_data = data.nlargest(10, 'value_gap')[['player_name', 'current_year_salary', 'LEBRON', 'value_gap']]
+        text_class = "text-success fw-bold"
+    elif table_type == 'overpaid':
+        data = filtered[filtered['value_gap'] < 0]
+        if len(data) == 0: return html.P("No overpaid players in filter")
+        top_data = data.nsmallest(10, 'value_gap')[['player_name', 'current_year_salary', 'LEBRON', 'value_gap']]
+        text_class = "text-danger fw-bold"
+    else:
+        return html.P("Invalid table type")
+
+    rows = []
+    for _, row in top_data.iterrows():
+        player_name = str(row['player_name']).strip() if pd.notna(row['player_name']) else 'Unknown'
+        rows.append(html.Tr([
+            html.Td(player_name, style={"fontWeight": "500", "width": "45%"}),
+            html.Td(f"${row['current_year_salary']:,.0f}", style={"width": "30%"}),
+            html.Td(f"{row['LEBRON']:.2f}", style={"width": "15%"}),
+            html.Td(f"{row['value_gap']:.1f}", className=text_class, style={"width": "10%"})
+        ]))
+    
+    return dbc.Table([
+        html.Thead(html.Tr([
+            html.Th("Player"), html.Th("Salary"), html.Th("LEBRON"), html.Th("Gap")
+        ], style={"fontSize": "12px"})),
+        html.Tbody(rows, style={"fontSize": "12px"})
+    ], striped=True, hover=True, bordered=True, size='sm')
+
+
+def create_all_players_table(df):
+    """
+    Creates the comprehensive 'All Players' table.
+    
+    This table lists every player in the dataset, sorted by Value Gap.
+    It uses color-coded text to highlight extreme values.
+
+    Args:
+        df (pd.DataFrame): The full player DataFrame.
+
+    Returns:
+        dbc.Table: A styled HTML table component.
+    """
+    if 'value_gap' not in df.columns:
+        return html.P("No data available")
+        
+    all_players_data = df.sort_values('value_gap', ascending=False)[
+        ['player_name', 'current_year_salary', 'LEBRON', 'value_gap', 'archetype']
+    ]
+    rows = []
+    for _, row in all_players_data.iterrows():
+        player_name = str(row['player_name']).strip() if pd.notna(row['player_name']) else 'Unknown'
+        archetype = str(row['archetype']).strip() if pd.notna(row['archetype']) else 'Unknown'
+        gap_value = row['value_gap']
+        
+        # Multi-tier coloring matching the theme
+        if gap_value > 20:
+            gap_color = '#06d6a0'  # Electric Green (Elite Value)
+        elif gap_value > 5:
+            gap_color = '#4cd9b0'  # Good Value
+        elif gap_value < -20:
+            gap_color = '#ef476f'  # Hot Pink (Terrible Value)
+        elif gap_value < -5:
+            gap_color = '#ff8fa3'  # Bad Value
+        else:
+            gap_color = '#ffd166'  # Warm Yellow (Neutral)
+            
+        rows.append(html.Tr([
+            html.Td(player_name, style={"fontWeight": "500"}),
+            html.Td(archetype, style={"fontSize": "12px", "color": "#adb5bd"}),
+            html.Td(f"${row['current_year_salary']:,.0f}"),
+            html.Td(f"{row['LEBRON']:.2f}"),
+            html.Td(f"{gap_value:.1f}", style={"color": gap_color, "fontWeight": "bold"})
+        ], style={"backgroundColor": "#1a2332", "borderBottom": "1px solid #2c3e50"}))
+    
+    return dbc.Table([
+        html.Thead(html.Tr([
+            html.Th("Player Name"), html.Th("Archetype"), html.Th("Salary"), html.Th("LEBRON"), html.Th("Value Gap")
+        ], style={"backgroundColor": "#151b26", "color": "#e4e6eb", "borderBottom": "2px solid #ff6b35"})),
+        html.Tbody(rows)
+    ], hover=True, bordered=False, size='sm', style={"color": "#e4e6eb"})
