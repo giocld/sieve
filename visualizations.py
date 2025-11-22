@@ -11,9 +11,8 @@ import numpy as np
 import dash_bootstrap_components as dbc
 from dash import html, dash_table
 
-# ==========================================
+
 # TEAM VISUALIZATIONS
-# ==========================================
 
 def create_efficiency_quadrant(df_teams):
     """
@@ -263,10 +262,7 @@ def create_team_grid(df_teams):
     return fig_grid
 
 
-# ==========================================
 # PLAYER VISUALIZATIONS
-# ==========================================
-
 def create_salary_impact_scatter(filtered):
     """
     Creates the Salary vs. Impact Scatter Plot.
@@ -320,7 +316,7 @@ def create_salary_impact_scatter(filtered):
 
 def create_underpaid_bar(filtered):
     """
-    Creates a horizontal bar chart of the Top 10 Underpaid Players.
+    Creates a horizontal bar chart of the Top 20 Underpaid Players.
     
     Args:
         filtered (pd.DataFrame): Filtered DataFrame of players.
@@ -332,7 +328,7 @@ def create_underpaid_bar(filtered):
         # Filter for positive value gaps only
         underpaid_only = filtered[filtered['value_gap'] > 0]
         if len(underpaid_only) > 0:
-            # Get top 10
+            # Get top 20
             top_under = underpaid_only.nlargest(20, 'value_gap').sort_values('value_gap', ascending=True)
             fig = go.Figure(go.Bar(
                 x=top_under['value_gap'],
@@ -384,7 +380,7 @@ def create_age_impact_scatter(filtered):
     if len(filtered) > 0 and 'Age' in filtered.columns:
         fig.add_trace(go.Scatter(
             x=filtered['Age'],
-            y=filtered['LEBRON'],
+            y=filtered['value_gap'],
             mode='markers',
             marker=dict(
                 # Size by Salary to show if expensive players are performing
@@ -399,7 +395,7 @@ def create_age_impact_scatter(filtered):
                   for n, a, i, g in zip(
                       filtered['player_name'], 
                       filtered['Age'], 
-                      filtered['LEBRON'],
+                      filtered['value_gap'],
                       filtered['value_gap'] if 'value_gap' in filtered.columns else [0]*len(filtered)
                   )],
             hovertemplate='%{text}<extra></extra>'
@@ -407,7 +403,7 @@ def create_age_impact_scatter(filtered):
     fig.update_layout(
         title='<b style="font-size:16px">Age vs Impact Curve</b><br><sub style="color:#adb5bd">Size = Salary | Color = Value Gap</sub>',
         xaxis_title='<b>Player Age</b>',
-        yaxis_title='<b>LEBRON Impact</b>',
+        yaxis_title='<b>Value Gap Impact</b>',
         height=500,
         template='plotly_dark',
         hovermode='closest',
@@ -424,7 +420,7 @@ def create_age_impact_scatter(filtered):
 
 def create_overpaid_bar(filtered):
     """
-    Creates a horizontal bar chart of the Top 10 Overpaid Players.
+    Creates a horizontal bar chart of the Top 20 Overpaid Players.
     
     Args:
         filtered (pd.DataFrame): Filtered DataFrame of players.
@@ -469,10 +465,7 @@ def create_overpaid_bar(filtered):
     return fig
 
 
-# ==========================================
 # TABLES
-# ==========================================
-
 def create_player_table(filtered, table_type='underpaid'):
     """
     Creates a Dash Bootstrap Table for displaying player lists.

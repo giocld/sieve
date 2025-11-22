@@ -3,26 +3,21 @@ from dash import Input, Output, State
 import dash_bootstrap_components as dbc
 import pandas as pd
 
-# Import local modules
 import data_processing
 import visualizations
 import layout
 
-# ==========================================
 # 1. APP INITIALIZATION
-# ==========================================
 
-# Initialize the Dash app with Bootstrap stylesheets for responsive design.
-# We suppress callback exceptions to allow for dynamic content loading.
+# Initialize the Dash app with Bootstrap stylesheets.
+# We suppress callback exceptions to allow for content loading.
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.CYBORG], suppress_callback_exceptions=True)
 app.title = "Sieve | NBA Analytics"
 
-# Expose the underlying Flask server for WSGI deployment (e.g., Gunicorn)
+# Expose the Flask server for deployment (e.g., Gunicorn)
 server = app.server
 
-# ==========================================
 # 2. DATA LOADING & PROCESSING
-# ==========================================
 
 print("Loading data...")
 try:
@@ -46,9 +41,7 @@ except Exception as e:
     df = pd.DataFrame()
     df_teams = pd.DataFrame()
 
-# ==========================================
 # 3. LAYOUT CONSTRUCTION
-# ==========================================
 
 # Pre-generate static team charts since they don't depend on user filters
 # This improves initial load performance.
@@ -62,10 +55,8 @@ team_tab_layout = layout.create_team_tab(df_teams, fig_quadrant, fig_grid)
 # Assemble the main application layout
 app.layout = layout.create_main_layout(player_tab_layout, team_tab_layout)
 
-# ==========================================
-# 4. CALLBACKS
-# ==========================================
 
+# 4.  CALLBACKS
 @app.callback(
     Output('min-salary', 'value'),
     Input('max-salary', 'value'),
@@ -157,9 +148,7 @@ def update_team_radar(team_abbr):
     return visualizations.create_team_radar_chart(radar_data, team_abbr)
 
 
-# ==========================================
 # 5. ENTRY POINT
-# ==========================================
 
 if __name__ == '__main__':
     print("======================================================================")
