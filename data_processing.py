@@ -178,13 +178,21 @@ def calculate_team_metrics(df_players, standings_file='nba_standings_cache.csv')
     
     # 2. Normalize Team Abbreviations in Player Data
     # Players might have team codes like 'TOT' (Total) or non-standard codes.
+    # We need to normalize AFTER splitting to handle multi-team entries like 'BRK/LAL'
     if 'Team(s)' in df_players.columns:
         df_players = df_players.copy()
-        df_players['Team_Abbr'] = df_players['Team(s)'].replace(ABBR_NORMALIZATION)
         # Handle multi-team players (e.g., 'CLE/LAL') by taking the first team listed
-        df_players['Team_Main'] = df_players['Team_Abbr'].apply(
-            lambda x: str(x).split('/')[0].strip() if isinstance(x, str) else 'UNK'
-        )
+        # Then normalize the abbreviation (e.g., 'BRK' -> 'BKN')
+        def normalize_team(team_str):
+            if not isinstance(team_str, str):
+                return 'UNK'
+            # Split on '/' and take the first team
+            first_team = str(team_str).split('/')[0].strip()
+            # Apply normalization to the first team code
+            normalized = ABBR_NORMALIZATION.get(first_team, first_team)
+            return normalized
+        
+        df_players['Team_Main'] = df_players['Team(s)'].apply(normalize_team)
     else:
         df_players = df_players.copy()
         df_players['Team_Main'] = 'UNK'

@@ -187,7 +187,7 @@ def create_team_tab(df_teams, fig_quadrant, fig_grid):
         html.H2("Team Analysis", className="mt-4 mb-4", 
                 style={"color": "#e9ecef", "fontWeight": "600", "fontSize": "28px", "textAlign": "center"}),
         
-        # Charts Row: Quadrant and Grid side-by-side
+        # Charts Row: Quadrant and Treemap side-by-side
         dbc.Row([
             dbc.Col([
                 dbc.Card([
@@ -200,7 +200,7 @@ def create_team_tab(df_teams, fig_quadrant, fig_grid):
             
             dbc.Col([
                 dbc.Card([
-                    dbc.CardHeader(html.H5("Team Efficiency Rankings", className="mb-0", 
+                    dbc.CardHeader(html.H5("Team Payroll vs Efficiency", className="mb-0", 
                                           style={"fontWeight": "600", "fontSize": "16px", "color": "#e4e6eb"}),
                                   style={"backgroundColor": "#151b26", "borderBottom": "2px solid #ff6b35"}),
                     dbc.CardBody([dcc.Graph(figure=fig_grid)], style={"padding": "10px"})
@@ -208,23 +208,43 @@ def create_team_tab(df_teams, fig_quadrant, fig_grid):
             ], lg=6, className="mb-4")
         ]),
         
-        # Radar Chart Section
+        # Radar Chart Section - Team Comparison
         dbc.Row([
             dbc.Col([
                 dbc.Card([
                     dbc.CardHeader([
+                        html.Div([
+                            html.H5("Team Comparison Radar", className="mb-0 text-center", 
+                                  style={"fontWeight": "600", "fontSize": "16px", "color": "#e4e6eb"}),
+                            html.P("Compare team strengths and weaknesses", 
+                                  className="mb-3 text-center", 
+                                  style={"fontSize": "12px", "color": "#6c757d"})
+                        ]),
                         dbc.Row([
-                            dbc.Col(html.H5("Missing Piece Radar", className="mb-0", 
-                                          style={"fontWeight": "600", "fontSize": "16px", "color": "#e4e6eb"}), width=8),
-                            dbc.Col(dbc.Select(
-                                id='team-radar-dropdown',
-                                options=[{'label': ABBR_TO_NAME.get(t, t), 'value': t} for t in sorted(df_teams['Abbrev'].unique())] if not df_teams.empty else [],
-                                value='BOS' if not df_teams.empty and 'BOS' in df_teams['Abbrev'].values else (df_teams['Abbrev'].iloc[0] if not df_teams.empty else None),
-                                class_name="bg-dark text-white border-secondary",
-                                style={'fontSize': '14px'}
-                            ), width=4)
-                        ], align="center")
-                    ], style={"backgroundColor": "#151b26", "borderBottom": "2px solid #ff6b35"}),
+                            dbc.Col(width=2),
+                            dbc.Col([
+                                html.Label("Team 1", className="text-center d-block", style={"fontSize": "11px", "color": "#ff6b35", "fontWeight": "600", "marginBottom": "3px"}),
+                                dbc.Select(
+                                    id='team-radar-dropdown-1',
+                                    options=[{'label': ABBR_TO_NAME.get(t, t), 'value': t} for t in sorted(df_teams['Abbrev'].unique())] if not df_teams.empty else [],
+                                    value='BOS' if not df_teams.empty and 'BOS' in df_teams['Abbrev'].values else (df_teams['Abbrev'].iloc[0] if not df_teams.empty else None),
+                                    class_name="bg-dark text-white border-secondary",
+                                    style={'fontSize': '13px', 'borderColor': '#ff6b35'}
+                                )
+                            ], width=4),
+                            dbc.Col([
+                                html.Label("Team 2", className="text-center d-block", style={"fontSize": "11px", "color": "#a855f7", "fontWeight": "600", "marginBottom": "3px"}),
+                                dbc.Select(
+                                    id='team-radar-dropdown-2',
+                                    options=[{'label': ABBR_TO_NAME.get(t, t), 'value': t} for t in sorted(df_teams['Abbrev'].unique())] if not df_teams.empty else [],
+                                    value='LAL' if not df_teams.empty and 'LAL' in df_teams['Abbrev'].values else (df_teams['Abbrev'].iloc[1] if len(df_teams) > 1 else None),
+                                    class_name="bg-dark text-white border-secondary",
+                                    style={'fontSize': '13px', 'borderColor': '#a855f7'}
+                                )
+                            ], width=4),
+                            dbc.Col(width=2)
+                        ], justify="center")
+                    ], style={"backgroundColor": "#151b26", "borderBottom": "2px solid #ff6b35", "padding": "15px"}),
                     dbc.CardBody([
                         dcc.Graph(id='chart-team-radar')
                     ], style={"padding": "15px"})

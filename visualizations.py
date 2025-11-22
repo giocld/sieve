@@ -178,14 +178,10 @@ def create_team_grid(df_teams):
     """
     Creates the Team Efficiency Grid.
     
-    This visualization displays all 30 teams as equal-sized tiles, sorted by their
-    Efficiency Index. It provides a quick "Power Ranking" view of front office performance.
-
-    Visual Elements:
-    - Layout: 6 columns x 5 rows grid.
-    - Sorting: Top-left is #1 (Most Efficient), Bottom-right is #30 (Least Efficient).
-    - Color: Tiles are colored by Efficiency Index (Green to Red).
-    - Content: Team Logo.
+    This visualization displays all 30 teams as equal-sized tiles in a 6x5 grid:
+    - Sorted by Efficiency Index (Best to Worst, top-left to bottom-right)
+    - Color coded by efficiency
+    - Team logos prominently displayed
 
     Args:
         df_teams (pd.DataFrame): DataFrame containing team metrics.
@@ -195,7 +191,7 @@ def create_team_grid(df_teams):
     """
     if df_teams.empty:
         fig = go.Figure().add_annotation(text="No Team Data Available")
-        fig.update_layout(height=500, template='plotly_dark', paper_bgcolor='#0f1623')
+        fig.update_layout(height=600, template='plotly_dark', paper_bgcolor='#0f1623')
         return fig
 
     # Sort teams by Efficiency Index descending (Best to Worst)
@@ -220,7 +216,19 @@ def create_team_grid(df_teams):
             size=65,  # Large squares to form tiles
             color=df_grid['Efficiency_Index'],
             colorscale='RdYlGn',
-            cmin=-3, cmax=3, # Fixed scale for consistency with Quadrant chart
+            cmin=-3, cmax=3,  # Fixed scale for consistency with Quadrant chart
+            colorbar=dict(
+                title='Efficiency',
+                tickmode='linear',
+                tick0=-3,
+                dtick=1,
+                thickness=15,
+                len=0.7,
+                bgcolor='#1a202c',
+                bordercolor='#2c3e50',
+                borderwidth=1,
+                tickfont=dict(color='#e4e6eb', size=11)
+            ),
             line=dict(width=2, color='#1a2332'),
             opacity=0.9
         ),
@@ -244,22 +252,24 @@ def create_team_grid(df_teams):
                 ))
     
     fig_grid.update_layout(
-        title='<b>Team Efficiency Rankings</b><br><sub style="color:#adb5bd">Equal Sized • Sorted by Efficiency • Green = Good</sub>',
-        height=500,
-        margin=dict(l=20, r=20, t=80, b=20),
+        title='<b>Team Efficiency Rankings</b><br><sub style="color:#adb5bd">Sorted by Efficiency • Green = Good Value • Red = Overpaying</sub>',
+        height=600,
+        margin=dict(l=80, r=40, t=80, b=70),
         paper_bgcolor='#0f1623',
-        plot_bgcolor='#0f1623',
+        plot_bgcolor='#1a202c',
+        font=dict(size=12),
         # Hide axes for a clean grid look
-        xaxis=dict(showgrid=False, zeroline=False, showticklabels=False, range=[-0.5, 5.5]),
-        yaxis=dict(showgrid=False, zeroline=False, showticklabels=False, range=[-0.5, 4.5]),
+        xaxis=dict(showgrid=False, zeroline=False, showticklabels=False, range=[-0.5, 5.5], fixedrange=True),
+        yaxis=dict(showgrid=False, zeroline=False, showticklabels=False, range=[-0.5, 4.5], fixedrange=True),
         images=grid_images,
         hoverlabel=dict(
             bgcolor="#1a2332",
             bordercolor="#ff6b35",
-            font=dict(color="#e4e6eb")
+            font=dict(color="#e4e6eb", size=12)
         )
     )
     return fig_grid
+
 
 
 # PLAYER VISUALIZATIONS
@@ -564,39 +574,88 @@ def create_all_players_table(df):
     ], hover=True, bordered=False, size='sm', style={"color": "#e4e6eb"})
 
 
-def create_team_radar_chart(radar_data, team_name):
+def create_team_radar_chart(radar_data_team1, radar_data_team2, team1_name, team2_name):
     """
-    Creates a Radar Chart (Spider Web) showing team strengths/weaknesses.
+    Creates a Radar Chart (Spider Web) comparing two teams' strengths/weaknesses.
     
     Args:
-        radar_data (dict): Dictionary of metrics and percentiles (0-100).
-        team_name (str): Name of the team.
+        radar_data_team1 (dict): Dictionary of metrics and percentiles (0-100) for team 1.
+        radar_data_team2 (dict): Dictionary of metrics and percentiles (0-100) for team 2.
+        team1_name (str): Name/abbreviation of the first team.
+        team2_name (str): Name/abbreviation of the second team.
         
     Returns:
-        go.Figure: Plotly radar chart.
+        go.Figure: Plotly radar chart comparing both teams.
     """
-    if not radar_data:
-        fig = go.Figure().add_annotation(text="No Advanced Data Available")
-        fig.update_layout(height=400, template='plotly_dark', paper_bgcolor='#0f1623')
+    if not radar_data_team1 or not radar_data_team2:
+        fig = go.Figure().add_annotation(
+            text="No Advanced Data Available<br><sub>Select teams to compare</sub>",
+            font=dict(size=14, color='#adb5bd')
+        )
+        fig.update_layout(height=500, template='plotly_dark', paper_bgcolor='#0f1623')
         return fig
         
-    categories = list(radar_data.keys())
-    values = list(radar_data.values())
+    categories = list(radar_data_team1.keys())
+    values_team1 = list(radar_data_team1.values())
+    values_team2 = list(radar_data_team2.values())
     
-    # Close the loop
+    # Close the loop for radar chart
     categories.append(categories[0])
-    values.append(values[0])
+    values_team1.append(values_team1[0])
+    values_team2.append(values_team2[0])
     
     fig = go.Figure()
     
+    # Add Team 1 (vibrant orange/red)
     fig.add_trace(go.Scatterpolar(
-        r=values,
+        r=values_team1,
         theta=categories,
         fill='toself',
-        name=team_name,
-        line=dict(color='#ff6b35', width=2),
-        fillcolor='rgba(255, 107, 53, 0.3)',
-        hovertemplate='<b>%{theta}</b>: %{r:.1f}th Percentile<extra></extra>'
+        name=team1_name,
+        line=dict(color='#ff6b35', width=3),
+        fillcolor='rgba(255, 107, 53, 0.25)',
+        hovertemplate='<b>%{theta}</b><br>' + team1_name + ': %{r:.1f}th percentile<extra></extra>',
+        marker=dict(size=8, color='#ff6b35')
+    ))
+    
+    # Add Team 2 (vibrant purple)
+    fig.add_trace(go.Scatterpolar(
+        r=values_team2,
+        theta=categories,
+        fill='toself',
+        name=team2_name,
+        line=dict(color='#a855f7', width=3),
+        fillcolor='rgba(168, 85, 247, 0.25)',
+        hovertemplate='<b>%{theta}</b><br>' + team2_name + ': %{r:.1f}th percentile<extra></extra>',
+        marker=dict(size=8, color='#a855f7')
+    ))
+    
+    # Add reference circles for context (25th, 50th, 75th percentiles)
+    fig.add_trace(go.Scatterpolar(
+        r=[25] * len(categories),
+        theta=categories,
+        mode='lines',
+        line=dict(color='rgba(255, 255, 255, 0.1)', width=1, dash='dot'),
+        showlegend=False,
+        hoverinfo='skip'
+    ))
+    
+    fig.add_trace(go.Scatterpolar(
+        r=[50] * len(categories),
+        theta=categories,
+        mode='lines',
+        line=dict(color='rgba(255, 255, 255, 0.15)', width=1, dash='dot'),
+        showlegend=False,
+        hoverinfo='skip'
+    ))
+    
+    fig.add_trace(go.Scatterpolar(
+        r=[75] * len(categories),
+        theta=categories,
+        mode='lines',
+        line=dict(color='rgba(255, 255, 255, 0.1)', width=1, dash='dot'),
+        showlegend=False,
+        hoverinfo='skip'
     ))
     
     fig.update_layout(
@@ -604,26 +663,55 @@ def create_team_radar_chart(radar_data, team_name):
             radialaxis=dict(
                 visible=True,
                 range=[0, 100],
-                showticklabels=False,
+                showticklabels=True,
+                tickmode='array',
+                tickvals=[25, 50, 75],
+                ticktext=['25th', '50th', '75th'],
+                tickfont=dict(size=10, color='#6c757d'),
                 gridcolor='#2c3e50',
-                linecolor='#2c3e50'
+                linecolor='#2c3e50',
+                gridwidth=1.5
             ),
             angularaxis=dict(
-                tickfont=dict(size=12, color='#e4e6eb'),
-                gridcolor='#2c3e50',
-                linecolor='#2c3e50'
+                tickfont=dict(size=13, color='#e4e6eb', family='Inter, sans-serif'),
+                gridcolor='#3a4555',
+                linecolor='#3a4555',
+                gridwidth=1.5
             ),
-            bgcolor='#1a202c'
+            bgcolor='#151b26'
         ),
         title=dict(
-            text=f'<b>{team_name} Profile</b><br><sub style="color:#adb5bd">Percentile Rank (League Wide)</sub>',
-            y=0.95
+            text=f'<b style="color:#e4e6eb">Team Comparison Radar</b><br>' +
+                 f'<sub style="color:#ff6b35">{team1_name}</sub> vs <sub style="color:#a855f7">{team2_name}</sub><br>' +
+                 f'<sub style="color:#6c757d; font-size:11px">Percentile Rankings • League-Wide Comparison</sub>',
+            y=0.97,
+            x=0.5,
+            xanchor='center',
+            font=dict(size=16)
         ),
-        height=450,
+        height=550,
         template='plotly_dark',
         paper_bgcolor='#0f1623',
-        margin=dict(l=40, r=40, t=80, b=40),
-        showlegend=False
+        plot_bgcolor='#151b26',
+        margin=dict(l=80, r=80, t=120, b=60),
+        showlegend=True,
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=-0.15,
+            xanchor="center",
+            x=0.5,
+            bgcolor='rgba(26, 35, 50, 0.8)',
+            bordercolor='#3a4555',
+            borderwidth=1,
+            font=dict(size=12, color='#e4e6eb')
+        ),
+        hoverlabel=dict(
+            bgcolor="#1a2332",
+            bordercolor="#ff6b35",
+            font=dict(color="#e4e6eb", size=12)
+        )
     )
     
     return fig
+

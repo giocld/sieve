@@ -134,18 +134,21 @@ def update_dashboard(min_lebron, min_salary, max_salary):
 
 @app.callback(
     Output('chart-team-radar', 'figure'),
-    Input('team-radar-dropdown', 'value')
+    [Input('team-radar-dropdown-1', 'value'),
+     Input('team-radar-dropdown-2', 'value')]
 )
-def update_team_radar(team_abbr):
-    #Updates the Missing Piece Radar Chart based on selected team.
-    if not team_abbr:
+def update_team_radar(team1_abbr, team2_abbr):
+    """Updates the Team Comparison Radar Chart based on selected teams."""
+    if not team1_abbr or not team2_abbr:
         from plotly import graph_objects as go
         empty = go.Figure()
         empty.update_layout(template='plotly_dark', paper_bgcolor='#0f1623')
         return empty
     
-    radar_data = data_processing.get_team_radar_data(team_abbr)
-    return visualizations.create_team_radar_chart(radar_data, team_abbr)
+    radar_data_1 = data_processing.get_team_radar_data(team1_abbr)
+    radar_data_2 = data_processing.get_team_radar_data(team2_abbr)
+    return visualizations.create_team_radar_chart(radar_data_1, radar_data_2, team1_abbr, team2_abbr)
+
 
 
 # 5. ENTRY POINT
