@@ -19,6 +19,25 @@ ABBR_TO_NAME.update({
     'NOP': 'New Orleans Pelicans', 'UTA': 'Utah Jazz'
 })
 
+# Global Style Constants
+SECTION_TITLE_STYLE = {
+    "color": "#e9ecef",
+    "fontWeight": "600",
+    "fontSize": "28px",
+    "textAlign": "center"
+}
+
+CARD_HEADER_TEXT_STYLE = {
+    "fontWeight": "600",
+    "fontSize": "16px",
+    "color": "#e4e6eb"
+}
+
+CARD_HEADER_BG_STYLE = {
+    "backgroundColor": "#151b26",
+    "borderBottom": "2px solid #ff6b35"
+}
+
 def create_player_tab(df):
     """
     Creates the layout for the 'Player Analysis' tab.
@@ -43,13 +62,13 @@ def create_player_tab(df):
     
     return dbc.Container([
         html.H2("Player Value Analysis", className="mt-4 mb-4", 
-                style={"color": "#e9ecef", "fontWeight": "600", "fontSize": "28px", "textAlign": "center"}),
+                style=SECTION_TITLE_STYLE),
         
         # Filter Controls Card
         # Contains sliders to filter the dataset by Salary and LEBRON Impact
         dbc.Card([
-            dbc.CardHeader(html.H5("Filters", className="mb-0", style={"fontWeight": "600", "color": "#e4e6eb"}),
-                          style={"backgroundColor": "#1a2332", "borderBottom": "2px solid #ff6b35"}),
+            dbc.CardHeader(html.H5("Filters", className="mb-0", style=CARD_HEADER_TEXT_STYLE),
+                          style=CARD_HEADER_BG_STYLE),
             dbc.CardBody([
                 dbc.Row([
                     dbc.Col([
@@ -60,9 +79,9 @@ def create_player_tab(df):
                             max=max_salary_m,
                             value=5,
                             marks={i: f"${i}" for i in range(0, max_salary_m + 1, 5)},
-                            tooltip={"placement": "bottom", "always_visible": True}
+                            tooltip={"placement": "bottom", "always_visible": False}
                         )
-                    ], md=6),
+                    ], xs=12, md=6),
                     
                     dbc.Col([
                         html.Label("Max Salary ($M):", className="fw-bold mb-2", style={"fontSize": "14px"}),
@@ -72,9 +91,9 @@ def create_player_tab(df):
                             max=max_salary_m,
                             value=max_salary_m,
                             marks={i: f"${i}" for i in range(0, max_salary_m + 1, 5)},
-                            tooltip={"placement": "bottom", "always_visible": True}
+                            tooltip={"placement": "bottom", "always_visible": False}
                         )
-                    ], md=6)
+                    ], xs=12, md=6)
                 ], className="mb-3"),
                 
                 dbc.Row([
@@ -85,8 +104,9 @@ def create_player_tab(df):
                             min=min_lebron,
                             max=max_lebron,
                             value=min_lebron,
-                            marks={round(i, 1): f"{i:.1f}" for i in np.arange(min_lebron, max_lebron + 0.5, 0.5)},
-                            tooltip={"placement": "bottom", "always_visible": True}
+                            step=0.5,
+                            marks={round(i, 1): f"{i:.1f}" for i in np.arange(np.floor(min_lebron * 2) / 2, np.ceil(max_lebron * 2) / 2 + 0.1, 0.5)},
+                            tooltip={"placement": "bottom", "always_visible": False}
                         )
                     ], md=12)
                 ])
@@ -98,41 +118,41 @@ def create_player_tab(df):
             dbc.Col([
                 dbc.Card([
                     dbc.CardHeader(html.H5("Salary vs Impact", className="mb-0", 
-                                          style={"fontWeight": "600", "fontSize": "16px", "color": "#e4e6eb"}),
-                                  style={"backgroundColor": "#151b26", "borderBottom": "2px solid #ff6b35"}),
+                                          style=CARD_HEADER_TEXT_STYLE),
+                                  style=CARD_HEADER_BG_STYLE),
                     dbc.CardBody([dcc.Graph(id='chart-salary-impact')], style={"padding": "10px"})
                 ], style={"backgroundColor": "#1a2332", "border": "1px solid #2c3e50"})
-            ], lg=6, className="mb-4"),
+            ], xs=12, lg=6, className="mb-4"),
             
             dbc.Col([
                 dbc.Card([
-                    dbc.CardHeader(html.H5("Top Underpaid Players", className="mb-0", 
-                                          style={"fontWeight": "600", "fontSize": "16px", "color": "#06d6a0"}),
-                                  style={"backgroundColor": "#151b26", "borderBottom": "2px solid #06d6a0"}),
-                    dbc.CardBody([dcc.Graph(id='chart-underpaid')], style={"padding": "10px"})
+                    dbc.CardHeader(html.H5("Age vs Impact Curve", className="mb-0", 
+                                          style=CARD_HEADER_TEXT_STYLE),
+                                  style=CARD_HEADER_BG_STYLE),
+                    dbc.CardBody([dcc.Graph(id='chart-off-def')], style={"padding": "10px"})
                 ], style={"backgroundColor": "#1a2332", "border": "1px solid #2c3e50"})
-            ], lg=6, className="mb-4")
+            ], xs=12, lg=6, className="mb-4")
         ]),
         
         # Charts Row 2: Age Curve and Overpaid Bar Chart
         dbc.Row([
             dbc.Col([
                 dbc.Card([
-                    dbc.CardHeader(html.H5("Age vs Impact Curve", className="mb-0", 
-                                          style={"fontWeight": "600", "fontSize": "16px", "color": "#e4e6eb"}),
-                                  style={"backgroundColor": "#151b26", "borderBottom": "2px solid #ff6b35"}),
-                    dbc.CardBody([dcc.Graph(id='chart-off-def')], style={"padding": "10px"})
+                    dbc.CardHeader(html.H5("Top Underpaid Players", className="mb-0", 
+                                          style=CARD_HEADER_TEXT_STYLE),
+                                  style=CARD_HEADER_BG_STYLE),
+                    dbc.CardBody([dcc.Graph(id='chart-underpaid')], style={"padding": "10px"})
                 ], style={"backgroundColor": "#1a2332", "border": "1px solid #2c3e50"})
-            ], lg=6, className="mb-4"),
+            ], xs=12, lg=6, className="mb-4"),
             
             dbc.Col([
                 dbc.Card([
                     dbc.CardHeader(html.H5("Top Overpaid Players", className="mb-0", 
-                                          style={"fontWeight": "600", "fontSize": "16px", "color": "#ef476f"}),
-                                  style={"backgroundColor": "#151b26", "borderBottom": "2px solid #ef476f"}),
+                                          style=CARD_HEADER_TEXT_STYLE),
+                                  style=CARD_HEADER_BG_STYLE),
                     dbc.CardBody([dcc.Graph(id='chart-overpaid')], style={"padding": "10px"})
                 ], style={"backgroundColor": "#1a2332", "border": "1px solid #2c3e50"})
-            ], lg=6, className="mb-4")
+            ], xs=12, lg=6, className="mb-4")
         ]),
         
         # Tables Row: Side-by-side lists of Top 10 Underpaid and Overpaid
@@ -154,8 +174,8 @@ def create_player_tab(df):
             dbc.Col([
                 dbc.Card([
                     dbc.CardHeader(html.H5(f"All {len(df)} Players (Sorted by Value Gap)", className="mb-0", 
-                                          style={"fontWeight": "600", "fontSize": "16px", "color": "#e4e6eb"}),
-                                  style={"backgroundColor": "#151b26", "borderBottom": "2px solid #ff6b35"}),
+                                          style=CARD_HEADER_TEXT_STYLE),
+                                  style=CARD_HEADER_BG_STYLE),
                     dbc.CardBody([
                         html.Div(id='table-all-players', style={"maxHeight": "800px", "overflowY": "auto"})
                     ], style={"padding": "0px"})
@@ -185,15 +205,15 @@ def create_team_tab(df_teams, fig_quadrant, fig_grid):
     
     return dbc.Container([
         html.H2("Team Analysis", className="mt-4 mb-4", 
-                style={"color": "#e9ecef", "fontWeight": "600", "fontSize": "28px", "textAlign": "center"}),
+                style=SECTION_TITLE_STYLE),
         
         # Charts Row: Quadrant and Treemap side-by-side
         dbc.Row([
             dbc.Col([
                 dbc.Card([
                     dbc.CardHeader(html.H5("Efficiency Quadrant", className="mb-0", 
-                                          style={"fontWeight": "600", "fontSize": "16px", "color": "#e4e6eb"}),
-                                  style={"backgroundColor": "#151b26", "borderBottom": "2px solid #ff6b35"}),
+                                          style=CARD_HEADER_TEXT_STYLE),
+                                  style=CARD_HEADER_BG_STYLE),
                     dbc.CardBody([dcc.Graph(figure=fig_quadrant)], style={"padding": "10px"})
                 ], style={"backgroundColor": "#1a2332", "border": "1px solid #2c3e50"})
             ], lg=6, className="mb-4"),
@@ -201,8 +221,8 @@ def create_team_tab(df_teams, fig_quadrant, fig_grid):
             dbc.Col([
                 dbc.Card([
                     dbc.CardHeader(html.H5("Team Payroll vs Efficiency", className="mb-0", 
-                                          style={"fontWeight": "600", "fontSize": "16px", "color": "#e4e6eb"}),
-                                  style={"backgroundColor": "#151b26", "borderBottom": "2px solid #ff6b35"}),
+                                          style=CARD_HEADER_TEXT_STYLE),
+                                  style=CARD_HEADER_BG_STYLE),
                     dbc.CardBody([dcc.Graph(figure=fig_grid)], style={"padding": "10px"})
                 ], style={"backgroundColor": "#1a2332", "border": "1px solid #2c3e50"})
             ], lg=6, className="mb-4")
@@ -215,7 +235,7 @@ def create_team_tab(df_teams, fig_quadrant, fig_grid):
                     dbc.CardHeader([
                         html.Div([
                             html.H5("Team Comparison Radar", className="mb-0 text-center", 
-                                  style={"fontWeight": "600", "fontSize": "16px", "color": "#e4e6eb"}),
+                                  style=CARD_HEADER_TEXT_STYLE),
                             html.P("Compare team strengths and weaknesses", 
                                   className="mb-3 text-center", 
                                   style={"fontSize": "12px", "color": "#6c757d"})
@@ -233,13 +253,13 @@ def create_team_tab(df_teams, fig_quadrant, fig_grid):
                                 )
                             ], width=4),
                             dbc.Col([
-                                html.Label("Team 2", className="text-center d-block", style={"fontSize": "11px", "color": "#a855f7", "fontWeight": "600", "marginBottom": "3px"}),
+                                html.Label("Team 2", className="text-center d-block", style={"fontSize": "11px", "color": "#2D96C7", "fontWeight": "600", "marginBottom": "3px"}),
                                 dbc.Select(
                                     id='team-radar-dropdown-2',
                                     options=[{'label': ABBR_TO_NAME.get(t, t), 'value': t} for t in sorted(df_teams['Abbrev'].unique())] if not df_teams.empty else [],
                                     value='LAL' if not df_teams.empty and 'LAL' in df_teams['Abbrev'].values else (df_teams['Abbrev'].iloc[1] if len(df_teams) > 1 else None),
                                     class_name="bg-dark text-white border-secondary",
-                                    style={'fontSize': '13px', 'borderColor': '#a855f7'}
+                                    style={'fontSize': '13px', 'borderColor': '#2D96C7'}
                                 )
                             ], width=4),
                             dbc.Col(width=2)
@@ -257,8 +277,8 @@ def create_team_tab(df_teams, fig_quadrant, fig_grid):
             dbc.Col([
                 dbc.Card([
                     dbc.CardHeader(html.H5("Team Statistics", className="mb-0", 
-                                          style={"fontWeight": "600", "fontSize": "16px", "color": "#e4e6eb"}),
-                                  style={"backgroundColor": "#151b26", "borderBottom": "2px solid #ff6b35"}),
+                                          style=CARD_HEADER_TEXT_STYLE),
+                                  style=CARD_HEADER_BG_STYLE),
                     dbc.CardBody([
                         dash_table.DataTable(
                             data=df_teams.assign(
@@ -291,86 +311,68 @@ def create_team_tab(df_teams, fig_quadrant, fig_grid):
     ], fluid=True, style={"backgroundColor": "#0f1623", "padding": "30px 20px"})
 
 
-def create_main_layout(player_tab, team_tab):
+def create_main_layout():
     """
     Creates the main application shell.
     
     This function wraps the individual tabs in a top-level container, adding
-    the application header and the tab navigation control.
-
-    Args:
-        player_tab (dbc.Container): The layout content for the Player Analysis tab.
-        team_tab (dbc.Container): The layout content for the Team Analysis tab.
+    the application header and the view selection dropdown.
 
     Returns:
         html.Div: The root HTML element of the application.
     """
     return html.Div([
-        # Header Section
-        dbc.Container([
-            dbc.Row([
-                dbc.Col([
-                    html.H1("Sieve", className="display-3 text-center mt-5 mb-2", 
-                           style={"fontWeight": "700", "color": "#e9ecef", "letterSpacing": "2px"}),
-                    html.P("NBA Player Value Analytics", 
-                           className="text-center mb-4", 
-                           style={"color": "#adb5bd", "fontSize": "16px", "fontWeight": "300"})
+        # Header Section (Hero)
+        html.Div([
+            dbc.Container([
+                dbc.Row([
+                    dbc.Col([
+                        html.H1("Sieve", className="display-3 text-center mb-2", 
+                               style={"fontWeight": "700", "color": "#e9ecef", "letterSpacing": "2px"}),
+                        html.P("NBA Player Value Analytics", 
+                               className="text-center mb-4", 
+                               style={"color": "#adb5bd", "fontSize": "16px", "fontWeight": "300"})
+                    ])
+                ]),
+                
+                # View Selection Dropdown
+                dbc.Row([
+                    dbc.Col([
+                        html.Label("Select Analysis View:", className="text-center d-block mb-2", 
+                                  style={"color": "#e4e6eb", "fontWeight": "600"}),
+                        dbc.RadioItems(
+                            id='view-selector',
+                            options=[
+                                {'label': 'Player Analysis', 'value': 'player'},
+                                {'label': 'Team Analysis', 'value': 'team'}
+                            ],
+                            value='player',
+                            inline=True,
+                            className="btn-group",
+                            inputClassName="btn-check",
+                            labelClassName="btn btn-outline-primary",
+                            labelCheckedClassName="active",
+                            style={"display": "flex", "justifyContent": "center", "gap": "10px"}
+                        )
+                    ], width={"size": 4, "offset": 4})
                 ])
-            ]),
-        ], fluid=True),
+            ], fluid=True)
+        ], className="hero-header"),
         
-        # Tab Navigation
-        dbc.Tabs(
-            id='main-tabs',
-            active_tab='tab-players',
-            children=[
-                dbc.Tab(
-                    label='Player Analysis',
-                    tab_id='tab-players',
-                    label_style={
-                        'padding': '15px 30px',
-                        'fontWeight': '600',
-                        'fontSize': '15px',
-                        'color': '#8a92a3',
-                        'borderRadius': '0',
-                        'border': 'none',
-                        'backgroundColor': '#0f1419'
-                    },
-                    active_label_style={
-                        'padding': '15px 30px',
-                        'fontWeight': '600',
-                        'fontSize': '15px',
-                        'color': '#ffffff',
-                        'backgroundColor': '#1a2332',
-                        'borderTop': '3px solid #ff6b35',
-                        'borderRadius': '0'
-                    },
-                    children=player_tab
-                ),
-                dbc.Tab(
-                    label='Team Analysis',
-                    tab_id='tab-teams',
-                    label_style={
-                        'padding': '15px 30px',
-                        'fontWeight': '600',
-                        'fontSize': '15px',
-                        'color': '#8a92a3',
-                        'borderRadius': '0',
-                        'border': 'none',
-                        'backgroundColor': '#0f1419'
-                    },
-                    active_label_style={
-                        'padding': '15px 30px',
-                        'fontWeight': '600',
-                        'fontSize': '15px',
-                        'color': '#ffffff',
-                        'backgroundColor': '#1a2332',
-                        'borderTop': '3px solid #06d6a0',
-                        'borderRadius': '0'
-                    },
-                    children=team_tab
-                ),
-            ],
-            style={'backgroundColor': '#0f1623', 'borderBottom': '2px solid #2c3e50'}
-        )
-    ], style={"backgroundColor": "#0f1623", "minHeight": "100vh"})
+        # Content Area
+        html.Div(id='page-content', style={"minHeight": "calc(100vh - 350px)"}),
+        
+        # Footer
+        html.Div([
+            dbc.Container([
+                html.Hr(style={"borderColor": "#2c3e50", "opacity": "0.5"}),
+                html.P([
+                    "Sieve Analytics © 2025 | ",
+                    html.A("Documentation", href="https://github.com/giocld/sieve", target="_blank", style={"color": "#2D96C7", "textDecoration": "none"}),
+                    " | ",
+                    html.Span("Built with Dash & Plotly", style={"color": "#adb5bd"})
+                ], className="text-center mt-4 mb-4", style={"color": "#6c757d", "fontSize": "14px"})
+            ], fluid=True)
+        ])
+        
+    ], style={"backgroundColor": "#0f1623", "minHeight": "100vh", "display": "flex", "flexDirection": "column"})

@@ -53,7 +53,17 @@ player_tab_layout = layout.create_player_tab(df)
 team_tab_layout = layout.create_team_tab(df_teams, fig_quadrant, fig_grid)
 
 # Assemble the main application layout
-app.layout = layout.create_main_layout(player_tab_layout, team_tab_layout)
+app.layout = layout.create_main_layout()
+
+@app.callback(
+    Output('page-content', 'children'),
+    Input('view-selector', 'value')
+)
+def display_content(selected_view):
+    """Updates the main page content based on the selected view."""
+    if selected_view == 'team':
+        return team_tab_layout
+    return player_tab_layout
 
 
 # 4.  CALLBACKS

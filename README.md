@@ -1,15 +1,13 @@
-# Sieve - NBA Archetype Salary Analysis
+# Sieve | NBA Analytics
 
 ## Overview
-Sieve is a Python project that analyzes NBA player salaries relative to their on-court impact based on archetype classifications. It combines statistical performance metrics (LEBRON and WAR metrics) with contract data scraped from Basketball Reference to identify value gaps, players who may be overpaid or underpaid compared to their impact.
+Sieve is an analytics dashboard that evaluates NBA player contracts relative to on-court performance. By combining salary data with advanced impact metrics (LEBRON), it identifies market inefficiencies—highlighting players who are significantly underpaid or overpaid.
 
-## Features
-- Scrapes NBA player contract data from Basketball Reference.
-- Integrates with existing player impact data (LEBRON metrics).
-- Merges and processes player salary and impact data.
-- Calculates normalized salary and impact scores.
-- Highlights top underpaid and overpaid players by archetype.
-- Interactive dashboard to explore salary vs impact with visualizations.
-- Exports detailed player salary and impact analysis.
+## Key Features
+- **Value Analysis**: Automatically calculates a "Value Gap" for every player.
+- **Team Efficiency**: Visualizes how well front offices convert payroll into wins.
+- **Interactive Dashboard**: Filter by salary, age, and impact to explore the market.
+- **Data Integration**: Merges contract data from Basketball Reference with advanced performance stats.
 
-check it out here: (https://sievenba-dashboard.onrender.com)
+## Live Demo
+[View Dashboard](https://sievenba-dashboard.onrender.com)

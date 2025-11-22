@@ -2,7 +2,7 @@
 
 /* Slider Track (The filled part) */
 .rc-slider-track {
-    background-color: #ff6b35 !important;
+    background-color: #2D96C7 !important;
 }
 
 /* Slider Rail (The empty background part) */
@@ -13,27 +13,49 @@
 
 /* Slider Handle (The draggable circle) */
 .rc-slider-handle {
-    border: 2px solid #ff6b35 !important;
-    background-color: #0f1623 !important;
+    border: 2px solid #2D96C7 !important;
+    background-color: #2D96C7 !important;
+    /* Solid Blue Fill */
     opacity: 1 !important;
+    width: 16px;
+    height: 16px;
+    margin-top: -6px;
 }
 
 .rc-slider-handle:hover,
 .rc-slider-handle:active {
-    border-color: #ff8c61 !important;
-    box-shadow: 0 0 5px #ff6b35 !important;
+    border-color: #5dbce8 !important;
+    box-shadow: 0 0 8px rgba(45, 150, 199, 0.6) !important;
+}
+
+/* Slider Dots (The marks on the rail) */
+.rc-slider-dot {
+    border: 2px solid #2c3e50 !important;
+    background-color: #1a2332 !important;
+}
+
+.rc-slider-dot-active {
+    border-color: #2D96C7 !important;
+    background-color: #2D96C7 !important;
 }
 
 /* Slider Tooltip */
+.rc-slider-tooltip {
+    transition: opacity 0.3s ease-out;
+}
+
 .rc-slider-tooltip-inner {
     background-color: #1a2332 !important;
     color: #e4e6eb !important;
-    border: 1px solid #ff6b35 !important;
-    box-shadow: none !important;
+    border: 1px solid #2D96C7 !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5) !important;
+    font-size: 12px;
+    padding: 4px 8px;
+    border-radius: 4px;
 }
 
 .rc-slider-tooltip-arrow {
-    border-top-color: #ff6b35 !important;
+    border-top-color: #2D96C7 !important;
 }
 
 /* Scrollbar Styling for Webkit (Chrome/Safari) */
@@ -59,4 +81,64 @@
 .dash-table-container .dash-spreadsheet-container .dash-spreadsheet-inner td img {
     height: 50px;
     width: auto;
+}
+
+/* Hero Header */
+.hero-header {
+    background-color: #1e293b;
+    /* Lighter than body for contrast */
+    background-image:
+        repeating-linear-gradient(45deg,
+            rgba(255, 255, 255, 0.03) 0px,
+            rgba(255, 255, 255, 0.03) 1px,
+            transparent 1px,
+            transparent 10px),
+        repeating-linear-gradient(-45deg,
+            rgba(255, 255, 255, 0.03) 0px,
+            rgba(255, 255, 255, 0.03) 1px,
+            transparent 1px,
+            transparent 10px);
+    border-bottom: 3px solid #ff6b35;
+    padding-top: 4rem;
+    padding-bottom: 3rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+
+/* Card Hover Effect */
+.card {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.4) !important;
+    border-color: #4a5568 !important;
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+    .hero-header {
+        padding-top: 2rem;
+        padding-bottom: 1.5rem;
+    }
+
+    .display-3 {
+        font-size: 2.5rem !important;
+    }
+
+    .container-fluid {
+        padding-left: 10px !important;
+        padding-right: 10px !important;
+    }
+
+    .card-header h5 {
+        font-size: 14px !important;
+    }
+
+    /* Adjust chart margins on mobile if needed */
+    .js-plotly-plot .plotly .main-svg {
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+    }
 }

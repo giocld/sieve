@@ -125,11 +125,11 @@ def create_efficiency_quadrant(df_teams):
 
     # Configure the layout
     fig_quadrant.update_layout(
-        title='<b>Efficiency Quadrant: Wins vs. Payroll</b><br><sub style="color:#adb5bd">Green = Outperforming Budget | Red = Underperforming Budget</sub>',
+        # title='<b>Efficiency Quadrant: Wins vs. Payroll</b><br><sub style="color:#adb5bd">Green = Outperforming Budget | Red = Underperforming Budget</sub>',
         xaxis_title='<b>Total Payroll ($)</b>',
         yaxis_title='<b>Wins</b>',
-        height=600,
-        margin=dict(l=80, r=40, t=80, b=70),
+        height=650,
+        margin=dict(l=80, r=40, t=20, b=70),
         paper_bgcolor='#0f1623', # Deep Navy background
         plot_bgcolor='#1a202c',  # Slightly lighter plot area
         font=dict(size=12),
@@ -252,9 +252,9 @@ def create_team_grid(df_teams):
                 ))
     
     fig_grid.update_layout(
-        title='<b>Team Efficiency Rankings</b><br><sub style="color:#adb5bd">Sorted by Efficiency • Green = Good Value • Red = Overpaying</sub>',
-        height=600,
-        margin=dict(l=80, r=40, t=80, b=70),
+        # title='<b>Team Efficiency Rankings</b><br><sub style="color:#adb5bd">Sorted by Efficiency • Green = Good Value • Red = Overpaying</sub>',
+        height=650,
+        margin=dict(l=80, r=40, t=20, b=70),
         paper_bgcolor='#0f1623',
         plot_bgcolor='#1a202c',
         font=dict(size=12),
@@ -296,7 +296,7 @@ def create_salary_impact_scatter(filtered):
             size=filtered['LEBRON WAR'].clip(lower=1) * 3.5 if 'LEBRON WAR' in filtered.columns else 6,
             # Color markers by Value Gap to highlight efficiency
             color=filtered['value_gap'] if 'value_gap' in filtered.columns else 0,
-            colorscale='RdYlGn',
+            colorscale=[[0, '#ef476f'], [0.5, '#ffd166'], [1, '#06d6a0']],
             colorbar=dict(
                 title=dict(text="<b>Value<br>Gap</b>", font=dict(size=11)),
                 thickness=15,
@@ -311,15 +311,20 @@ def create_salary_impact_scatter(filtered):
         hovertemplate='%{text}<extra></extra>'
     ))
     fig.update_layout(
-        title='<b style="font-size:16px">Salary vs Impact</b><br><sub style="color:#adb5bd">Size = WAR | Color = Value Gap</sub>',
+        # title='<b style="font-size:16px">Salary vs Impact</b><br><sub style="color:#adb5bd">Size = WAR | Color = Value Gap</sub>',
         xaxis_title='<b>LEBRON Total</b>',
         yaxis_title='<b>Salary ($)</b>',
-        height=500,
+        height=550,
         template='plotly_dark',
         hovermode='closest',
         paper_bgcolor='#0f1623',
         plot_bgcolor='#1a202c',
-        margin=dict(l=70, r=100, t=80, b=60)
+        margin=dict(l=70, r=100, t=20, b=60),
+        hoverlabel=dict(
+            bgcolor="#1a2332",
+            bordercolor="#ff6b35",
+            font=dict(color="#e4e6eb")
+        )
     )
     return fig
 
@@ -345,23 +350,28 @@ def create_underpaid_bar(filtered):
                 y=top_under['player_name'],
                 orientation='h',
                 marker=dict(
-                    color='#2ca02c',  # Vibrant green
+                    color='#06d6a0',  # Electric Green
                     opacity=0.9,
-                    line=dict(color='#1e7b1e', width=1)
+                    line=dict(color='#04a077', width=1)
                 ),
                 text=[f"{v:.1f}" for v in top_under['value_gap']],
                 textposition='outside',
                 textfont=dict(size=11, color='white')
             ))
             fig.update_layout(
-                title='<b style="font-size:16px">Top 20 Underpaid Players</b>',
+                # title='<b style="font-size:16px">Top 20 Underpaid Players</b>',
                 xaxis_title='<b>Value Gap</b>',
-                height=500,
+                height=550,
                 template='plotly_dark',
-                margin=dict(l=200, r=40, t=70, b=60),
+                margin=dict(l=200, r=40, t=20, b=60),
                 showlegend=False,
                 paper_bgcolor='#0f1623',
-                plot_bgcolor='#1a202c'
+                plot_bgcolor='#1a202c',
+                hoverlabel=dict(
+                    bgcolor="#1a2332",
+                    bordercolor="#ff6b35",
+                    font=dict(color="#e4e6eb")
+                )
             )
             fig.update_xaxes(fixedrange=True)
             fig.update_yaxes(fixedrange=True)
@@ -396,7 +406,7 @@ def create_age_impact_scatter(filtered):
                 # Size by Salary to show if expensive players are performing
                 size=filtered['current_year_salary'].fillna(0) / 2_000_000 if 'current_year_salary' in filtered.columns else 10,
                 color=filtered['value_gap'] if 'value_gap' in filtered.columns else 0,
-                colorscale='RdYlGn',
+                colorscale=[[0, '#ef476f'], [0.5, '#ffd166'], [1, '#06d6a0']],
                 line=dict(width=1.5, color='rgba(255,255,255,0.4)'),
                 opacity=0.85,
                 sizemin=4
@@ -411,15 +421,20 @@ def create_age_impact_scatter(filtered):
             hovertemplate='%{text}<extra></extra>'
         ))
     fig.update_layout(
-        title='<b style="font-size:16px">Age vs Impact Curve</b><br><sub style="color:#adb5bd">Size = Salary | Color = Value Gap</sub>',
+        # title='<b style="font-size:16px">Age vs Impact Curve</b><br><sub style="color:#adb5bd">Size = Salary | Color = Value Gap</sub>',
         xaxis_title='<b>Player Age</b>',
         yaxis_title='<b>Value Gap Impact</b>',
-        height=500,
+        height=550,
         template='plotly_dark',
         hovermode='closest',
         paper_bgcolor='#0f1623',
         plot_bgcolor='#1a202c',
-        margin=dict(l=70, r=40, t=80, b=60)
+        margin=dict(l=70, r=40, t=20, b=60),
+        hoverlabel=dict(
+            bgcolor="#1a2332",
+            bordercolor="#ff6b35",
+            font=dict(color="#e4e6eb")
+        )
     )
     # Add reference band for typical "Peak Years" (26-30)
     fig.add_vrect(x0=26, x1=30, fillcolor="rgba(255,107,53,0.1)", 
@@ -447,23 +462,28 @@ def create_overpaid_bar(filtered):
                 y=top_over['player_name'],
                 orientation='h',
                 marker=dict(
-                    color='#d62728',  # Vibrant red
+                    color='#ef476f',  # Hot Pink
                     opacity=0.9,
-                    line=dict(color='#a01d1d', width=1)
+                    line=dict(color='#c92a4e', width=1)
                 ),
                 text=[f"{v:.1f}" for v in top_over['value_gap']],
                 textposition='outside',
                 textfont=dict(size=11, color='white')
             ))
             fig.update_layout(
-                title='<b style="font-size:16px">Top 20 Overpaid Players</b>',
+                # title='<b style="font-size:16px">Top 20 Overpaid Players</b>',
                 xaxis_title='<b>Value Gap</b>',
-                height=500,
+                height=550,
                 template='plotly_dark',
-                margin=dict(l=200, r=40, t=70, b=60),
+                margin=dict(l=200, r=40, t=20, b=60),
                 showlegend=False,
                 paper_bgcolor='#0f1623',
-                plot_bgcolor='#1a202c'
+                plot_bgcolor='#1a202c',
+                hoverlabel=dict(
+                    bgcolor="#1a2332",
+                    bordercolor="#ff6b35",
+                    font=dict(color="#e4e6eb")
+                )
             )
             fig.update_xaxes(fixedrange=True)
             fig.update_yaxes(fixedrange=True)
@@ -494,12 +514,12 @@ def create_player_table(filtered, table_type='underpaid'):
         data = filtered[filtered['value_gap'] > 0]
         if len(data) == 0: return html.P("No underpaid players in filter")
         top_data = data.nlargest(20, 'value_gap')[['player_name', 'current_year_salary', 'LEBRON', 'value_gap']]
-        text_class = "text-success fw-bold"
+        text_color = "#06d6a0"
     elif table_type == 'overpaid':
         data = filtered[filtered['value_gap'] < 0]
         if len(data) == 0: return html.P("No overpaid players in filter")
         top_data = data.nsmallest(20, 'value_gap')[['player_name', 'current_year_salary', 'LEBRON', 'value_gap']]
-        text_class = "text-danger fw-bold"
+        text_color = "#ef476f"
     else:
         return html.P("Invalid table type")
 
@@ -510,15 +530,15 @@ def create_player_table(filtered, table_type='underpaid'):
             html.Td(player_name, style={"fontWeight": "500", "width": "45%"}),
             html.Td(f"${row['current_year_salary']:,.0f}", style={"width": "30%"}),
             html.Td(f"{row['LEBRON']:.2f}", style={"width": "15%"}),
-            html.Td(f"{row['value_gap']:.1f}", className=text_class, style={"width": "10%"})
+            html.Td(f"{row['value_gap']:.1f}", style={"width": "10%", "color": text_color, "fontWeight": "bold"})
         ]))
     
     return dbc.Table([
         html.Thead(html.Tr([
             html.Th("Player"), html.Th("Salary"), html.Th("LEBRON"), html.Th("Gap")
-        ], style={"fontSize": "12px"})),
+        ], style={"backgroundColor": "#151b26", "color": "#e4e6eb", "borderBottom": "2px solid #ff6b35"})),
         html.Tbody(rows, style={"fontSize": "12px"})
-    ], striped=True, hover=True, bordered=True, size='sm')
+    ], striped=True, hover=True, bordered=True, size='sm', style={"color": "#e4e6eb"})
 
 
 def create_all_players_table(df):
@@ -618,16 +638,16 @@ def create_team_radar_chart(radar_data_team1, radar_data_team2, team1_name, team
         marker=dict(size=8, color='#ff6b35')
     ))
     
-    # Add Team 2 (vibrant purple)
+    # Add Team 2 (vibrant blue)
     fig.add_trace(go.Scatterpolar(
         r=values_team2,
         theta=categories,
         fill='toself',
         name=team2_name,
-        line=dict(color='#a855f7', width=3),
-        fillcolor='rgba(168, 85, 247, 0.25)',
+        line=dict(color='#2D96C7', width=3),
+        fillcolor='rgba(45, 150, 199, 0.25)',
         hovertemplate='<b>%{theta}</b><br>' + team2_name + ': %{r:.1f}th percentile<extra></extra>',
-        marker=dict(size=8, color='#a855f7')
+        marker=dict(size=8, color='#2D96C7')
     ))
     
     # Add reference circles for context (25th, 50th, 75th percentiles)
@@ -680,20 +700,20 @@ def create_team_radar_chart(radar_data_team1, radar_data_team2, team1_name, team
             ),
             bgcolor='#151b26'
         ),
-        title=dict(
-            text=f'<b style="color:#e4e6eb">Team Comparison Radar</b><br>' +
-                 f'<sub style="color:#ff6b35">{team1_name}</sub> vs <sub style="color:#a855f7">{team2_name}</sub><br>' +
-                 f'<sub style="color:#6c757d; font-size:11px">Percentile Rankings • League-Wide Comparison</sub>',
-            y=0.97,
-            x=0.5,
-            xanchor='center',
-            font=dict(size=16)
-        ),
-        height=550,
+        # title=dict(
+        #     text=f'<b style="color:#e4e6eb">Team Comparison Radar</b><br>' +
+        #          f'<sub style="color:#ff6b35">{team1_name}</sub> vs <sub style="color:#2D96C7">{team2_name}</sub><br>' +
+        #          f'<sub style="color:#6c757d; font-size:11px">Percentile Rankings • League-Wide Comparison</sub>',
+        #     y=0.97,
+        #     x=0.5,
+        #     xanchor='center',
+        #     font=dict(size=16)
+        # ),
+        height=600,
         template='plotly_dark',
         paper_bgcolor='#0f1623',
         plot_bgcolor='#151b26',
-        margin=dict(l=80, r=80, t=120, b=60),
+        margin=dict(l=80, r=80, t=30, b=60),
         showlegend=True,
         legend=dict(
             orientation="h",
