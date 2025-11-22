@@ -12,23 +12,4 @@ Sieve is a Python project that analyzes NBA player salaries relative to their on
 - Interactive dashboard to explore salary vs impact with visualizations.
 - Exports detailed player salary and impact analysis.
 
-## Project Structure
-- `scraper.py`: Script to scrape player contract data from Basketball Reference using Selenium and BeautifulSoup.
-- `app.py`: Main analysis pipeline that loads data, merges statistics and contracts, runs the salary impact analysis, and exports results.
-- `dashboard.py`: Dash-based interactive web dashboard for visualizing the analysis with sliders, charts, and tables.
-- `LEBRON.csv`: Player impact data with LEBRON/WAR metrics and archetype classifications.
-- `basketball_reference_contracts.csv`: Scraped NBA contract data including salary and contract length.
-- `sieve_analysis.csv`: Output CSV with merged and analyzed salary impact data.
-- `venv/`: Python virtual environment with required dependencies (not tracked in Git).
-
-## Installation
-1. Clone the repository.
-
-2. Create a Python virtual environment with these dependencies:
-     pip install pandas numpy selenium beautifulsoup4 dash plotly dash-bootstrap-components
-3. Run the `dashboard.py` file
-
-![Dashboard screenshot](/screenshots/screenshot1.jpg)
-
-
-![Dashboard screenshot](/screenshots/screenshot2.jpg)
+check it out here: https://dashboard.render.com/web/srv-d4fjonp5pdvs73ai1ogg
