@@ -1,0 +1,62 @@
+/* Custom CSS for Sieve Dashboard */
+
+/* Slider Track (The filled part) */
+.rc-slider-track {
+    background-color: #ff6b35 !important;
+}
+
+/* Slider Rail (The empty background part) */
+.rc-slider-rail {
+    background-color: #1a2332 !important;
+    border: 1px solid #2c3e50;
+}
+
+/* Slider Handle (The draggable circle) */
+.rc-slider-handle {
+    border: 2px solid #ff6b35 !important;
+    background-color: #0f1623 !important;
+    opacity: 1 !important;
+}
+
+.rc-slider-handle:hover,
+.rc-slider-handle:active {
+    border-color: #ff8c61 !important;
+    box-shadow: 0 0 5px #ff6b35 !important;
+}
+
+/* Slider Tooltip */
+.rc-slider-tooltip-inner {
+    background-color: #1a2332 !important;
+    color: #e4e6eb !important;
+    border: 1px solid #ff6b35 !important;
+    box-shadow: none !important;
+}
+
+.rc-slider-tooltip-arrow {
+    border-top-color: #ff6b35 !important;
+}
+
+/* Scrollbar Styling for Webkit (Chrome/Safari) */
+::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+::-webkit-scrollbar-track {
+    background: #0f1623;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #2c3e50;
+    border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #ff6b35;
+}
+
+/* Table Images */
+.dash-table-container .dash-spreadsheet-container .dash-spreadsheet-inner td img {
+    height: 50px;
+    width: auto;
+}
