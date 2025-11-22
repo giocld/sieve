@@ -12,4 +12,4 @@ Sieve is a Python project that analyzes NBA player salaries relative to their on
 - Interactive dashboard to explore salary vs impact with visualizations.
 - Exports detailed player salary and impact analysis.
 
-check it out here: https://dashboard.render.com/web/srv-d4fjonp5pdvs73ai1ogg
+check it out here: (https://sievenba-dashboard.onrender.com)
