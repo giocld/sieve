@@ -8,6 +8,16 @@ import dash_bootstrap_components as dbc
 from dash import dcc, html, dash_table
 import pandas as pd
 import numpy as np
+import plotly.graph_objects as go
+from data_processing import TEAM_ABBR_MAP
+
+# Create reverse mapping for display
+ABBR_TO_NAME = {v: k for k, v in TEAM_ABBR_MAP.items()}
+# Add missing teams if any
+ABBR_TO_NAME.update({
+    'PHX': 'Phoenix Suns', 'BKN': 'Brooklyn Nets', 'CHA': 'Charlotte Hornets', 
+    'NOP': 'New Orleans Pelicans', 'UTA': 'Utah Jazz'
+})
 
 def create_player_tab(df):
     """
@@ -196,6 +206,30 @@ def create_team_tab(df_teams, fig_quadrant, fig_grid):
                     dbc.CardBody([dcc.Graph(figure=fig_grid)], style={"padding": "10px"})
                 ], style={"backgroundColor": "#1a2332", "border": "1px solid #2c3e50"})
             ], lg=6, className="mb-4")
+        ]),
+        
+        # Radar Chart Section
+        dbc.Row([
+            dbc.Col([
+                dbc.Card([
+                    dbc.CardHeader([
+                        dbc.Row([
+                            dbc.Col(html.H5("Missing Piece Radar", className="mb-0", 
+                                          style={"fontWeight": "600", "fontSize": "16px", "color": "#e4e6eb"}), width=8),
+                            dbc.Col(dbc.Select(
+                                id='team-radar-dropdown',
+                                options=[{'label': ABBR_TO_NAME.get(t, t), 'value': t} for t in sorted(df_teams['Abbrev'].unique())] if not df_teams.empty else [],
+                                value='BOS' if not df_teams.empty and 'BOS' in df_teams['Abbrev'].values else (df_teams['Abbrev'].iloc[0] if not df_teams.empty else None),
+                                class_name="bg-dark text-white border-secondary",
+                                style={'fontSize': '14px'}
+                            ), width=4)
+                        ], align="center")
+                    ], style={"backgroundColor": "#151b26", "borderBottom": "2px solid #ff6b35"}),
+                    dbc.CardBody([
+                        dcc.Graph(id='chart-team-radar')
+                    ], style={"padding": "15px"})
+                ], style={"backgroundColor": "#1a2332", "border": "1px solid #2c3e50"})
+            ], lg=12, className="mb-4")
         ]),
         
         # Table Row: Comprehensive Team Stats

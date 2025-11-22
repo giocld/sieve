@@ -44,6 +44,17 @@ def create_efficiency_quadrant(df_teams):
     avg_payroll = df_teams['Total_Payroll'].mean()
     avg_wins = df_teams['WINS'].mean()
     
+    # Calculate tighter bounds to "zoom in" on the relevant data area
+    x_min, x_max = df_teams['Total_Payroll'].min(), df_teams['Total_Payroll'].max()
+    y_min, y_max = df_teams['WINS'].min(), df_teams['WINS'].max()
+    x_padding = (x_max - x_min) * 0.15  # Increased padding slightly
+    y_padding = (y_max - y_min) * 0.15
+    
+    view_x_min = x_min - x_padding
+    view_x_max = x_max + x_padding
+    view_y_min = y_min - y_padding
+    view_y_max = y_max + y_padding
+    
     # Initialize the figure
     fig_quadrant = go.Figure()
 
@@ -56,9 +67,9 @@ def create_efficiency_quadrant(df_teams):
     mean_wins = df_teams['WINS'].mean()
     std_wins = df_teams['WINS'].std()
     
-    # Define the grid range with some padding around the data points
-    x_range = np.linspace(df_teams['Total_Payroll'].min() * 0.85, df_teams['Total_Payroll'].max() * 1.15, 100)
-    y_range = np.linspace(df_teams['WINS'].min() * 0.85, df_teams['WINS'].max() * 1.15, 100)
+    # Define the grid range to slightly EXCEED the view range to ensure full coverage
+    x_range = np.linspace(view_x_min * 0.95, view_x_max * 1.05, 100)
+    y_range = np.linspace(view_y_min * 0.95, view_y_max * 1.05, 100)
     
     X, Y = np.meshgrid(x_range, y_range)
     
@@ -113,12 +124,6 @@ def create_efficiency_quadrant(df_teams):
                     layer="above"
                 ))
 
-    # Calculate tighter bounds to "zoom in" on the relevant data area
-    x_min, x_max = df_teams['Total_Payroll'].min(), df_teams['Total_Payroll'].max()
-    y_min, y_max = df_teams['WINS'].min(), df_teams['WINS'].max()
-    x_padding = (x_max - x_min) * 0.1
-    y_padding = (y_max - y_min) * 0.1
-
     # Configure the layout
     fig_quadrant.update_layout(
         title='<b>Efficiency Quadrant: Wins vs. Payroll</b><br><sub style="color:#adb5bd">Green = Outperforming Budget | Red = Underperforming Budget</sub>',
@@ -130,8 +135,8 @@ def create_efficiency_quadrant(df_teams):
         plot_bgcolor='#1a202c',  # Slightly lighter plot area
         font=dict(size=12),
         images=logo_images,
-        xaxis=dict(showgrid=True, gridcolor='#2c3e50', zeroline=False, range=[x_min - x_padding, x_max + x_padding]),
-        yaxis=dict(showgrid=True, gridcolor='#2c3e50', zeroline=False, range=[y_min - y_padding, y_max + y_padding]),
+        xaxis=dict(showgrid=True, gridcolor='#2c3e50', zeroline=False),
+        yaxis=dict(showgrid=True, gridcolor='#2c3e50', zeroline=False),
         hoverlabel=dict(
             bgcolor="#1a2332",
             bordercolor="#ff6b35",
@@ -564,3 +569,68 @@ def create_all_players_table(df):
         ], style={"backgroundColor": "#151b26", "color": "#e4e6eb", "borderBottom": "2px solid #ff6b35"})),
         html.Tbody(rows)
     ], hover=True, bordered=False, size='sm', style={"color": "#e4e6eb"})
+
+
+def create_team_radar_chart(radar_data, team_name):
+    """
+    Creates a Radar Chart (Spider Web) showing team strengths/weaknesses.
+    
+    Args:
+        radar_data (dict): Dictionary of metrics and percentiles (0-100).
+        team_name (str): Name of the team.
+        
+    Returns:
+        go.Figure: Plotly radar chart.
+    """
+    if not radar_data:
+        fig = go.Figure().add_annotation(text="No Advanced Data Available")
+        fig.update_layout(height=400, template='plotly_dark', paper_bgcolor='#0f1623')
+        return fig
+        
+    categories = list(radar_data.keys())
+    values = list(radar_data.values())
+    
+    # Close the loop
+    categories.append(categories[0])
+    values.append(values[0])
+    
+    fig = go.Figure()
+    
+    fig.add_trace(go.Scatterpolar(
+        r=values,
+        theta=categories,
+        fill='toself',
+        name=team_name,
+        line=dict(color='#ff6b35', width=2),
+        fillcolor='rgba(255, 107, 53, 0.3)',
+        hovertemplate='<b>%{theta}</b>: %{r:.1f}th Percentile<extra></extra>'
+    ))
+    
+    fig.update_layout(
+        polar=dict(
+            radialaxis=dict(
+                visible=True,
+                range=[0, 100],
+                showticklabels=False,
+                gridcolor='#2c3e50',
+                linecolor='#2c3e50'
+            ),
+            angularaxis=dict(
+                tickfont=dict(size=12, color='#e4e6eb'),
+                gridcolor='#2c3e50',
+                linecolor='#2c3e50'
+            ),
+            bgcolor='#1a202c'
+        ),
+        title=dict(
+            text=f'<b>{team_name} Profile</b><br><sub style="color:#adb5bd">Percentile Rank (League Wide)</sub>',
+            y=0.95
+        ),
+        height=450,
+        template='plotly_dark',
+        paper_bgcolor='#0f1623',
+        margin=dict(l=40, r=40, t=80, b=40),
+        showlegend=False
+    )
+    
+    return fig

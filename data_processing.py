@@ -294,3 +294,96 @@ def add_team_logos(df_teams):
     df_teams['Logo_URL'] = df_teams['TeamID'].apply(lambda x: get_team_logo_url(int(x)) if pd.notna(x) else None)
     
     return df_teams
+
+
+def fetch_nba_advanced_stats(cache_file='nba_advanced_stats_cache.csv'):
+    """
+    Fetches Advanced Team Stats from NBA API and caches them.
+    
+    Returns:
+        pd.DataFrame: DataFrame with advanced stats.
+    """
+    if os.path.exists(cache_file):
+        # Check if cache is recent (optional, skipping for now)
+        return pd.read_csv(cache_file)
+        
+    try:
+        from nba_api.stats.endpoints import leaguedashteamstats
+        stats = leaguedashteamstats.LeagueDashTeamStats(measure_type_detailed_defense='Advanced')
+        df = stats.get_data_frames()[0]
+        df.to_csv(cache_file, index=False)
+        return df
+    except Exception as e:
+        print(f"Error fetching NBA API data: {e}")
+        return pd.DataFrame()
+
+
+def get_team_radar_data(team_abbr):
+    """
+    Prepares data for the 'Missing Piece' Radar Chart.
+    
+    Calculates percentiles for key metrics:
+    - Offense (OFF_RATING)
+    - Defense (DEF_RATING) - Inverted
+    - Rebounding (REB_PCT)
+    - Playmaking (AST_PCT)
+    - Shooting (TS_PCT)
+    
+    Args:
+        team_abbr (str): Team abbreviation (e.g., 'BOS').
+        
+    Returns:
+        dict: Dictionary with metrics and percentiles for the team.
+    """
+    df = fetch_nba_advanced_stats()
+    if df.empty:
+        return None
+        
+    # Map abbreviation to Team Name if necessary, or use ID
+    # The API returns TEAM_NAME. We need to match our 'team_abbr'.
+    # We can use our TEAM_ABBR_MAP inverted or just fuzzy match.
+    
+    # Invert the map to get Full Name from Abbr
+    abbr_to_name = {v: k for k, v in TEAM_ABBR_MAP.items()}
+    
+    # Handle edge cases
+    abbr_to_name['PHX'] = 'Phoenix Suns'
+    abbr_to_name['BKN'] = 'Brooklyn Nets'
+    abbr_to_name['CHA'] = 'Charlotte Hornets'
+    abbr_to_name['NOP'] = 'New Orleans Pelicans'
+    abbr_to_name['UTA'] = 'Utah Jazz'
+    
+    full_name = abbr_to_name.get(team_abbr)
+    
+    if not full_name:
+        return None
+        
+    # Find the team row
+    team_row = df[df['TEAM_NAME'] == full_name]
+    if team_row.empty:
+        return None
+        
+    # Calculate Percentiles for the whole league
+    metrics = {
+        'Offense': 'OFF_RATING',
+        'Defense': 'DEF_RATING',
+        'Rebounding': 'REB_PCT',
+        'Playmaking': 'AST_PCT',
+        'Shooting': 'TS_PCT'
+    }
+    
+    radar_data = {}
+    
+    for label, col in metrics.items():
+        # Calculate percentile rank (0-100)
+        # For Defense, Lower is Better, so we invert the rank
+        if label == 'Defense':
+            rank = df[col].rank(ascending=False, pct=True) * 100
+        else:
+            rank = df[col].rank(ascending=True, pct=True) * 100
+            
+        # Get the specific team's percentile
+        team_val = rank[df['TEAM_NAME'] == full_name].values[0]
+        radar_data[label] = team_val
+        
+    return radar_data
