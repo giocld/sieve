@@ -76,6 +76,7 @@ class SieveApp:
 
     def analyze_players(self):
         """
+        FOR TESTING PURPOSES ONLY
         Performs analysis on player value and prints top lists to the console.
         
         It identifies:

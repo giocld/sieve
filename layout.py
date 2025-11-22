@@ -48,8 +48,8 @@ def create_player_tab(df):
                             id='min-salary',
                             min=0,
                             max=max_salary_m,
-                            value=0,
-                            marks={i: f"${i}" for i in range(0, max_salary_m + 1, 10)},
+                            value=5,
+                            marks={i: f"${i}" for i in range(0, max_salary_m + 1, 5)},
                             tooltip={"placement": "bottom", "always_visible": True}
                         )
                     ], md=6),
@@ -61,7 +61,7 @@ def create_player_tab(df):
                             min=0,
                             max=max_salary_m,
                             value=max_salary_m,
-                            marks={i: f"${i}" for i in range(0, max_salary_m + 1, 10)},
+                            marks={i: f"${i}" for i in range(0, max_salary_m + 1, 5)},
                             tooltip={"placement": "bottom", "always_visible": True}
                         )
                     ], md=6)

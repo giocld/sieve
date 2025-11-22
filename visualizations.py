@@ -328,7 +328,7 @@ def create_underpaid_bar(filtered):
         underpaid_only = filtered[filtered['value_gap'] > 0]
         if len(underpaid_only) > 0:
             # Get top 10
-            top_under = underpaid_only.nlargest(10, 'value_gap').sort_values('value_gap', ascending=True)
+            top_under = underpaid_only.nlargest(20, 'value_gap').sort_values('value_gap', ascending=True)
             fig = go.Figure(go.Bar(
                 x=top_under['value_gap'],
                 y=top_under['player_name'],
@@ -343,7 +343,7 @@ def create_underpaid_bar(filtered):
                 textfont=dict(size=11, color='white')
             ))
             fig.update_layout(
-                title='<b style="font-size:16px">Top 10 Underpaid Players</b>',
+                title='<b style="font-size:16px">Top 20 Underpaid Players</b>',
                 xaxis_title='<b>Value Gap</b>',
                 height=500,
                 template='plotly_dark',
@@ -430,7 +430,7 @@ def create_overpaid_bar(filtered):
     if 'value_gap' in filtered.columns and len(filtered) > 0:
         overpaid_only = filtered[filtered['value_gap'] < 0]
         if len(overpaid_only) > 0:
-            top_over = overpaid_only.nsmallest(10, 'value_gap').sort_values('value_gap', ascending=False)
+            top_over = overpaid_only.nsmallest(20, 'value_gap').sort_values('value_gap', ascending=False)
             fig = go.Figure(go.Bar(
                 x=top_over['value_gap'],
                 y=top_over['player_name'],
@@ -445,7 +445,7 @@ def create_overpaid_bar(filtered):
                 textfont=dict(size=11, color='white')
             ))
             fig.update_layout(
-                title='<b style="font-size:16px">Top 10 Overpaid Players</b>',
+                title='<b style="font-size:16px">Top 20 Overpaid Players</b>',
                 xaxis_title='<b>Value Gap</b>',
                 height=500,
                 template='plotly_dark',
@@ -485,12 +485,12 @@ def create_player_table(filtered, table_type='underpaid'):
     if table_type == 'underpaid':
         data = filtered[filtered['value_gap'] > 0]
         if len(data) == 0: return html.P("No underpaid players in filter")
-        top_data = data.nlargest(10, 'value_gap')[['player_name', 'current_year_salary', 'LEBRON', 'value_gap']]
+        top_data = data.nlargest(20, 'value_gap')[['player_name', 'current_year_salary', 'LEBRON', 'value_gap']]
         text_class = "text-success fw-bold"
     elif table_type == 'overpaid':
         data = filtered[filtered['value_gap'] < 0]
         if len(data) == 0: return html.P("No overpaid players in filter")
-        top_data = data.nsmallest(10, 'value_gap')[['player_name', 'current_year_salary', 'LEBRON', 'value_gap']]
+        top_data = data.nsmallest(20, 'value_gap')[['player_name', 'current_year_salary', 'LEBRON', 'value_gap']]
         text_class = "text-danger fw-bold"
     else:
         return html.P("Invalid table type")

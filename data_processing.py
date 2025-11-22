@@ -134,7 +134,7 @@ def calculate_player_value_metrics(df):
             df['impact_norm'] = 100 * (df['LEBRON'] - lebron_min) / (lebron_max - lebron_min)
             
             # Calculate the Gap
-            df['value_gap'] = df['impact_norm'] - df['salary_norm']
+            df['value_gap'] = df['impact_norm']*1.4 - df['salary_norm']*0.9 - 10
         else:
             df['value_gap'] = 0
     else:
