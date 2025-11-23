@@ -9,7 +9,7 @@ Check out the Code Documentation here: [Link to Sieve Code Documentation](./CODE
 - **Interactive Dashboard**: Filter by salary, age, and impact to explore the market.
 - **Data Integration**: Merges contract data from Basketball Reference with advanced performance stats.
 
-Check out the Statistical Data used: [Link to Sieve Code Documentation](./STATISTICAL_DATA.md)
+Check out the Statistical Data used: [Link to Sieve Code Documentation](./STATISTICS_EXPLAINED.md)
 
 ## Live Demo
 [View Dashboard](https://sievenba-dashboard.onrender.com)
