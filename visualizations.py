@@ -498,14 +498,14 @@ def create_overpaid_bar(filtered):
 # TABLES
 def create_player_table(filtered, table_type='underpaid'):
     """
-    Creates a Dash Bootstrap Table for displaying player lists.
+    Creates a Dash DataTable for displaying player lists.
     
     Args:
         filtered (pd.DataFrame): Filtered DataFrame of players.
         table_type (str): 'underpaid' or 'overpaid'. Determines sorting and coloring.
 
     Returns:
-        dbc.Table: A styled HTML table component.
+        dash_table.DataTable: A styled table component.
     """
     if 'value_gap' not in filtered.columns or len(filtered) == 0:
         return html.P("No data available")
@@ -513,85 +513,198 @@ def create_player_table(filtered, table_type='underpaid'):
     if table_type == 'underpaid':
         data = filtered[filtered['value_gap'] > 0]
         if len(data) == 0: return html.P("No underpaid players in filter")
-        top_data = data.nlargest(20, 'value_gap')[['player_name', 'current_year_salary', 'LEBRON', 'value_gap']]
+        top_data = data.nlargest(20, 'value_gap')[['player_name', 'current_year_salary', 'LEBRON', 'value_gap']].copy()
         text_color = "#06d6a0"
     elif table_type == 'overpaid':
         data = filtered[filtered['value_gap'] < 0]
         if len(data) == 0: return html.P("No overpaid players in filter")
-        top_data = data.nsmallest(20, 'value_gap')[['player_name', 'current_year_salary', 'LEBRON', 'value_gap']]
+        top_data = data.nsmallest(20, 'value_gap')[['player_name', 'current_year_salary', 'LEBRON', 'value_gap']].copy()
         text_color = "#ef476f"
     else:
         return html.P("Invalid table type")
 
-    rows = []
-    for _, row in top_data.iterrows():
-        player_name = str(row['player_name']).strip() if pd.notna(row['player_name']) else 'Unknown'
-        rows.append(html.Tr([
-            html.Td(player_name, style={"fontWeight": "500", "width": "45%"}),
-            html.Td(f"${row['current_year_salary']:,.0f}", style={"width": "30%"}),
-            html.Td(f"{row['LEBRON']:.2f}", style={"width": "15%"}),
-            html.Td(f"{row['value_gap']:.1f}", style={"width": "10%", "color": text_color, "fontWeight": "bold"})
-        ]))
+    # Clean up player names
+    top_data['player_name'] = top_data['player_name'].apply(
+        lambda x: str(x).strip() if pd.notna(x) else 'Unknown'
+    )
     
-    return dbc.Table([
-        html.Thead(html.Tr([
-            html.Th("Player"), html.Th("Salary"), html.Th("LEBRON"), html.Th("Gap")
-        ], style={"backgroundColor": "#151b26", "color": "#e4e6eb", "borderBottom": "2px solid #ff6b35"})),
-        html.Tbody(rows, style={"fontSize": "12px"})
-    ], striped=True, hover=True, bordered=True, size='sm', style={"color": "#e4e6eb"})
+    return dash_table.DataTable(
+        data=top_data.to_dict('records'),
+        columns=[
+            {'name': 'Player', 'id': 'player_name', 'type': 'text'},
+            {'name': 'Salary', 'id': 'current_year_salary', 'type': 'numeric', 
+             'format': {'specifier': '$,.0f'}},
+            {'name': 'LEBRON', 'id': 'LEBRON', 'type': 'numeric', 
+             'format': {'specifier': '.2f'}},
+            {'name': 'Gap', 'id': 'value_gap', 'type': 'numeric', 
+             'format': {'specifier': '.1f'}}
+        ],
+        style_table={'overflowX': 'auto'},
+        style_cell={
+            'backgroundColor': '#1a2332',
+            'color': '#e4e6eb',
+            'textAlign': 'left',
+            'padding': '6px 12px',
+            'fontSize': '12px',
+            'border': 'none',
+            'borderBottom': '1px solid #2c3e50'
+        },
+        style_header={
+            'backgroundColor': '#151b26',
+            'fontWeight': 'bold',
+            'textAlign': 'left',
+            'color': '#e4e6eb',
+            'borderBottom': '2px solid #ff6b35',
+            'borderTop': 'none',
+            'borderLeft': 'none',
+            'borderRight': 'none',
+            'fontSize': '12px',
+            'padding': '6px 12px'
+        },
+        style_data_conditional=[
+            # Player name styling
+            {
+                'if': {'column_id': 'player_name'},
+                'fontWeight': '500'
+            },
+            # Value gap color
+            {
+                'if': {'column_id': 'value_gap'},
+                'color': text_color,
+                'fontWeight': 'bold'
+            }
+        ],
+        page_action='none'
+    )
 
 
 def create_all_players_table(df):
     """
-    Creates the comprehensive 'All Players' table.
+    Creates the comprehensive 'All Players' table with sorting capabilities.
     
-    This table lists every player in the dataset, sorted by Value Gap.
+    This table lists every player in the dataset, initially sorted by Value Gap.
+    Users can click column headers to sort by any column.
     It uses color-coded text to highlight extreme values.
 
     Args:
         df (pd.DataFrame): The full player DataFrame.
 
     Returns:
-        dbc.Table: A styled HTML table component.
+        dash_table.DataTable: A sortable styled table component.
     """
     if 'value_gap' not in df.columns:
         return html.P("No data available")
         
+    # Prepare the data
     all_players_data = df.sort_values('value_gap', ascending=False)[
-        ['player_name', 'current_year_salary', 'LEBRON', 'value_gap', 'archetype']
-    ]
-    rows = []
-    for _, row in all_players_data.iterrows():
-        player_name = str(row['player_name']).strip() if pd.notna(row['player_name']) else 'Unknown'
-        archetype = str(row['archetype']).strip() if pd.notna(row['archetype']) else 'Unknown'
-        gap_value = row['value_gap']
-        
-        # Multi-tier coloring matching the theme
-        if gap_value > 20:
-            gap_color = '#06d6a0'  # Electric Green (Elite Value)
-        elif gap_value > 5:
-            gap_color = '#4cd9b0'  # Good Value
-        elif gap_value < -20:
-            gap_color = '#ef476f'  # Hot Pink (Terrible Value)
-        elif gap_value < -5:
-            gap_color = '#ff8fa3'  # Bad Value
-        else:
-            gap_color = '#ffd166'  # Warm Yellow (Neutral)
-            
-        rows.append(html.Tr([
-            html.Td(player_name, style={"fontWeight": "500"}),
-            html.Td(archetype, style={"fontSize": "12px", "color": "#adb5bd"}),
-            html.Td(f"${row['current_year_salary']:,.0f}"),
-            html.Td(f"{row['LEBRON']:.2f}"),
-            html.Td(f"{gap_value:.1f}", style={"color": gap_color, "fontWeight": "bold"})
-        ], style={"backgroundColor": "#1a2332", "borderBottom": "1px solid #2c3e50"}))
+        ['player_name', 'archetype', 'current_year_salary', 'LEBRON', 'value_gap']
+    ].copy()
     
-    return dbc.Table([
-        html.Thead(html.Tr([
-            html.Th("Player Name"), html.Th("Archetype"), html.Th("Salary"), html.Th("LEBRON"), html.Th("Value Gap")
-        ], style={"backgroundColor": "#151b26", "color": "#e4e6eb", "borderBottom": "2px solid #ff6b35"})),
-        html.Tbody(rows)
-    ], hover=True, bordered=False, size='sm', style={"color": "#e4e6eb"})
+    # Clean up player names and archetypes
+    all_players_data['player_name'] = all_players_data['player_name'].apply(
+        lambda x: str(x).strip() if pd.notna(x) else 'Unknown'
+    )
+    all_players_data['archetype'] = all_players_data['archetype'].apply(
+        lambda x: str(x).strip() if pd.notna(x) else 'Unknown'
+    )
+    
+    # Create style conditions based on actual values (not row indices)
+    # This ensures colors stay correct even when table is sorted differently
+    style_conditions = [
+        # Value Gap color coding based on actual values
+        {
+            'if': {
+                'filter_query': '{value_gap} > 20',
+                'column_id': 'value_gap'
+            },
+            'color': '#06d6a0',  # Electric Green (Elite Value)
+            'fontWeight': 'bold'
+        },
+        {
+            'if': {
+                'filter_query': '{value_gap} > 5 && {value_gap} <= 20',
+                'column_id': 'value_gap'
+            },
+            'color': '#4cd9b0',  # Good Value
+            'fontWeight': 'bold'
+        },
+        {
+            'if': {
+                'filter_query': '{value_gap} >= -5 && {value_gap} <= 5',
+                'column_id': 'value_gap'
+            },
+            'color': '#ffd166',  # Warm Yellow (Neutral)
+            'fontWeight': 'bold'
+        },
+        {
+            'if': {
+                'filter_query': '{value_gap} >= -20 && {value_gap} < -5',
+                'column_id': 'value_gap'
+            },
+            'color': '#ff8fa3',  # Bad Value
+            'fontWeight': 'bold'
+        },
+        {
+            'if': {
+                'filter_query': '{value_gap} < -20',
+                'column_id': 'value_gap'
+            },
+            'color': '#ef476f',  # Hot Pink (Terrible Value)
+            'fontWeight': 'bold'
+        },
+        # Player name styling
+        {
+            'if': {'column_id': 'player_name'},
+            'fontWeight': '500'
+        },
+        # Archetype styling
+        {
+            'if': {'column_id': 'archetype'},
+            'fontSize': '12px',
+            'color': '#adb5bd'
+        }
+    ]
+    
+    return dash_table.DataTable(
+        data=all_players_data.to_dict('records'),
+        columns=[
+            {'name': 'Player Name', 'id': 'player_name', 'type': 'text'},
+            {'name': 'Archetype', 'id': 'archetype', 'type': 'text'},
+            {'name': 'Salary', 'id': 'current_year_salary', 'type': 'numeric', 
+             'format': {'specifier': '$,.0f'}},
+            {'name': 'LEBRON', 'id': 'LEBRON', 'type': 'numeric', 
+             'format': {'specifier': '.2f'}},
+            {'name': 'Value Gap', 'id': 'value_gap', 'type': 'numeric', 
+             'format': {'specifier': '.1f'}}
+        ],
+        sort_action='native',
+        sort_mode='single',
+        sort_by=[{'column_id': 'value_gap', 'direction': 'desc'}],
+        style_table={'overflowX': 'auto'},
+        style_cell={
+            'backgroundColor': '#1a2332',
+            'color': '#e4e6eb',
+            'textAlign': 'left',
+            'padding': '6px 12px',
+            'fontSize': '13px',
+            'border': 'none',
+            'borderBottom': '1px solid #2c3e50'
+        },
+        style_header={
+            'backgroundColor': '#151b26',
+            'fontWeight': 'bold',
+            'textAlign': 'left',
+            'color': '#e4e6eb',
+            'borderBottom': '2px solid #ff6b35',
+            'borderTop': 'none',
+            'borderLeft': 'none',
+            'borderRight': 'none',
+            'fontSize': '13px',
+            'padding': '6px 12px'
+        },
+        style_data_conditional=style_conditions,
+        page_action='none'
+    )
 
 
 def create_team_radar_chart(radar_data_team1, radar_data_team2, team1_name, team2_name):

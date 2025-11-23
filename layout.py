@@ -173,9 +173,30 @@ def create_player_tab(df):
         dbc.Row([
             dbc.Col([
                 dbc.Card([
-                    dbc.CardHeader(html.H5(f"All {len(df)} Players (Sorted by Value Gap)", className="mb-0", 
-                                          style=CARD_HEADER_TEXT_STYLE),
-                                  style=CARD_HEADER_BG_STYLE),
+                    dbc.CardHeader([
+                        dbc.Row([
+                            dbc.Col([
+                                html.H5(f"All {len(df)} Players (Sorted by Value Gap)", className="mb-0", 
+                                       style=CARD_HEADER_TEXT_STYLE)
+                            ], width=6),
+                            dbc.Col([
+                                dbc.Input(
+                                    id='player-search-input',
+                                    type='text',
+                                    placeholder='Search players...',
+                                    className='mb-0',
+                                    style={
+                                        'backgroundColor': '#0f1623',
+                                        'color': '#e4e6eb',
+                                        'border': '1px solid #2c3e50',
+                                        'borderRadius': '4px',
+                                        'fontSize': '13px',
+                                        'padding': '6px 12px'
+                                    }
+                                )
+                            ], width=6)
+                        ], align='center')
+                    ], style=CARD_HEADER_BG_STYLE),
                     dbc.CardBody([
                         html.Div(id='table-all-players', style={"maxHeight": "800px", "overflowY": "auto"})
                     ], style={"padding": "0px"})

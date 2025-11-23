@@ -97,19 +97,22 @@ def enforce_salary_constraints(max_val, current_min):
      Output('table-all-players', 'children')],
     [Input('min-lebron', 'value'),
      Input('min-salary', 'value'),
-     Input('max-salary', 'value')]
+     Input('max-salary', 'value'),
+     Input('player-search-input', 'value')]
 )
-def update_dashboard(min_lebron, min_salary, max_salary):
+def update_dashboard(min_lebron, min_salary, max_salary, search_query):
     """
     Updates all visualizations on the Player Analysis tab based on user filters.
     
-    This function is triggered whenever a user adjusts the salary or impact sliders.
+    This function is triggered whenever a user adjusts the salary or impact sliders,
+    or types in the player search box.
     It filters the global DataFrame and regenerates all charts and tables.
 
     Args:
         min_lebron (float): Minimum LEBRON impact score.
         min_salary (int): Minimum salary in millions.
         max_salary (int): Maximum salary in millions.
+        search_query (str): Player name search query.
 
     Returns:
         tuple: A tuple containing 4 Plotly figures and 3 HTML table components.
@@ -135,7 +138,15 @@ def update_dashboard(min_lebron, min_salary, max_salary):
     # Generate updated tables
     table_under = visualizations.create_player_table(filtered_df, 'underpaid')
     table_over = visualizations.create_player_table(filtered_df, 'overpaid')
-    table_all = visualizations.create_all_players_table(filtered_df)
+    
+    # Filter the all players table by search query
+    if search_query and search_query.strip():
+        search_filtered_df = filtered_df[
+            filtered_df['player_name'].str.contains(search_query.strip(), case=False, na=False)
+        ]
+        table_all = visualizations.create_all_players_table(search_filtered_df)
+    else:
+        table_all = visualizations.create_all_players_table(filtered_df)
     
     return fig_scatter, fig_under, fig_age, fig_over, table_under, table_over, table_all
 
