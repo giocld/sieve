@@ -3,9 +3,9 @@ from dash import Input, Output, State
 import dash_bootstrap_components as dbc
 import pandas as pd
 
-import data_processing
-import visualizations
-import layout
+from . import data_processing
+from . import visualizations
+from . import layout
 
 # 1. APP INITIALIZATION
 

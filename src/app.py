@@ -8,7 +8,7 @@ results to CSV files.
 import pandas as pd
 import numpy as np
 import os
-import data_processing
+from . import data_processing
 
 class SieveApp:
     """
@@ -98,8 +98,8 @@ class SieveApp:
         print(overpaid[['player_name', 'current_year_salary', 'LEBRON', 'value_gap']].to_string(index=False))
         
         # Export results
-        self.df.to_csv('sieve_player_analysis.csv', index=False)
-        print("\nFull player analysis saved to 'sieve_player_analysis.csv'")
+        self.df.to_csv('data/sieve_player_analysis.csv', index=False)
+        print("\nFull player analysis saved to 'data/sieve_player_analysis.csv'")
 
     def analyze_teams(self):
         """
@@ -123,8 +123,8 @@ class SieveApp:
         print(ranked_teams[display_cols].to_string(index=False))
         
         # Export results
-        ranked_teams.to_csv('sieve_team_efficiency.csv', index=False)
-        print("\nTeam efficiency analysis saved to 'sieve_team_efficiency.csv'")
+        ranked_teams.to_csv('data/sieve_team_efficiency.csv', index=False)
+        print("\nTeam efficiency analysis saved to 'data/sieve_team_efficiency.csv'")
 
     def run(self):
         """

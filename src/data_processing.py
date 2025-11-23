@@ -30,7 +30,7 @@ ABBR_NORMALIZATION = {
 }
 
 
-def load_and_merge_data(lebron_file='LEBRON.csv', contracts_file='basketball_reference_contracts.csv'):
+def load_and_merge_data(lebron_file='data/LEBRON.csv', contracts_file='data/basketball_reference_contracts.csv'):
     """
     Loads player impact data (LEBRON) and contract data, merges them into a single dataset,
     and performs initial data cleaning and type conversion.
@@ -143,7 +143,7 @@ def calculate_player_value_metrics(df):
     return df
 
 
-def calculate_team_metrics(df_players, standings_file='nba_standings_cache.csv'):
+def calculate_team_metrics(df_players, standings_file='data/nba_standings_cache.csv'):
     """
     Aggregates individual player data to the team level and calculates team efficiency metrics.
     
@@ -304,7 +304,7 @@ def add_team_logos(df_teams):
     return df_teams
 
 
-def fetch_nba_advanced_stats(cache_file='nba_advanced_stats_cache.csv'):
+def fetch_nba_advanced_stats(cache_file='data/nba_advanced_stats_cache.csv'):
     """
     Fetches Advanced Team Stats from NBA API and caches them.
     

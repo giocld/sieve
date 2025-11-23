@@ -9,7 +9,7 @@ from dash import dcc, html, dash_table
 import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
-from data_processing import TEAM_ABBR_MAP
+from .data_processing import TEAM_ABBR_MAP
 
 # Create reverse mapping for display
 ABBR_TO_NAME = {v: k for k, v in TEAM_ABBR_MAP.items()}

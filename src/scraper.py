@@ -215,7 +215,7 @@ def scrape_bball_ref():
     print(f"\n✓ Extracted {len(output_df)} players")
     print(output_df.head(10).to_string(index=False))
     
-    output_df.to_csv('basketball_reference_contracts.csv', index=False)
+    output_df.to_csv('data/basketball_reference_contracts.csv', index=False)
 
 if __name__ == "__main__":
     scrape_bball_ref()
