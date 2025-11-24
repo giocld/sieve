@@ -584,9 +584,9 @@ def create_similarity_card(name, season, pid, stats, position='Wing', match_scor
                     dcc.Graph(
                         figure=radar_fig,
                         config={'displayModeBar': False},
-                        style={"margin": "0", "padding": "0", "height": "180px", "width": "100%"}
+                        style={"margin": "0", "padding": "0", "height": "220px", "width": "100%"}
                     )
-                ], style={"height": "180px", "overflow": "hidden"})
+                ], style={"height": "220px", "overflow": "hidden"})
             ], style={"padding": "15px", "display": "flex", "flexDirection": "column"})
         ], style={
             "backgroundColor": bg_color, 

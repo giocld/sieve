@@ -990,8 +990,8 @@ def create_player_radar_mini(stats, position='Wing', player_name='Player'):
             ),
             bgcolor='rgba(0, 0, 0, 0.2)'
         ),
-        height=200,  # Reduced for better card fit
-        margin=dict(l=35, r=35, t=5, b=5),
+        height=220,  # Increased to prevent label cutoff
+        margin=dict(l=40, r=40, t=20, b=20),
         paper_bgcolor='rgba(0,0,0,0)',  # Transparent
         plot_bgcolor='rgba(0,0,0,0)',
         showlegend=False,
