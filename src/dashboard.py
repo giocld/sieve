@@ -47,8 +47,13 @@ try:
     # Load historical data (cached or fetch new)
     df_history = data_processing.fetch_historical_data()
     
-    # Build KNN model
-    knn_model, knn_scaler, df_model_data = data_processing.build_similarity_model(df_history)
+    # Build KNN model with enhanced features
+    result = data_processing.build_similarity_model(df_history)
+    
+    if result and len(result) == 4:
+        knn_model, knn_scaler, df_model_data, knn_feature_info = result
+    else:
+        knn_model, knn_scaler, df_model_data, knn_feature_info = None, None, pd.DataFrame(), None
     
     # Get list of ALL players for dropdown (not just current season)
     if not df_history.empty:
@@ -60,11 +65,14 @@ try:
     print("Similarity Engine initialized.")
 except Exception as e:
     print(f"Error initializing Similarity Engine: {e}")
+    import traceback
+    traceback.print_exc()
     df_history = pd.DataFrame()
     knn_model = None
     knn_scaler = None
     player_options = []
     df_model_data = pd.DataFrame()
+    knn_feature_info = None
 
 # 3. LAYOUT CONSTRUCTION
 
@@ -245,9 +253,10 @@ def update_similarity_results(player_name, season, exclude_self_val):
              
         target_row = player_rows.iloc[0]
         
-        # Get Similar Players
+        # Get Similar Players with enhanced feature set
         results = data_processing.find_similar_players(
-            player_name, season, df_model_data, knn_model, knn_scaler, exclude_self=exclude_self
+            player_name, season, df_model_data, knn_model, knn_scaler, 
+            feature_info=knn_feature_info, exclude_self=exclude_self
         )
         
         if not results:
@@ -257,18 +266,31 @@ def update_similarity_results(player_name, season, exclude_self_val):
         cards = []
         
         # 1. Target Player Card
-        # Extract stats for target
-        features = ['PTS', 'REB', 'AST', 'STL', 'BLK', 'TOV', 'USG_PCT', 'rTS', 'AST_PCT', '3PA_RATE']
-        target_stats = target_row[features].to_dict()
+        # Extract stats for target - use actual features from model
+        if knn_feature_info and 'features' in knn_feature_info:
+            features = knn_feature_info['features']
+        else:
+            features = ['PTS', 'REB', 'AST', 'STL', 'BLK', 'TOV', 'USG_PCT', 'rTS', 'AST_PCT', '3PA_RATE']
+        
+        target_stats = {}
+        for f in features:
+            if f in target_row:
+                target_stats[f] = target_row[f]
+        
+        # Get target position
+        target_position = target_row.get('POSITION_GROUP', 'wing').title() if 'POSITION_GROUP' in target_row else 'Wing'
         
         cards.append(layout.create_similarity_card(
-            player_name, season, target_row['PLAYER_ID'], target_stats, is_target=True
+            player_name, season, target_row['PLAYER_ID'], target_stats, 
+            position=target_position, is_target=True
         ))
         
         # 2. Similar Player Cards
         for res in results:
             cards.append(layout.create_similarity_card(
-                res['Player'], res['Season'], res['id'], res['Stats'], similarity=res['Similarity']
+                res['Player'], res['Season'], res['id'], res['Stats'], 
+                position=res.get('Position', 'Wing'),
+                match_score=res.get('MatchScore'), distance=res.get('Distance')
             ))
             
         # Layout: 2 Rows of 3 Cards (Total 6)

@@ -312,8 +312,8 @@ def create_team_tab(df_teams, fig_quadrant, fig_grid):
                                 {'name': 'Total WAR', 'id': 'Total_WAR', 'type': 'numeric', 'format': {'specifier': '.1f'}},
                             ],
                             style_table={'overflowX': 'auto'},
-                            style_cell={'backgroundColor': '#0f1623', 'color': '#e4e6eb', 'textAlign': 'left', 'padding': '8px', 'fontSize': '12px', 'border': '1px solid #2c3e50'},
-                            style_header={'backgroundColor': '#151b26', 'fontWeight': 'bold', 'textAlign': 'center', 'border': '1px solid #ff6b35', 'color': '#e4e6eb'},
+                            style_cell={'backgroundColor': '#0f1623', 'color': '#e4e6eb', 'textAlign': 'left', 'padding': '4px', 'fontSize': '11px', 'border': '1px solid #2c3e50'},
+                            style_header={'backgroundColor': '#151b26', 'fontWeight': 'bold', 'textAlign': 'center', 'border': '1px solid #ff6b35', 'color': '#e4e6eb', 'padding': '4px'},
                             style_data_conditional=[
                                 {'if': {'row_index': 'odd'}, 'backgroundColor': '#1a2332'}
                             ],
@@ -445,75 +445,154 @@ def create_similarity_tab(player_options):
         ])
     ], fluid=True, style={"backgroundColor": "#0f1623", "padding": "30px 20px"})
 
-def create_similarity_card(name, season, pid, stats, similarity=None, is_target=False):
+def create_similarity_card(name, season, pid, stats, position='Wing', match_score=None, distance=None, is_target=False):
     """
-    Creates a styled card for a player in the similarity engine.
+    Creates a styled card for a player in the similarity engine with hexagonal radar chart.
     
     Args:
         name (str): Player name.
         season (str): Season ID (e.g., '2024-25').
         pid (int): Player ID for fetching the headshot.
         stats (dict): Dictionary of player statistics.
-        similarity (float, optional): Similarity score (0-100). Defaults to None.
+        position (str): Player position group ('Guard', 'Wing', 'Big').
+        match_score (float, optional): Match score (0-100, non-linear). Defaults to None.
+        distance (float, optional): Raw cosine distance for debugging. Defaults to None.
         is_target (bool, optional): Whether this is the target player (gold styling). Defaults to False.
 
     Returns:
         dbc.Col: A column containing the player card.
     """
+    from . import visualizations
+    
     # Styling based on type
     if is_target:
         border_color = "#ff6b35"
         bg_color = "rgba(255, 107, 53, 0.1)"
         badge_text = "SELECTED PLAYER"
         badge_color = "warning"
+        match_display = None
+        radar_color = "#ff6b35" # Force Orange for target
     else:
-        border_color = "#2c3e50"
+        # Color-code match score - APPLY TO ENTIRE CARD
+        if match_score and match_score >= 90:
+            score_color = "#06d6a0"  # Green - Excellent match
+            badge_color = "success"
+            match_quality = "EXCELLENT"
+        elif match_score and match_score >= 75:
+            score_color = "#2D96C7"  # Blue - Good match
+            badge_color = "info"
+            match_quality = "GOOD"
+        elif match_score and match_score >= 60:
+            score_color = "#ffd60a"  # Yellow - Moderate match
+            badge_color = "warning"
+            match_quality = "MODERATE"
+        else:
+            score_color = "#ef476f"  # Red - Weak match
+            badge_color = "danger"
+            match_quality = "WEAK"
+        
+        border_color = score_color
         bg_color = "#151b26"
-        badge_text = f"{similarity}% MATCH"
-        badge_color = "info"
+        radar_color = score_color # Force Radar to match card color
+        badge_text = f"{match_quality} MATCH"
+        
+        # Build match display with score and optional distance
+        match_display = html.Div([
+            # Match Score (large, prominent)
+            html.Div([
+                html.Span(f"{match_score:.0f}", style={
+                    "fontSize": "2.5rem", 
+                    "fontWeight": "800",
+                    "color": score_color,
+                    "lineHeight": "1"
+                }),
+                html.Span("/100", style={
+                    "fontSize": "1.2rem",
+                    "color": "#6c757d",
+                    "marginLeft": "4px"
+                })
+            ], className="text-center mb-2"),
+            
+            # Visual progress bar
+            html.Div([
+                html.Div(style={
+                    "width": f"{match_score}%",
+                    "height": "6px",
+                    "backgroundColor": score_color,
+                    "borderRadius": "3px",
+                    "transition": "width 0.3s ease"
+                })
+            ], style={
+                "width": "100%",
+                "height": "6px",
+                "backgroundColor": "rgba(255,255,255,0.1)",
+                "borderRadius": "3px",
+                "marginBottom": "8px"
+            }),
+            
+            # Distance (small, technical detail)
+            html.Small(f"cosine distance: {distance:.4f}" if distance is not None else "",
+                       className="text-muted", 
+                       style={"fontSize": "0.65rem", "fontStyle": "italic"})
+        ], className="mb-3")
 
     img_url = f"https://cdn.nba.com/headshots/nba/latest/1040x760/{pid}.png"
     
-    # Stat Block Helper
-    def stat_block(label, value, color="white"):
-        return html.Div([
-            html.Small(label, className="text-muted", style={"fontSize": "0.7rem", "textTransform": "uppercase"}),
-            html.Div(f"{value}", style={"color": color, "fontSize": "1.0rem", "fontWeight": "bold"})
-        ], className="text-center p-1", style={"backgroundColor": "rgba(255,255,255,0.05)", "borderRadius": "6px"})
+    # Create mini radar chart
+    radar_fig = visualizations.create_player_radar_mini(stats, position=radar_color, player_name=name)
+
 
     return dbc.Col(
         dbc.Card([
             dbc.CardBody([
                 # Top Badge
                 html.Div([
-                    html.Span(badge_text, className=f"badge bg-{badge_color} mb-3", style={"fontSize": "0.8rem", "letterSpacing": "1px"})
-                ], className="text-center"),
+                    html.Span(badge_text, className="badge mb-2", style={
+                        "fontSize": "0.8rem", 
+                        "letterSpacing": "1px",
+                        "backgroundColor": radar_color,
+                        "color": "#fff"
+                    })
+                ], className="text-center", style={"minHeight": "30px"}),
                 
-                # Image & Info
+                # Match Score Display (for comparison players only) - fixed height
+                html.Div([
+                    match_display if match_display else html.Div()
+                ], style={"minHeight": "110px"}),  # Always 110px for alignment
+                
+                # Image & Info - fixed height
                 html.Div([
                     html.Img(src=img_url, style={
                         "width": "90px", "height": "90px", 
                         "borderRadius": "50%", "objectFit": "cover",
                         "border": f"3px solid {border_color}", "marginBottom": "10px"
                     }),
-                    html.H5(name, className="text-white mb-0", style={"fontWeight": "700"}),
-                    html.Small(season, className="text-info")
-                ], className="text-center mb-3"),
+                    html.H5(name, className="text-white mb-0", style={"fontWeight": "700", "fontSize": "0.95rem"}),
+                    html.Small(season, style={"fontSize": "0.75rem", "color": radar_color, "fontWeight": "600"}),
+                    html.Br(),
+                    # Position badge
+                    html.Span(position, className="badge mt-1", style={
+                        "fontSize": "0.65rem",
+                        "backgroundColor": "rgba(255,255,255,0.1)",
+                        "color": "#adb5bd",
+                        "fontWeight": "500"
+                    })
+                ], className="text-center mb-2", style={"minHeight": "150px"}),
                 
-                # Stats Grid
+                # Hexagonal Radar Chart - FIXED HEIGHT
                 html.Div([
-                    dbc.Row([
-                        dbc.Col(stat_block("PTS", f"{stats.get('PTS', 0):.1f}"), width=4),
-                        dbc.Col(stat_block("REB", f"{stats.get('REB', 0):.1f}"), width=4),
-                        dbc.Col(stat_block("AST", f"{stats.get('AST', 0):.1f}"), width=4),
-                    ], className="g-1 mb-2"),
-                    dbc.Row([
-                        dbc.Col(stat_block("USG%", f"{stats.get('USG_PCT', 0):.1f}", "#ff6b35"), width=4),
-                        dbc.Col(stat_block("rTS%", f"{stats.get('rTS', 0):.1f}", "#2D96C7"), width=4),
-                        dbc.Col(stat_block("3PAr", f"{stats.get('3PA_RATE', 0):.2f}", "#06d6a0"), width=4),
-                    ], className="g-1"),
-                ])
-            ])
-        ], className="h-100 shadow-sm", style={"backgroundColor": bg_color, "border": f"1px solid {border_color}"}),
+                    dcc.Graph(
+                        figure=radar_fig,
+                        config={'displayModeBar': False},
+                        style={"margin": "0", "padding": "0", "height": "180px", "width": "100%"}
+                    )
+                ], style={"height": "180px", "overflow": "hidden"})
+            ], style={"padding": "15px", "display": "flex", "flexDirection": "column"})
+        ], style={
+            "backgroundColor": bg_color, 
+            "border": f"2px solid {border_color}",
+            "height": "550px",  # FIXED height instead of min-height
+            "boxShadow": "0 2px 4px rgba(0,0,0,0.3)"
+        }),
         width=12, lg=4, className="mb-4"
     )

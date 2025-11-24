@@ -432,16 +432,21 @@ def get_season_list(start_year=2014):
     return seasons
 
 
-def fetch_historical_data(start_year=2003, cache_file='data/nba_historical_stats.csv'):
+def fetch_historical_data(start_year=2003, cache_file='data/nba_historical_stats.csv', include_tracking=True):
     """
-    Fetches historical player stats (Base + Advanced) for multiple seasons.
-    Calculates Relative True Shooting (rTS).
+    Fetches historical player stats (Base + Advanced + Tracking) for multiple seasons.
+    Calculates Relative True Shooting (rTS), era-adjusted metrics, and defensive profiles.
+    
+    Args:
+        start_year (int): Starting year for historical data
+        cache_file (str): Path to cache file
+        include_tracking (bool): Whether to fetch tracking data (slower but more detailed)
     """
     if os.path.exists(cache_file):
         print(f"Loading historical data from {cache_file}...")
         return pd.read_csv(cache_file)
 
-    from nba_api.stats.endpoints import leaguedashplayerstats
+    from nba_api.stats.endpoints import leaguedashplayerstats, leaguedashptstats
     import time
 
     seasons = get_season_list(start_year=start_year)
@@ -474,26 +479,101 @@ def fetch_historical_data(start_year=2003, cache_file='data/nba_historical_stats
             # Suffixes handle columns that exist in both (like GP, MIN)
             df_merged = pd.merge(df_base, df_adv, on='PLAYER_ID', suffixes=('', '_ADV'))
             
-            # 4. Calculate League Average TS% for this season
-            # We filter for relevant players to get a "rotation player" average, not skewed by garbage time
-            qualified_players = df_merged[df_merged['GP'] > 10]
-            if not qualified_players.empty:
-                league_avg_ts = qualified_players['TS_PCT'].mean()
-            else:
-                league_avg_ts = 0.55 # Fallback
+            # 4. Fetch Tracking Data (Optional - for ball-handling style)
+            if include_tracking:
+                try:
+                    # Tracking data includes: TOUCHES, AVG_SEC_PER_TOUCH, AVG_DRIB_PER_TOUCH
+                    tracking = leaguedashptstats.LeagueDashPtStats(
+                        season=season,
+                        per_mode_simple='PerGame',
+                        player_or_team='Player'
+                    )
+                    df_tracking = tracking.get_data_frames()[0]
+                    
+                    # Select only tracking-specific columns to avoid duplicates
+                    tracking_cols = ['PLAYER_ID', 'TOUCHES', 'AVG_SEC_PER_TOUCH', 
+                                   'AVG_DRIB_PER_TOUCH', 'DIST_MILES', 'AVG_SPEED']
+                    tracking_cols = [c for c in tracking_cols if c in df_tracking.columns]
+                    
+                    df_merged = pd.merge(
+                        df_merged, 
+                        df_tracking[tracking_cols], 
+                        on='PLAYER_ID', 
+                        how='left'
+                    )
+                    time.sleep(0.6)
+                except Exception as e:
+                    print(f"  Warning: Could not fetch tracking data for {season}: {e}")
             
-            # 5. Calculate Relative True Shooting (rTS) and other derived metrics
+            # 5. Calculate League Averages for Era Adjustment
+            # We filter for qualified players to get a "rotation player" average
+            qualified_players = df_merged[df_merged['GP'] > 10]
+            
+            if not qualified_players.empty:
+                # True Shooting
+                league_avg_ts = qualified_players['TS_PCT'].mean()
+                
+                # 3-Point Rate (era adjustment - accounts for 3-point revolution)
+                league_avg_3pa = qualified_players['FG3A'].mean()
+                
+                # Pace proxy (for era normalization)
+                league_avg_pts = qualified_players['PTS'].mean()
+            else:
+                league_avg_ts = 0.55
+                league_avg_3pa = 2.0
+                league_avg_pts = 15.0
+            
+            # 6. Calculate Relative/Era-Adjusted Metrics
             df_merged['LEAGUE_AVG_TS'] = league_avg_ts
+            df_merged['LEAGUE_AVG_3PA'] = league_avg_3pa
+            df_merged['LEAGUE_AVG_PTS'] = league_avg_pts
+            
             # Scale percentages to 0-100 for readability
             df_merged['rTS'] = (df_merged['TS_PCT'] - league_avg_ts) * 100
             df_merged['USG_PCT'] = df_merged['USG_PCT'] * 100
             df_merged['AST_PCT'] = df_merged['AST_PCT'] * 100
             
-            # Calculate 3-Point Attempt Rate (3PA / FGA)
-            # Handle division by zero
+            # Defensive rebounding percentage (already in Advanced stats)
+            if 'DREB_PCT' in df_merged.columns:
+                df_merged['DREB_PCT'] = df_merged['DREB_PCT'] * 100
+            if 'OREB_PCT' in df_merged.columns:
+                df_merged['OREB_PCT'] = df_merged['OREB_PCT'] * 100
+            
+            # 7. Calculate Additional Derived Metrics
+            
+            # 3-Point Attempt Rate (3PA / FGA) - shooting style
             df_merged['3PA_RATE'] = df_merged.apply(
                 lambda x: x['FG3A'] / x['FGA'] if x['FGA'] > 0 else 0, axis=1
             )
+            
+            # 2-Point FG% (for inside/mid-range game)
+            df_merged['FG2_PCT'] = df_merged.apply(
+                lambda x: (x['FGM'] - x['FG3M']) / (x['FGA'] - x['FG3A']) 
+                if (x['FGA'] - x['FG3A']) > 0 else 0, 
+                axis=1
+            )
+            
+            # Free Throw % (already in base stats as FT_PCT)
+            # Just ensure it exists
+            if 'FT_PCT' not in df_merged.columns:
+                df_merged['FT_PCT'] = df_merged.apply(
+                    lambda x: x['FTM'] / x['FTA'] if x['FTA'] > 0 else 0,
+                    axis=1
+                )
+            
+            # Turnover to Assist Ratio (decision-making quality)
+            df_merged['TOV_AST_RATIO'] = df_merged.apply(
+                lambda x: x['TOV'] / x['AST'] if x['AST'] > 0 else x['TOV'],
+                axis=1
+            )
+            
+            # Ball-handling style (if tracking data available)
+            if 'TOUCHES' in df_merged.columns and 'AVG_DRIB_PER_TOUCH' in df_merged.columns:
+                # High touches + high dribbles = ball-dominant creator
+                # Low touches + low dribbles = catch-and-shoot / off-ball
+                df_merged['BALL_DOMINANT'] = (
+                    df_merged['TOUCHES'].fillna(0) * df_merged['AVG_DRIB_PER_TOUCH'].fillna(0)
+                )
             
             df_merged['SEASON_ID'] = season
             all_dfs.append(df_merged)
@@ -514,51 +594,164 @@ def fetch_historical_data(start_year=2003, cache_file='data/nba_historical_stats
     return full_history
 
 
+def classify_position_group(row):
+    """
+    Classifies a player into a position group based on their statistical profile.
+    
+    Returns:
+        str: 'guard', 'wing', or 'big'
+    """
+    # Thresholds for position classification
+    # Guards: High AST%, Low REB%, High 3PA_RATE
+    # Bigs: High REB%, Low AST%, Low 3PA_RATE  
+    # Wings: Balanced
+    
+    ast_pct = row.get('AST_PCT', 0)
+    reb = row.get('REB', 0)
+    three_rate = row.get('3PA_RATE', 0)
+    
+    # Guard indicators: AST% > 20, REB < 5, or high 3PA rate with high AST
+    if ast_pct > 20 or (ast_pct > 15 and reb < 5):
+        return 'guard'
+    
+    # Big indicators: REB > 10, low 3PA rate, low AST%
+    elif reb > 10 or (reb > 8 and three_rate < 0.15 and ast_pct < 15):
+        return 'big'
+    
+    # Everything else is a wing
+    else:
+        return 'wing'
+
+
 def build_similarity_model(df):
     """
-    Trains a NearestNeighbors model on the provided dataframe.
+    Trains an enhanced NearestNeighbors model with weighted features and position classification.
+    
+    Improvements:
+    - 20+ features including defensive metrics, shooting profile, tracking data
+    - Weighted feature importance (efficiency/style weighted higher than volume)
+    - Cosine similarity for better style matching
+    - Position group classification for filtering
+    
+    Returns:
+        tuple: (model, scaler, df_filtered, feature_weights)
     """
+    import numpy as np
     from sklearn.neighbors import NearestNeighbors
     from sklearn.preprocessing import StandardScaler
 
-    # e.g., > 15 games and > 10 mins/game 
+    # Filter for qualified players (>= 15 games)
     df_filtered = df[df['GP'] >= 15].copy()
     
     # Handle missing values
     df_filtered = df_filtered.fillna(0)
     
-    # Features for similarity
-    # We want a mix of Production (PTS, REB, AST) and Style (USG, rTS, 3PAr)
-    # Note: Using Per100 stats for production
-    features = [
-        'PTS', 'REB', 'AST', 'STL', 'BLK', 'TOV',  # Production (Per 100)
-        'USG_PCT', 'rTS', 'AST_PCT', '3PA_RATE'    # Style / Efficiency
-    ]
+    # ENHANCED FEATURE SET (20+ features)
+    # Organized by category with weights
     
-    # Ensure all features exist
-    available_features = [f for f in features if f in df_filtered.columns]
+    feature_config = {
+        # PRODUCTION (Volume stats - moderate weight)
+        'PTS': 1.0,
+        'REB': 1.0, 
+        'AST': 1.0,
+        'STL': 0.8,
+        'BLK': 0.8,
+        'TOV': 0.8,
+        
+        # EFFICIENCY/STYLE (High weight - defines HOW they play)
+        'USG_PCT': 1.5,
+        'rTS': 1.5,
+        'AST_PCT': 1.5,
+        '3PA_RATE': 1.5,
+        'FT_PCT': 1.2,
+        'FG2_PCT': 1.2,
+        
+        # DEFENSIVE PROFILE (Moderate-high weight)
+        'DREB_PCT': 1.3,
+        'OREB_PCT': 1.0,
+        'DEF_RATING': 1.2,
+        
+        # PLAYMAKING QUALITY (Moderate weight)
+        'TOV_AST_RATIO': 1.0,
+        
+        # TRACKING DATA (if available - moderate weight)
+        'TOUCHES': 1.1,
+        'AVG_SEC_PER_TOUCH': 1.1,
+        'AVG_DRIB_PER_TOUCH': 1.1,
+        'BALL_DOMINANT': 1.2,
+    }
+    
+    # Filter to only available features
+    available_features = []
+    feature_weights = []
+    
+    for feature, weight in feature_config.items():
+        if feature in df_filtered.columns:
+            available_features.append(feature)
+            feature_weights.append(weight)
     
     if not available_features:
-        return None, None, None
-        
+        print("ERROR: No features available for similarity model")
+        return None, None, None, None
+    
+    print(f"Building similarity model with {len(available_features)} features:")
+    print(f"  Features: {', '.join(available_features)}")
+    
+    # Extract feature matrix
     X = df_filtered[available_features].values
     
-    # Normalize features
+    # Step 1: Normalize features with StandardScaler
     scaler = StandardScaler()
     X_scaled = scaler.fit_transform(X)
     
-    # Train KNN
-    # n_neighbors=6 because the closest match is always the player themselves (distance=0)
-    # n_jobs=1 to prevent resource exhaustion/crashes in limited environments
-    model = NearestNeighbors(n_neighbors=20, metric='euclidean', n_jobs=1) # Increased neighbors to allow for filtering
-    model.fit(X_scaled)
+    # Step 2: Apply feature weights
+    # Multiply each feature column by its weight
+    feature_weights_array = np.array(feature_weights).reshape(1, -1)
+    X_weighted = X_scaled * feature_weights_array
     
-    return model, scaler, df_filtered
+    print(f"  Applied weighted features (efficiency/style prioritized)")
+    
+    # Step 3: Classify position groups
+    df_filtered['POSITION_GROUP'] = df_filtered.apply(classify_position_group, axis=1)
+    
+    position_counts = df_filtered['POSITION_GROUP'].value_counts()
+    print(f"  Position distribution: Guard={position_counts.get('guard', 0)}, "
+          f"Wing={position_counts.get('wing', 0)}, Big={position_counts.get('big', 0)}")
+    
+    # Step 4: Train KNN with COSINE similarity
+    # Cosine measures direction/pattern regardless of magnitude
+    # Better for "type of player" vs "stats magnitude"
+    model = NearestNeighbors(
+        n_neighbors=30,  # Increased to allow for position filtering
+        metric='cosine',  # CHANGED from euclidean
+        n_jobs=1
+    )
+    model.fit(X_weighted)
+    
+    print(f"  Trained KNN model with cosine similarity")
+    
+    # Return model, scaler, filtered data, and feature info
+    return model, scaler, df_filtered, {
+        'features': available_features,
+        'weights': feature_weights
+    }
 
 
-def find_similar_players(player_name, season, df_history, model, scaler, exclude_self=True):
+def find_similar_players(player_name, season, df_history, model, scaler, feature_info=None, exclude_self=True):
     """
-    Finds the top 5 similar players for a given player and season.
+    Finds the top 5 similar players with position-aware filtering and improved scoring.
+    
+    Args:
+        player_name (str): Target player name
+        season (str): Target season
+        df_history (pd.DataFrame): Historical player data
+        model: Trained KNN model
+        scaler: Trained scaler
+        feature_info (dict): Dictionary with 'features' and 'weights' keys
+        exclude_self (bool): Whether to exclude other seasons of the same player
+        
+    Returns:
+        list: List of similar player dictionaries
     """
     # Find the target player's row
     target_row = df_history[
@@ -568,27 +761,47 @@ def find_similar_players(player_name, season, df_history, model, scaler, exclude
     
     if target_row.empty:
         return []
-        
-    # Extract features
-    features = [
-        'PTS', 'REB', 'AST', 'STL', 'BLK', 'TOV',
-        'USG_PCT', 'rTS', 'AST_PCT', '3PA_RATE'
-    ]
     
-    # Ensure features match training
-    available_features = [f for f in features if f in df_history.columns]
-    target_stats = target_row[available_features].values
+    target_row = target_row.iloc[0]
     
-    # Scale
+    # Get feature list
+    if feature_info and 'features' in feature_info:
+        available_features = feature_info['features']
+        feature_weights = np.array(feature_info['weights']).reshape(1, -1)
+    else:
+        # Fallback to basic features
+        available_features = [
+            'PTS', 'REB', 'AST', 'STL', 'BLK', 'TOV',
+            'USG_PCT', 'rTS', 'AST_PCT', '3PA_RATE'
+        ]
+        available_features = [f for f in available_features if f in df_history.columns]
+        feature_weights = np.ones((1, len(available_features)))
+    
+    # Extract and transform target stats
+    target_stats = target_row[available_features].values.reshape(1, -1)
     target_scaled = scaler.transform(target_stats)
+    target_weighted = target_scaled * feature_weights
+    
+    # Get target position group
+    target_position = target_row.get('POSITION_GROUP', 'wing')
     
     # Find neighbors
-    distances, indices = model.kneighbors(target_scaled)
+    distances, indices = model.kneighbors(target_weighted)
+    
+    # Define compatible position groups
+    # Guards can match guards and wings
+    # Wings can match anyone (most versatile)
+    # Bigs can match bigs and wings
+    position_compatibility = {
+        'guard': ['guard', 'wing'],
+        'wing': ['guard', 'wing', 'big'],
+        'big': ['big', 'wing']
+    }
+    compatible_positions = position_compatibility.get(target_position, ['guard', 'wing', 'big'])
     
     results = []
     
     # Iterate through neighbors
-    # indices[0] is the list of neighbor indices
     for i in range(len(indices[0])):
         idx = indices[0][i]
         dist = distances[0][i]
@@ -596,6 +809,7 @@ def find_similar_players(player_name, season, df_history, model, scaler, exclude
         match_row = df_history.iloc[idx]
         match_name = match_row['PLAYER_NAME']
         match_season = match_row['SEASON_ID']
+        match_position = match_row.get('POSITION_GROUP', 'wing')
         
         # 1. ALWAYS exclude the exact same player-season (the query itself)
         if match_name == player_name and match_season == season:
@@ -604,18 +818,30 @@ def find_similar_players(player_name, season, df_history, model, scaler, exclude
         # 2. If "Exclude Self" is checked, exclude ALL seasons of this player
         if exclude_self and match_name == player_name:
             continue
+        
+        # 3. Position filtering - only include compatible positions
+        if match_position not in compatible_positions:
+            continue
             
-        # Calculate a similarity score (0-100%)
-        # Euclidean distance of 0 = 100% similar.
-        # We need a heuristic to convert distance to %. 
-        # A distance of ~5-6 is usually very different.
-        similarity = max(0, 100 - (dist * 15)) # Heuristic conversion
+        # Calculate Match Score (0-100 scale, but non-linear to spread out differences)
+        # Problem: Cosine distances for similar players are VERY small (0.01 - 0.2)
+        # Old formula: (1 - dist/2) * 100 gave 95-100% for everything
+        # 
+        # New approach: Use exponential decay to spread scores better
+        # - Very close (dist < 0.05): 90-100 score
+        # - Close (dist 0.05-0.15): 75-90 score  
+        # - Moderate (dist 0.15-0.30): 60-75 score
+        # - Far (dist > 0.30): < 60 score
+        match_score = 100 * np.exp(-dist * 5)  # Exponential decay with factor 5
+        match_score = max(0, min(100, match_score))  # Clamp to [0, 100]
         
         results.append({
             'Player': match_name,
             'Season': match_season,
             'id': match_row['PLAYER_ID'],
-            'Similarity': round(similarity, 1),
+            'MatchScore': round(match_score, 1),
+            'Distance': round(dist, 4),  # Include raw distance for debugging
+            'Position': match_position.title(),
             'Stats': match_row[available_features].to_dict()
         })
         

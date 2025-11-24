@@ -14,6 +14,15 @@ from dash import html, dash_table
 
 # TEAM VISUALIZATIONS
 
+# NBA Team Colors (Primary)
+NBA_TEAM_COLORS = {
+    'ATL': '#C8102E', 'BOS': '#007A33', 'BKN': '#FFFFFF', 'CHA': '#1D1160', 'CHI': '#CE1141',
+    'CLE': '#860038', 'DAL': '#00538C', 'DEN': '#0E2240', 'DET': '#C8102E', 'GSW': '#1D428A',
+    'HOU': '#CE1141', 'IND': '#002D62', 'LAC': '#C8102E', 'LAL': '#552583', 'MEM': '#5D76A9',
+    'MIA': '#98002E', 'MIL': '#00471B', 'MIN': '#0C2340', 'NOP': '#0C2340', 'NYK': '#006BB6',
+    'OKC': '#007AC1', 'ORL': '#0077C0', 'PHI': '#006BB6', 'PHX': '#1D1160', 'POR': '#E03A3E',
+    'SAC': '#5A2D81', 'SAS': '#C4CED4', 'TOR': '#CE1141', 'UTA': '#002B5C', 'WAS': '#002B5C'
+}
 def create_efficiency_quadrant(df_teams):
     """
     Creates the Efficiency Quadrant Chart (Wins vs. Payroll).
@@ -707,6 +716,8 @@ def create_all_players_table(df):
     )
 
 
+
+
 def create_team_radar_chart(radar_data_team1, radar_data_team2, team1_name, team2_name):
     """
     Creates a Radar Chart (Spider Web) comparing two teams' strengths/weaknesses.
@@ -737,30 +748,47 @@ def create_team_radar_chart(radar_data_team1, radar_data_team2, team1_name, team
     values_team1.append(values_team1[0])
     values_team2.append(values_team2[0])
     
+    # Get team colors
+    color1 = NBA_TEAM_COLORS.get(team1_name, '#ff6b35')
+    color2 = NBA_TEAM_COLORS.get(team2_name, '#2D96C7')
+    
+    # Convert hex to rgba for fill
+    def hex_to_rgba(hex_color, alpha=0.25):
+        hex_color = hex_color.lstrip('#')
+        if len(hex_color) == 6:
+            r = int(hex_color[0:2], 16)
+            g = int(hex_color[2:4], 16)
+            b = int(hex_color[4:6], 16)
+            return f'rgba({r}, {g}, {b}, {alpha})'
+        return f'rgba(100, 100, 100, {alpha})'
+
+    fill1 = hex_to_rgba(color1)
+    fill2 = hex_to_rgba(color2)
+    
     fig = go.Figure()
     
-    # Add Team 1 (vibrant orange/red)
+    # Add Team 1
     fig.add_trace(go.Scatterpolar(
         r=values_team1,
         theta=categories,
         fill='toself',
         name=team1_name,
-        line=dict(color='#ff6b35', width=3),
-        fillcolor='rgba(255, 107, 53, 0.25)',
+        line=dict(color=color1, width=3),
+        fillcolor=fill1,
         hovertemplate='<b>%{theta}</b><br>' + team1_name + ': %{r:.1f}th percentile<extra></extra>',
-        marker=dict(size=8, color='#ff6b35')
+        marker=dict(size=8, color=color1)
     ))
     
-    # Add Team 2 (vibrant blue)
+    # Add Team 2
     fig.add_trace(go.Scatterpolar(
         r=values_team2,
         theta=categories,
         fill='toself',
         name=team2_name,
-        line=dict(color='#2D96C7', width=3),
-        fillcolor='rgba(45, 150, 199, 0.25)',
+        line=dict(color=color2, width=3),
+        fillcolor=fill2,
         hovertemplate='<b>%{theta}</b><br>' + team2_name + ': %{r:.1f}th percentile<extra></extra>',
-        marker=dict(size=8, color='#2D96C7')
+        marker=dict(size=8, color=color2)
     ))
     
     # Add reference circles for context (25th, 50th, 75th percentiles)
@@ -848,3 +876,130 @@ def create_team_radar_chart(radar_data_team1, radar_data_team2, team1_name, team
     
     return fig
 
+
+def create_player_radar_mini(stats, position='Wing', player_name='Player'):
+    """
+    Creates a compact hexagonal radar chart for a player card showing their archetype characteristics.
+    
+    Args:
+        stats (dict): Dictionary of player statistics
+        position (str): Player position group ('Guard', 'Wing', 'Big')
+        player_name (str): Player's name for tooltip
+        
+    Returns:
+        go.Figure: Compact Plotly radar chart
+    """
+    # Define the 6 categories for hexagonal radar
+    categories = [
+        'Scoring',      # PTS
+        'Playmaking',   # AST%, TOV_AST_RATIO
+        'Shooting',     # rTS, 3PA_RATE, FT%
+        'Rebounding',   # REB, DREB%, OREB%
+        'Defense',      # STL, BLK, DEF_RATING
+        'Efficiency'    # USG%, FG2%
+    ]
+    
+    # Calculate percentile values (0-100) for each category
+    # These are rough estimates - in production, you'd calculate actual percentiles
+    values = []
+    
+    # 1. Scoring (based on PTS per 100)
+    pts = stats.get('PTS', 0)
+    scoring_score = min(100, (pts / 35) * 100)  # 35 PTS/100 = 100th percentile
+    values.append(scoring_score)
+    
+    # 2. Playmaking (AST% primarily)
+    ast_pct = stats.get('AST_PCT', 0)
+    playmaking_score = min(100, (ast_pct / 40) * 100)  # 40 AST% = 100th percentile
+    values.append(playmaking_score)
+    
+    # 3. Shooting (composite of rTS and 3PA_RATE)
+    rts = stats.get('rTS', 0)
+    shooting_score = max(0, min(100, 50 + rts))  # rTS of +5 = 100th percentile
+    values.append(shooting_score)
+    
+    # 4. Rebounding (REB per 100)
+    reb = stats.get('REB', 0)
+    rebounding_score = min(100, (reb / 15) * 100)  # 15 REB/100 = 100th percentile
+    values.append(rebounding_score)
+    
+    # 5. Defense (composite of STL, BLK)
+    stl = stats.get('STL', 0)
+    blk = stats.get('BLK', 0)
+    defense_score = min(100, ((stl + blk) / 4) * 100)  # 4 combined = 100th percentile
+    values.append(defense_score)
+    
+    # 6. Efficiency (USG% and rTS combined)
+    usg = stats.get('USG_PCT', 0)
+    efficiency_score = min(100, (usg / 35) * 100)  # 35 USG% = 100th percentile
+    values.append(efficiency_score)
+    
+    # Close the radar loop
+    categories_closed = categories + [categories[0]]
+    values_closed = values + [values[0]]
+    
+    # Determine color - use custom color if provided (for match quality), otherwise position-based
+    if position and position.startswith('#'):
+        # It's actually a color code passed as position parameter
+        line_color = position
+        # Convert hex to rgba for fill
+        hex_color = position.lstrip('#')
+        r = int(hex_color[0:2], 16)
+        g = int(hex_color[2:4], 16)
+        b = int(hex_color[4:6], 16)
+        fill_color = f'rgba({r}, {g}, {b}, 0.3)'
+    elif position.lower() == 'guard':
+        line_color = '#2D96C7'  # Blue
+        fill_color = 'rgba(45, 150, 199, 0.3)'
+    elif position.lower() == 'big':
+        line_color = '#ef476f'  # Red
+        fill_color = 'rgba(239, 71, 111, 0.3)'
+    else:  # Wing or default
+        line_color = '#06d6a0'  # Green
+        fill_color = 'rgba(6, 214, 160, 0.3)'
+    
+    fig = go.Figure()
+    
+    # Add player trace
+    fig.add_trace(go.Scatterpolar(
+        r=values_closed,
+        theta=categories_closed,
+        fill='toself',
+        line=dict(color=line_color, width=2),
+        fillcolor=fill_color,
+        hovertemplate='<b>%{theta}</b><br>Score: %{r:.0f}/100<extra></extra>',
+        marker=dict(size=4, color=line_color),
+        showlegend=False
+    ))
+    
+    fig.update_layout(
+        polar=dict(
+            radialaxis=dict(
+                visible=True,
+                range=[0, 100],
+                showticklabels=False,
+                gridcolor='rgba(255, 255, 255, 0.1)',
+                linecolor='rgba(255, 255, 255, 0.1)',
+                gridwidth=1
+            ),
+            angularaxis=dict(
+                tickfont=dict(size=9, color='#e4e6eb', family='Inter, sans-serif'),
+                gridcolor='rgba(255, 255, 255, 0.15)',
+                linecolor='rgba(255, 255, 255, 0.15)',
+                gridwidth=1
+            ),
+            bgcolor='rgba(0, 0, 0, 0.2)'
+        ),
+        height=200,  # Reduced for better card fit
+        margin=dict(l=35, r=35, t=5, b=5),
+        paper_bgcolor='rgba(0,0,0,0)',  # Transparent
+        plot_bgcolor='rgba(0,0,0,0)',
+        showlegend=False,
+        hoverlabel=dict(
+            bgcolor="#1a2332",
+            bordercolor=line_color,
+            font=dict(color="#e4e6eb", size=10)
+        )
+    )
+    
+    return fig
