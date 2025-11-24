@@ -1,0 +1,44 @@
+/* Custom Tabs Styling */
+.custom-tabs-container {
+    border-bottom: none !important;
+}
+
+.custom-tabs-container .custom-tabs {
+    display: flex;
+    justify-content: center;
+}
+
+/* Default tab state */
+.custom-tabs-container .custom-tab {
+    background-color: #1a2332 !important;
+    border: 1px solid #2c3e50 !important;
+    border-radius: 8px 8px 0 0 !important;
+    color: #adb5bd !important;
+    padding: 12px 32px !important;
+    font-weight: 500 !important;
+    font-size: 15px !important;
+    margin: 0 4px !important;
+    transition: all 0.3s ease !important;
+}
+
+/* Hover state */
+.custom-tabs-container .custom-tab:hover {
+    background-color: #212d3f !important;
+    color: #e9ecef !important;
+    border-color: #ff6b35 !important;
+}
+
+/* Selected state - highest specificity */
+.custom-tabs-container .custom-tab--selected,
+.custom-tabs-container .tab--selected,
+div.custom-tabs-container div.custom-tab--selected {
+    background-color: #ff6b35 !important;
+    color: #0f1623 !important;
+    border: 2px solid #ff6b35 !important;
+    font-weight: 600 !important;
+}
+
+/* Remove default focus outline */
+.custom-tabs-container .custom-tab:focus {
+    outline: none !important;
+}

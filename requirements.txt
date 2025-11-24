@@ -6,3 +6,4 @@ numpy
 gunicorn
 nba_api
 selenium
+scikit-learn

@@ -7,6 +7,16 @@ cleaning data, and calculating advanced metrics like Value Gap and Efficiency In
 import pandas as pd
 import numpy as np
 import os
+import warnings
+from datetime import datetime
+import time
+from sklearn.neighbors import NearestNeighbors
+from sklearn.preprocessing import StandardScaler
+from nba_api.stats.static import teams
+from nba_api.stats.endpoints import leaguedashteamstats, leaguedashplayerstats
+
+# Suppress harmless multiprocessing cleanup warnings
+warnings.filterwarnings("ignore", category=UserWarning, module="multiprocessing.resource_tracker")
 
 # Mapping of full team names to their standard 3-letter abbreviations.
 # This ensures consistency across different data sources (e.g., LEBRON data vs Contract data).
@@ -90,6 +100,7 @@ def load_and_merge_data(lebron_file='data/LEBRON.csv', contracts_file='data/bask
         df['current_year_salary'] = df['current_year_salary'].fillna(0)
     
     return df
+
 
 
 def calculate_player_value_metrics(df):
@@ -395,3 +406,221 @@ def get_team_radar_data(team_abbr):
         radar_data[label] = team_val
         
     return radar_data
+
+def get_season_list(start_year=2014):
+    """
+    Generates a list of NBA season strings (e.g., '2014-15') 
+    from start_year up to the current active season.
+    """
+    current_date = datetime.now()
+    
+    # Logic: NBA season typically starts in October.
+    # If it's Oct-Dec (Month >= 10), the season started this year (e.g., Oct 2025 is the 2025-26 season).
+    # If it's Jan-Sept (Month < 10), the season started last year (e.g., Feb 2026 is the 2025-26 season).
+    if current_date.month >= 10:
+        current_season_start = current_date.year
+    else:
+        current_season_start = current_date.year - 1
+        
+    seasons = []
+    for year in range(start_year, current_season_start + 1):
+        # Format: "YYYY-YY" (e.g., 2024 -> "2024-25")
+        next_year_short = str(year + 1)[-2:]
+        season_str = f"{year}-{next_year_short}"
+        seasons.append(season_str)
+        
+    return seasons
+
+
+def fetch_historical_data(start_year=2003, cache_file='data/nba_historical_stats.csv'):
+    """
+    Fetches historical player stats (Base + Advanced) for multiple seasons.
+    Calculates Relative True Shooting (rTS).
+    """
+    if os.path.exists(cache_file):
+        print(f"Loading historical data from {cache_file}...")
+        return pd.read_csv(cache_file)
+
+    from nba_api.stats.endpoints import leaguedashplayerstats
+    import time
+
+    seasons = get_season_list(start_year=start_year)
+    all_dfs = []
+    
+    print(f"Fetching historical data for {len(seasons)} seasons...")
+    
+    for season in seasons:
+        try:
+            print(f"Fetching {season}...")
+            
+            # 1. Fetch Base Stats (Per 100 Possessions) -> For Volume (PTS, REB, AST)
+            stats_base = leaguedashplayerstats.LeagueDashPlayerStats(
+                season=season,
+                per_mode_detailed='Per100Possessions',
+                measure_type_detailed_defense='Base'
+            )
+            df_base = stats_base.get_data_frames()[0]
+            time.sleep(0.6) # Respect API rate limits
+            
+            # 2. Fetch Advanced Stats -> For Efficiency/Style (USG%, TS%, AST%)
+            stats_adv = leaguedashplayerstats.LeagueDashPlayerStats(
+                season=season,
+                measure_type_detailed_defense='Advanced'
+            )
+            df_adv = stats_adv.get_data_frames()[0]
+            time.sleep(0.6)
+            
+            # 3. Merge them on PLAYER_ID
+            # Suffixes handle columns that exist in both (like GP, MIN)
+            df_merged = pd.merge(df_base, df_adv, on='PLAYER_ID', suffixes=('', '_ADV'))
+            
+            # 4. Calculate League Average TS% for this season
+            # We filter for relevant players to get a "rotation player" average, not skewed by garbage time
+            qualified_players = df_merged[df_merged['GP'] > 10]
+            if not qualified_players.empty:
+                league_avg_ts = qualified_players['TS_PCT'].mean()
+            else:
+                league_avg_ts = 0.55 # Fallback
+            
+            # 5. Calculate Relative True Shooting (rTS) and other derived metrics
+            df_merged['LEAGUE_AVG_TS'] = league_avg_ts
+            # Scale percentages to 0-100 for readability
+            df_merged['rTS'] = (df_merged['TS_PCT'] - league_avg_ts) * 100
+            df_merged['USG_PCT'] = df_merged['USG_PCT'] * 100
+            df_merged['AST_PCT'] = df_merged['AST_PCT'] * 100
+            
+            # Calculate 3-Point Attempt Rate (3PA / FGA)
+            # Handle division by zero
+            df_merged['3PA_RATE'] = df_merged.apply(
+                lambda x: x['FG3A'] / x['FGA'] if x['FGA'] > 0 else 0, axis=1
+            )
+            
+            df_merged['SEASON_ID'] = season
+            all_dfs.append(df_merged)
+            
+        except Exception as e:
+            print(f"Error fetching {season}: {e}")
+            continue
+            
+    if not all_dfs:
+        return pd.DataFrame()
+        
+    full_history = pd.concat(all_dfs, ignore_index=True)
+    
+    # Save to cache
+    os.makedirs(os.path.dirname(cache_file), exist_ok=True)
+    full_history.to_csv(cache_file, index=False)
+    
+    return full_history
+
+
+def build_similarity_model(df):
+    """
+    Trains a NearestNeighbors model on the provided dataframe.
+    """
+    from sklearn.neighbors import NearestNeighbors
+    from sklearn.preprocessing import StandardScaler
+
+    # e.g., > 15 games and > 10 mins/game 
+    df_filtered = df[df['GP'] >= 15].copy()
+    
+    # Handle missing values
+    df_filtered = df_filtered.fillna(0)
+    
+    # Features for similarity
+    # We want a mix of Production (PTS, REB, AST) and Style (USG, rTS, 3PAr)
+    # Note: Using Per100 stats for production
+    features = [
+        'PTS', 'REB', 'AST', 'STL', 'BLK', 'TOV',  # Production (Per 100)
+        'USG_PCT', 'rTS', 'AST_PCT', '3PA_RATE'    # Style / Efficiency
+    ]
+    
+    # Ensure all features exist
+    available_features = [f for f in features if f in df_filtered.columns]
+    
+    if not available_features:
+        return None, None, None
+        
+    X = df_filtered[available_features].values
+    
+    # Normalize features
+    scaler = StandardScaler()
+    X_scaled = scaler.fit_transform(X)
+    
+    # Train KNN
+    # n_neighbors=6 because the closest match is always the player themselves (distance=0)
+    # n_jobs=1 to prevent resource exhaustion/crashes in limited environments
+    model = NearestNeighbors(n_neighbors=20, metric='euclidean', n_jobs=1) # Increased neighbors to allow for filtering
+    model.fit(X_scaled)
+    
+    return model, scaler, df_filtered
+
+
+def find_similar_players(player_name, season, df_history, model, scaler, exclude_self=True):
+    """
+    Finds the top 5 similar players for a given player and season.
+    """
+    # Find the target player's row
+    target_row = df_history[
+        (df_history['PLAYER_NAME'] == player_name) & 
+        (df_history['SEASON_ID'] == season)
+    ]
+    
+    if target_row.empty:
+        return []
+        
+    # Extract features
+    features = [
+        'PTS', 'REB', 'AST', 'STL', 'BLK', 'TOV',
+        'USG_PCT', 'rTS', 'AST_PCT', '3PA_RATE'
+    ]
+    
+    # Ensure features match training
+    available_features = [f for f in features if f in df_history.columns]
+    target_stats = target_row[available_features].values
+    
+    # Scale
+    target_scaled = scaler.transform(target_stats)
+    
+    # Find neighbors
+    distances, indices = model.kneighbors(target_scaled)
+    
+    results = []
+    
+    # Iterate through neighbors
+    # indices[0] is the list of neighbor indices
+    for i in range(len(indices[0])):
+        idx = indices[0][i]
+        dist = distances[0][i]
+        
+        match_row = df_history.iloc[idx]
+        match_name = match_row['PLAYER_NAME']
+        match_season = match_row['SEASON_ID']
+        
+        # 1. ALWAYS exclude the exact same player-season (the query itself)
+        if match_name == player_name and match_season == season:
+            continue
+            
+        # 2. If "Exclude Self" is checked, exclude ALL seasons of this player
+        if exclude_self and match_name == player_name:
+            continue
+            
+        # Calculate a similarity score (0-100%)
+        # Euclidean distance of 0 = 100% similar.
+        # We need a heuristic to convert distance to %. 
+        # A distance of ~5-6 is usually very different.
+        similarity = max(0, 100 - (dist * 15)) # Heuristic conversion
+        
+        results.append({
+            'Player': match_name,
+            'Season': match_season,
+            'id': match_row['PLAYER_ID'],
+            'Similarity': round(similarity, 1),
+            'Stats': match_row[available_features].to_dict()
+        })
+        
+        # Stop after 5 matches
+        if len(results) >= 5:
+            break
+        
+    return results

@@ -1,7 +1,8 @@
 import dash
-from dash import Input, Output, State
+from dash import Input, Output, State, html
 import dash_bootstrap_components as dbc
 import pandas as pd
+import plotly.graph_objects as go
 
 from . import data_processing
 from . import visualizations
@@ -41,6 +42,30 @@ except Exception as e:
     df = pd.DataFrame()
     df_teams = pd.DataFrame()
 
+print("Loading historical data for Similarity Engine...")
+try:
+    # Load historical data (cached or fetch new)
+    df_history = data_processing.fetch_historical_data()
+    
+    # Build KNN model
+    knn_model, knn_scaler, df_model_data = data_processing.build_similarity_model(df_history)
+    
+    # Get list of ALL players for dropdown (not just current season)
+    if not df_history.empty:
+        all_players = df_history['PLAYER_NAME'].unique()
+        player_options = [{'label': p, 'value': p} for p in sorted(all_players)]
+    else:
+        player_options = []
+        
+    print("Similarity Engine initialized.")
+except Exception as e:
+    print(f"Error initializing Similarity Engine: {e}")
+    df_history = pd.DataFrame()
+    knn_model = None
+    knn_scaler = None
+    player_options = []
+    df_model_data = pd.DataFrame()
+
 # 3. LAYOUT CONSTRUCTION
 
 # Pre-generate static team charts since they don't depend on user filters
@@ -51,6 +76,7 @@ fig_grid = visualizations.create_team_grid(df_teams)
 # Generate the layout for each tab
 player_tab_layout = layout.create_player_tab(df)
 team_tab_layout = layout.create_team_tab(df_teams, fig_quadrant, fig_grid)
+similarity_tab_layout = layout.create_similarity_tab(player_options)
 
 # Assemble the main application layout
 app.layout = layout.create_main_layout()
@@ -63,6 +89,8 @@ def display_content(selected_view):
     """Updates the main page content based on the selected view."""
     if selected_view == 'team':
         return team_tab_layout
+    elif selected_view == 'similarity':
+        return similarity_tab_layout
     return player_tab_layout
 
 
@@ -161,7 +189,6 @@ def update_dashboard(min_lebron, min_salary, max_salary, search_query):
 def update_team_radar(team1_abbr, team2_abbr):
     """Updates the Team Comparison Radar Chart based on selected teams."""
     if not team1_abbr or not team2_abbr:
-        from plotly import graph_objects as go
         empty = go.Figure()
         empty.update_layout(template='plotly_dark', paper_bgcolor='#0f1623')
         return empty
@@ -170,6 +197,89 @@ def update_team_radar(team1_abbr, team2_abbr):
     radar_data_2 = data_processing.get_team_radar_data(team2_abbr)
     return visualizations.create_team_radar_chart(radar_data_1, radar_data_2, team1_abbr, team2_abbr)
 
+
+
+
+
+@app.callback(
+    Output('similarity-season-dropdown', 'options'),
+    Output('similarity-season-dropdown', 'value'),
+    Input('similarity-player-dropdown', 'value')
+)
+def update_season_dropdown(player_name):
+    """Populates the season dropdown based on selected player."""
+    if not player_name or df_model_data.empty:
+        return [], None
+    
+    # Get all seasons for this player
+    player_seasons = df_model_data[df_model_data['PLAYER_NAME'] == player_name]['SEASON_ID'].unique()
+    season_options = [{'label': s, 'value': s} for s in sorted(player_seasons, reverse=True)]
+    
+    # Default to most recent season
+    default_season = sorted(player_seasons, reverse=True)[0] if len(player_seasons) > 0 else None
+    
+    return season_options, default_season
+
+@app.callback(
+    Output('similarity-results-container', 'children'),
+    [Input('similarity-player-dropdown', 'value'),
+     Input('similarity-season-dropdown', 'value'),
+     Input('similarity-exclude-self', 'value')]
+)
+def update_similarity_results(player_name, season, exclude_self_val):
+    """
+    Finds and displays similar players based on the selected player and season.
+    """
+    try:
+        if not player_name or not season or knn_model is None:
+            return html.Div("Select a player and season to see comparisons.", className="text-center text-muted mt-5")
+        
+        exclude_self = 'exclude' in (exclude_self_val or [])
+        print(f"Searching for similar players to: {player_name} ({season}) (Exclude Self: {exclude_self})")
+        
+        # Get Target Player Data
+        player_rows = df_model_data[(df_model_data['PLAYER_NAME'] == player_name) & (df_model_data['SEASON_ID'] == season)]
+        
+        if player_rows.empty:
+             return html.Div(f"Data for {player_name} in {season} is insufficient for comparison (low games played).", className="text-warning")
+             
+        target_row = player_rows.iloc[0]
+        
+        # Get Similar Players
+        results = data_processing.find_similar_players(
+            player_name, season, df_model_data, knn_model, knn_scaler, exclude_self=exclude_self
+        )
+        
+        if not results:
+            return html.Div("No matches found (insufficient data).", className="text-warning")
+
+        # --- Build Cards ---
+        cards = []
+        
+        # 1. Target Player Card
+        # Extract stats for target
+        features = ['PTS', 'REB', 'AST', 'STL', 'BLK', 'TOV', 'USG_PCT', 'rTS', 'AST_PCT', '3PA_RATE']
+        target_stats = target_row[features].to_dict()
+        
+        cards.append(layout.create_similarity_card(
+            player_name, season, target_row['PLAYER_ID'], target_stats, is_target=True
+        ))
+        
+        # 2. Similar Player Cards
+        for res in results:
+            cards.append(layout.create_similarity_card(
+                res['Player'], res['Season'], res['id'], res['Stats'], similarity=res['Similarity']
+            ))
+            
+        # Layout: 2 Rows of 3 Cards (Total 6)
+        return html.Div([
+            dbc.Row(cards, className="g-4")
+        ])
+        
+    except Exception as e:
+        print("ERROR IN CALLBACK:")
+        print(traceback.format_exc())
+        return html.Div(f"An error occurred: {str(e)}", className="text-danger")
 
 
 # 5. ENTRY POINT
@@ -183,4 +293,5 @@ if __name__ == '__main__':
     print("Press CTRL+C to stop")
     print("")
     # Run the application in debug mode for development
-    app.run(debug=True)
+    # use_reloader=False prevents termios errors in some environments
+    app.run(debug=True, use_reloader=False)

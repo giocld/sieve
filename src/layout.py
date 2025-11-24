@@ -13,11 +13,7 @@ from .data_processing import TEAM_ABBR_MAP
 
 # Create reverse mapping for display
 ABBR_TO_NAME = {v: k for k, v in TEAM_ABBR_MAP.items()}
-# Add missing teams if any
-ABBR_TO_NAME.update({
-    'PHX': 'Phoenix Suns', 'BKN': 'Brooklyn Nets', 'CHA': 'Charlotte Hornets', 
-    'NOP': 'New Orleans Pelicans', 'UTA': 'Utah Jazz'
-})
+
 
 # Global Style Constants
 SECTION_TITLE_STYLE = {
@@ -316,7 +312,7 @@ def create_team_tab(df_teams, fig_quadrant, fig_grid):
                                 {'name': 'Total WAR', 'id': 'Total_WAR', 'type': 'numeric', 'format': {'specifier': '.1f'}},
                             ],
                             style_table={'overflowX': 'auto'},
-                            style_cell={'backgroundColor': '#0f1623', 'color': '#e4e6eb', 'textAlign': 'left', 'padding': '12px', 'fontSize': '13px', 'border': '1px solid #2c3e50'},
+                            style_cell={'backgroundColor': '#0f1623', 'color': '#e4e6eb', 'textAlign': 'left', 'padding': '8px', 'fontSize': '12px', 'border': '1px solid #2c3e50'},
                             style_header={'backgroundColor': '#151b26', 'fontWeight': 'bold', 'textAlign': 'center', 'border': '1px solid #ff6b35', 'color': '#e4e6eb'},
                             style_data_conditional=[
                                 {'if': {'row_index': 'odd'}, 'backgroundColor': '#1a2332'}
@@ -356,26 +352,26 @@ def create_main_layout():
                     ])
                 ]),
                 
-                # View Selection Dropdown
+                # Navigation Tabs
                 dbc.Row([
                     dbc.Col([
-                        html.Label("Select Analysis View:", className="text-center d-block mb-2", 
-                                  style={"color": "#e4e6eb", "fontWeight": "600"}),
-                        dbc.RadioItems(
+                        dcc.Tabs(
                             id='view-selector',
-                            options=[
-                                {'label': 'Player Analysis', 'value': 'player'},
-                                {'label': 'Team Analysis', 'value': 'team'}
-                            ],
                             value='player',
-                            inline=True,
-                            className="btn-group",
-                            inputClassName="btn-check",
-                            labelClassName="btn btn-outline-primary",
-                            labelCheckedClassName="active",
-                            style={"display": "flex", "justifyContent": "center", "gap": "10px"}
+                            children=[
+                                dcc.Tab(label='Player Analysis', value='player', className='custom-tab', selected_className='custom-tab--selected'),
+                                dcc.Tab(label='Team Analysis', value='team', className='custom-tab', selected_className='custom-tab--selected'),
+                                dcc.Tab(label='Historical Comps', value='similarity', className='custom-tab', selected_className='custom-tab--selected'),
+                            ],
+                            colors={
+                                "border": "#2c3e50",
+                                "primary": "#ff6b35",
+                                "background": "#0f1623"
+                            },
+                            parent_className="custom-tabs",
+                            className="custom-tabs-container"
                         )
-                    ], width={"size": 4, "offset": 4})
+                    ], width=12)
                 ])
             ], fluid=True)
         ], className="hero-header"),
@@ -397,3 +393,127 @@ def create_main_layout():
         ])
         
     ], style={"backgroundColor": "#0f1623", "minHeight": "100vh", "display": "flex", "flexDirection": "column"})
+
+def create_similarity_tab(player_options):
+    """
+    Creates the layout for the 'Historical Comps' tab.
+    """
+    return dbc.Container([
+        html.H2("Historical Comps", className="mt-4 mb-4", 
+                style=SECTION_TITLE_STYLE),
+        
+        dbc.Row([
+            dbc.Col([
+                dbc.Card([
+                    dbc.CardHeader(html.H5("Find Historical Comps", className="mb-0", 
+                                          style=CARD_HEADER_TEXT_STYLE),
+                                  style=CARD_HEADER_BG_STYLE),
+                    dbc.CardBody([
+                        html.Label("Select a Player:", className="fw-bold mb-2", style={"color": "#e4e6eb"}),
+                        dcc.Dropdown(
+                            id='similarity-player-dropdown',
+                            options=player_options,
+                            placeholder="Type to search...",
+                            className="mb-3",
+                            style={'color': '#000'}
+                        ),
+                        html.Label("Select a Season:", className="fw-bold mb-2", style={"color": "#e4e6eb"}),
+                        dcc.Dropdown(
+                            id='similarity-season-dropdown',
+                            placeholder="First select a player...",
+                            className="mb-3",
+                            style={'color': '#000'}
+                        ),
+                        dcc.Checklist(
+                            id='similarity-exclude-self',
+                            options=[{'label': ' Exclude Player from Results', 'value': 'exclude'}],
+                            value=['exclude'],
+                            className="mb-3 text-white",
+                            inputStyle={"marginRight": "5px"}
+                        ),
+                        html.P("Finds the top 5 statistical matches from the last 10 years based on production and playstyle.",
+                               className="text-muted small")
+                    ], style={"padding": "20px"})
+                ], style={"backgroundColor": "#1a2332", "border": "1px solid #2c3e50"})
+            ], md=6, className="offset-md-3 mb-4")
+        ]),
+        
+        dbc.Row([
+            dbc.Col([
+                html.Div(id='similarity-results-container')
+            ], md=12)
+        ])
+    ], fluid=True, style={"backgroundColor": "#0f1623", "padding": "30px 20px"})
+
+def create_similarity_card(name, season, pid, stats, similarity=None, is_target=False):
+    """
+    Creates a styled card for a player in the similarity engine.
+    
+    Args:
+        name (str): Player name.
+        season (str): Season ID (e.g., '2024-25').
+        pid (int): Player ID for fetching the headshot.
+        stats (dict): Dictionary of player statistics.
+        similarity (float, optional): Similarity score (0-100). Defaults to None.
+        is_target (bool, optional): Whether this is the target player (gold styling). Defaults to False.
+
+    Returns:
+        dbc.Col: A column containing the player card.
+    """
+    # Styling based on type
+    if is_target:
+        border_color = "#ff6b35"
+        bg_color = "rgba(255, 107, 53, 0.1)"
+        badge_text = "SELECTED PLAYER"
+        badge_color = "warning"
+    else:
+        border_color = "#2c3e50"
+        bg_color = "#151b26"
+        badge_text = f"{similarity}% MATCH"
+        badge_color = "info"
+
+    img_url = f"https://cdn.nba.com/headshots/nba/latest/1040x760/{pid}.png"
+    
+    # Stat Block Helper
+    def stat_block(label, value, color="white"):
+        return html.Div([
+            html.Small(label, className="text-muted", style={"fontSize": "0.7rem", "textTransform": "uppercase"}),
+            html.Div(f"{value}", style={"color": color, "fontSize": "1.0rem", "fontWeight": "bold"})
+        ], className="text-center p-1", style={"backgroundColor": "rgba(255,255,255,0.05)", "borderRadius": "6px"})
+
+    return dbc.Col(
+        dbc.Card([
+            dbc.CardBody([
+                # Top Badge
+                html.Div([
+                    html.Span(badge_text, className=f"badge bg-{badge_color} mb-3", style={"fontSize": "0.8rem", "letterSpacing": "1px"})
+                ], className="text-center"),
+                
+                # Image & Info
+                html.Div([
+                    html.Img(src=img_url, style={
+                        "width": "90px", "height": "90px", 
+                        "borderRadius": "50%", "objectFit": "cover",
+                        "border": f"3px solid {border_color}", "marginBottom": "10px"
+                    }),
+                    html.H5(name, className="text-white mb-0", style={"fontWeight": "700"}),
+                    html.Small(season, className="text-info")
+                ], className="text-center mb-3"),
+                
+                # Stats Grid
+                html.Div([
+                    dbc.Row([
+                        dbc.Col(stat_block("PTS", f"{stats.get('PTS', 0):.1f}"), width=4),
+                        dbc.Col(stat_block("REB", f"{stats.get('REB', 0):.1f}"), width=4),
+                        dbc.Col(stat_block("AST", f"{stats.get('AST', 0):.1f}"), width=4),
+                    ], className="g-1 mb-2"),
+                    dbc.Row([
+                        dbc.Col(stat_block("USG%", f"{stats.get('USG_PCT', 0):.1f}", "#ff6b35"), width=4),
+                        dbc.Col(stat_block("rTS%", f"{stats.get('rTS', 0):.1f}", "#2D96C7"), width=4),
+                        dbc.Col(stat_block("3PAr", f"{stats.get('3PA_RATE', 0):.2f}", "#06d6a0"), width=4),
+                    ], className="g-1"),
+                ])
+            ])
+        ], className="h-100 shadow-sm", style={"backgroundColor": bg_color, "border": f"1px solid {border_color}"}),
+        width=12, lg=4, className="mb-4"
+    )
