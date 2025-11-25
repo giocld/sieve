@@ -150,6 +150,17 @@
         margin-right: 0 !important;
     }
 
+    /* Hide player headshot images in charts on mobile - multiple selectors for safety */
+    .js-plotly-plot image,
+    .js-plotly-plot svg image,
+    div[id^="chart-"] image,
+    #chart-underpaid image,
+    #chart-overpaid image {
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+    }
+
     /* Reduce padding for main container on mobile */
     .content-container {
         padding: 15px 10px;

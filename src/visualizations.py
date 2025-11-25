@@ -359,21 +359,22 @@ def create_underpaid_bar(filtered):
             top_under = underpaid_only.nlargest(20, 'value_gap').sort_values('value_gap', ascending=True)
             
             # Create images list
-            images = []
-            if 'PLAYER_ID' in top_under.columns:
-                for i, row in enumerate(top_under.itertuples()):
-                    if pd.notna(row.PLAYER_ID):
-                        pid = int(row.PLAYER_ID)
-                        img_url = f"https://cdn.nba.com/headshots/nba/latest/1040x760/{pid}.png"
-                        images.append(dict(
-                            source=img_url,
-                            xref="paper", yref="y",
-                            x=-0.25, # Move further left to avoid name overlap
-                            y=row.player_name,
-                            sizex=0.2, sizey=0.9,
-                            xanchor="right", yanchor="middle",
-                            layer="above"
-                        ))
+            # Commented out images as they don't position correctly on mobile
+            # images = []
+            # if 'PLAYER_ID' in top_under.columns:
+            #     for i, row in enumerate(top_under.itertuples()):
+            #         if pd.notna(row.PLAYER_ID):
+            #             pid = int(row.PLAYER_ID)
+            #             img_url = f"https://cdn.nba.com/headshots/nba/latest/1040x760/{pid}.png"
+            #             images.append(dict(
+            #                 source=img_url,
+            #                 xref="paper", yref="y",
+            #                 x=-0.08, # Closer to chart edge for mobile
+            #                 y=row.player_name,
+            #                 sizex=0.12, sizey=0.7,
+            #                 xanchor="right", yanchor="middle",
+            #                 layer="above"
+            #             ))
 
             fig = go.Figure(go.Bar(
                 x=top_under['value_gap'],
@@ -393,12 +394,12 @@ def create_underpaid_bar(filtered):
                 xaxis_title='<b>Value Gap</b>',
                 height=550,
                 template='plotly_dark',
-                margin=dict(l=220, r=20, t=20, b=50), # Increased left margin significantly
+                margin=dict(l=150, r=20, t=20, b=50), # Reduced left margin
                 autosize=True,
                 showlegend=False,
                 paper_bgcolor='#0f1623',
                 plot_bgcolor='#1a202c',
-                images=images,
+                # images=images,  # Removed images for mobile compatibility
                 hoverlabel=dict(
                     bgcolor="#1a2332",
                     bordercolor="#ff6b35",
@@ -492,21 +493,22 @@ def create_overpaid_bar(filtered):
             top_over = overpaid_only.nsmallest(20, 'value_gap').sort_values('value_gap', ascending=False)
             
             # Create images list
-            images = []
-            if 'PLAYER_ID' in top_over.columns:
-                for i, row in enumerate(top_over.itertuples()):
-                    if pd.notna(row.PLAYER_ID):
-                        pid = int(row.PLAYER_ID)
-                        img_url = f"https://cdn.nba.com/headshots/nba/latest/1040x760/{pid}.png"
-                        images.append(dict(
-                            source=img_url,
-                            xref="paper", yref="y",
-                            x=-0.25, # Move further left to avoid name overlap
-                            y=row.player_name,
-                            sizex=0.2, sizey=0.9,
-                            xanchor="right", yanchor="middle",
-                            layer="above"
-                        ))
+            # Commented out images as they don't position correctly on mobile
+            # images = []
+            # if 'PLAYER_ID' in top_over.columns:
+            #     for i, row in enumerate(top_over.itertuples()):
+            #         if pd.notna(row.PLAYER_ID):
+            #             pid = int(row.PLAYER_ID)
+            #             img_url = f"https://cdn.nba.com/headshots/nba/latest/1040x760/{pid}.png"
+            #             images.append(dict(
+            #                 source=img_url,
+            #                 xref="paper", yref="y",
+            #                 x=-0.08, # Closer to chart edge for mobile
+            #                 y=row.player_name,
+            #                 sizex=0.12, sizey=0.7,
+            #                 xanchor="right", yanchor="middle",
+            #                 layer="above"
+            #             ))
 
             fig = go.Figure(go.Bar(
                 x=top_over['value_gap'],
@@ -526,12 +528,12 @@ def create_overpaid_bar(filtered):
                 xaxis_title='<b>Value Gap</b>',
                 height=550,
                 template='plotly_dark',
-                margin=dict(l=220, r=20, t=20, b=50), # Increased left margin significantly
+                margin=dict(l=150, r=20, t=20, b=50), # Reduced left margin
                 autosize=True,
                 showlegend=False,
                 paper_bgcolor='#0f1623',
                 plot_bgcolor='#1a202c',
-                images=images,
+                # images=images,  # Removed images for mobile compatibility
                 hoverlabel=dict(
                     bgcolor="#1a2332",
                     bordercolor="#ff6b35",
