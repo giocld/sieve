@@ -13,7 +13,7 @@ import time
 from sklearn.neighbors import NearestNeighbors
 from sklearn.preprocessing import StandardScaler
 from nba_api.stats.static import teams
-from nba_api.stats.endpoints import leaguedashteamstats, leaguedashplayerstats
+from nba_api.stats.endpoints import leaguedashteamstats, leaguedashplayerstats, leaguedashptstats
 
 # Suppress harmless multiprocessing cleanup warnings
 warnings.filterwarnings("ignore", category=UserWarning, module="multiprocessing.resource_tracker")
@@ -98,6 +98,22 @@ def load_and_merge_data(lebron_file='data/LEBRON.csv', contracts_file='data/bask
         
         # If still missing, fill with 0 to allow for calculations without errors
         df['current_year_salary'] = df['current_year_salary'].fillna(0)
+
+    # --- NEW: Add Player IDs for Headshots ---
+    # We try to load the historical stats cache to get a mapping of Name -> ID
+    historical_file = 'data/nba_historical_stats.csv'
+    if os.path.exists(historical_file):
+        try:
+            df_hist = pd.read_csv(historical_file)
+            if 'PLAYER_NAME' in df_hist.columns and 'PLAYER_ID' in df_hist.columns:
+                # Create a mapping dictionary (Name -> ID)
+                # We use the most recent ID found for a player
+                id_map = df_hist.set_index('PLAYER_NAME')['PLAYER_ID'].to_dict()
+                
+                # Map IDs to the main dataframe
+                df['PLAYER_ID'] = df['player_name'].map(id_map)
+        except Exception as e:
+            print(f"Warning: Could not load player IDs from history: {e}")
     
     return df
 
@@ -293,7 +309,7 @@ def add_team_logos(df_teams):
     Returns:
         pd.DataFrame: The input DataFrame with an added 'Logo_URL' column.
     """
-    from nba_api.stats.static import teams
+
     nba_teams = teams.get_teams()
     
     # Create a mapping dictionary from Abbreviation to Team ID
@@ -327,7 +343,7 @@ def fetch_nba_advanced_stats(cache_file='data/nba_advanced_stats_cache.csv'):
         return pd.read_csv(cache_file)
         
     try:
-        from nba_api.stats.endpoints import leaguedashteamstats
+
         stats = leaguedashteamstats.LeagueDashTeamStats(measure_type_detailed_defense='Advanced')
         df = stats.get_data_frames()[0]
         df.to_csv(cache_file, index=False)
@@ -446,8 +462,7 @@ def fetch_historical_data(start_year=2003, cache_file='data/nba_historical_stats
         print(f"Loading historical data from {cache_file}...")
         return pd.read_csv(cache_file)
 
-    from nba_api.stats.endpoints import leaguedashplayerstats, leaguedashptstats
-    import time
+
 
     seasons = get_season_list(start_year=start_year)
     all_dfs = []
@@ -636,9 +651,7 @@ def build_similarity_model(df):
     Returns:
         tuple: (model, scaler, df_filtered, feature_weights)
     """
-    import numpy as np
-    from sklearn.neighbors import NearestNeighbors
-    from sklearn.preprocessing import StandardScaler
+
 
     # Filter for qualified players (>= 15 games)
     df_filtered = df[df['GP'] >= 15].copy()

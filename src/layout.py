@@ -8,7 +8,7 @@ import dash_bootstrap_components as dbc
 from dash import dcc, html, dash_table
 import pandas as pd
 import numpy as np
-import plotly.graph_objects as go
+
 from .data_processing import TEAM_ABBR_MAP
 
 # Create reverse mapping for display
@@ -157,12 +157,12 @@ def create_player_tab(df):
                 html.H5("Top Underpaid Players (Best Value)", className="mb-3", 
                        style={"fontWeight": "600", "color": "#06d6a0"}),
                 html.Div(id='table-underpaid', style={"maxHeight": "300px", "overflowY": "auto"})
-            ], md=6),
+            ], xs=12, md=6, className="mb-4 mb-md-0"),
             dbc.Col([
                 html.H5("Top Overpaid Players (Worst Value)", className="mb-3", 
                        style={"fontWeight": "600", "color": "#ef476f"}),
                 html.Div(id='table-overpaid', style={"maxHeight": "300px", "overflowY": "auto"})
-            ], md=6)
+            ], xs=12, md=6)
         ], className="mb-4"),
         
         # All Players Table Row: Full dataset listing
@@ -199,7 +199,7 @@ def create_player_tab(df):
                 ], style={"backgroundColor": "#1a2332", "border": "1px solid #2c3e50"})
             ])
         ], className="mb-4")
-    ], fluid=True, style={"backgroundColor": "#0f1623", "padding": "30px 20px"})
+    ], fluid=True, className="content-container")
 
 
 def create_team_tab(df_teams, fig_quadrant, fig_grid):
@@ -258,7 +258,6 @@ def create_team_tab(df_teams, fig_quadrant, fig_grid):
                                   style={"fontSize": "12px", "color": "#6c757d"})
                         ]),
                         dbc.Row([
-                            dbc.Col(width=2),
                             dbc.Col([
                                 html.Label("Team 1", className="text-center d-block", style={"fontSize": "11px", "color": "#ff6b35", "fontWeight": "600", "marginBottom": "3px"}),
                                 dbc.Select(
@@ -268,7 +267,7 @@ def create_team_tab(df_teams, fig_quadrant, fig_grid):
                                     class_name="bg-dark text-white border-secondary",
                                     style={'fontSize': '13px', 'borderColor': '#ff6b35'}
                                 )
-                            ], width=4),
+                            ], xs=12, md=5, className="mb-2 mb-md-0"),
                             dbc.Col([
                                 html.Label("Team 2", className="text-center d-block", style={"fontSize": "11px", "color": "#2D96C7", "fontWeight": "600", "marginBottom": "3px"}),
                                 dbc.Select(
@@ -278,8 +277,7 @@ def create_team_tab(df_teams, fig_quadrant, fig_grid):
                                     class_name="bg-dark text-white border-secondary",
                                     style={'fontSize': '13px', 'borderColor': '#2D96C7'}
                                 )
-                            ], width=4),
-                            dbc.Col(width=2)
+                            ], xs=12, md=5)
                         ], justify="center")
                     ], style={"backgroundColor": "#151b26", "borderBottom": "2px solid #ff6b35", "padding": "15px"}),
                     dbc.CardBody([
@@ -325,7 +323,7 @@ def create_team_tab(df_teams, fig_quadrant, fig_grid):
                 ], style={"backgroundColor": "#1a2332", "border": "1px solid #2c3e50"})
             ], width=12)
         ])
-    ], fluid=True, style={"backgroundColor": "#0f1623", "padding": "30px 20px"})
+    ], fluid=True, className="content-container")
 
 
 def create_main_layout():
@@ -443,7 +441,7 @@ def create_similarity_tab(player_options):
                 html.Div(id='similarity-results-container')
             ], md=12)
         ])
-    ], fluid=True, style={"backgroundColor": "#0f1623", "padding": "30px 20px"})
+    ], fluid=True, className="content-container")
 
 def create_similarity_card(name, season, pid, stats, position='Wing', match_score=None, distance=None, is_target=False):
     """

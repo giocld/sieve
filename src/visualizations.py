@@ -5,7 +5,7 @@ It separates the view logic from the main application controller.
 """
 
 import plotly.graph_objects as go
-import plotly.express as px
+
 import pandas as pd
 import numpy as np
 import dash_bootstrap_components as dbc
@@ -138,10 +138,10 @@ def create_efficiency_quadrant(df_teams):
         xaxis_title='<b>Total Payroll ($)</b>',
         yaxis_title='<b>Wins</b>',
         height=650,
-        margin=dict(l=80, r=40, t=20, b=70),
+        margin=dict(l=50, r=20, t=20, b=50),  # Reduced margins for mobile
         paper_bgcolor='#0f1623', # Deep Navy background
         plot_bgcolor='#1a202c',  # Slightly lighter plot area
-        font=dict(size=12),
+        font=dict(size=11),      # Slightly smaller font
         images=logo_images,
         xaxis=dict(showgrid=True, gridcolor='#2c3e50', zeroline=False),
         yaxis=dict(showgrid=True, gridcolor='#2c3e50', zeroline=False),
@@ -149,7 +149,8 @@ def create_efficiency_quadrant(df_teams):
             bgcolor="#1a2332",
             bordercolor="#ff6b35",
             font=dict(color="#e4e6eb")
-        )
+        ),
+        autosize=True
     )
     
     # 4. Add Quadrant Lines (League Averages)
@@ -161,23 +162,23 @@ def create_efficiency_quadrant(df_teams):
     
     # Add Text Labels for Context (Quadrant Names)
     fig_quadrant.add_annotation(x=df_teams['Total_Payroll'].min(), y=df_teams['WINS'].max(), 
-                               text="<b>ELITE</b><br>(High Wins / Low Pay)", showarrow=False, 
-                               font=dict(color="#06d6a0", size=14, weight="bold"), xanchor="left", yanchor="top",
+                               text="<b>ELITE</b>", showarrow=False, 
+                               font=dict(color="#06d6a0", size=12, weight="bold"), xanchor="left", yanchor="top",
                                bgcolor="rgba(15, 22, 35, 0.7)", borderpad=4)
                                
     fig_quadrant.add_annotation(x=df_teams['Total_Payroll'].max(), y=df_teams['WINS'].max(), 
-                               text="<b>CONTENDERS</b><br>(High Wins / High Pay)", showarrow=False, 
-                               font=dict(color="#ffd166", size=14, weight="bold"), xanchor="right", yanchor="top",
+                               text="<b>CONTENDERS</b>", showarrow=False, 
+                               font=dict(color="#ffd166", size=12, weight="bold"), xanchor="right", yanchor="top",
                                bgcolor="rgba(15, 22, 35, 0.7)", borderpad=4)
                                
     fig_quadrant.add_annotation(x=df_teams['Total_Payroll'].min(), y=df_teams['WINS'].min(), 
-                               text="<b>REBUILDING</b><br>(Low Wins / Low Pay)", showarrow=False, 
-                               font=dict(color="#e4e6eb", size=12), xanchor="left", yanchor="bottom",
+                               text="<b>REBUILDING</b>", showarrow=False, 
+                               font=dict(color="#e4e6eb", size=10), xanchor="left", yanchor="bottom",
                                bgcolor="rgba(15, 22, 35, 0.7)", borderpad=4)
                                
     fig_quadrant.add_annotation(x=df_teams['Total_Payroll'].max(), y=df_teams['WINS'].min(), 
-                               text="<b>DISASTER</b><br>(Low Wins / High Pay)", showarrow=False, 
-                               font=dict(color="#ef476f", size=14, weight="bold"), xanchor="right", yanchor="bottom",
+                               text="<b>DISASTER</b>", showarrow=False, 
+                               font=dict(color="#ef476f", size=12, weight="bold"), xanchor="right", yanchor="bottom",
                                bgcolor="rgba(15, 22, 35, 0.7)", borderpad=4)
     
     return fig_quadrant
@@ -263,10 +264,11 @@ def create_team_grid(df_teams):
     fig_grid.update_layout(
         # title='<b>Team Efficiency Rankings</b><br><sub style="color:#adb5bd">Sorted by Efficiency • Green = Good Value • Red = Overpaying</sub>',
         height=650,
-        margin=dict(l=80, r=40, t=20, b=70),
+        margin=dict(l=40, r=20, t=20, b=50),
         paper_bgcolor='#0f1623',
         plot_bgcolor='#1a202c',
-        font=dict(size=12),
+        font=dict(size=11),
+        autosize=True,
         # Hide axes for a clean grid look
         xaxis=dict(showgrid=False, zeroline=False, showticklabels=False, range=[-0.5, 5.5], fixedrange=True),
         yaxis=dict(showgrid=False, zeroline=False, showticklabels=False, range=[-0.5, 4.5], fixedrange=True),
@@ -328,7 +330,8 @@ def create_salary_impact_scatter(filtered):
         hovermode='closest',
         paper_bgcolor='#0f1623',
         plot_bgcolor='#1a202c',
-        margin=dict(l=70, r=100, t=20, b=60),
+        margin=dict(l=50, r=20, t=20, b=50),
+        autosize=True,
         hoverlabel=dict(
             bgcolor="#1a2332",
             bordercolor="#ff6b35",
@@ -354,6 +357,24 @@ def create_underpaid_bar(filtered):
         if len(underpaid_only) > 0:
             # Get top 20
             top_under = underpaid_only.nlargest(20, 'value_gap').sort_values('value_gap', ascending=True)
+            
+            # Create images list
+            images = []
+            if 'PLAYER_ID' in top_under.columns:
+                for i, row in enumerate(top_under.itertuples()):
+                    if pd.notna(row.PLAYER_ID):
+                        pid = int(row.PLAYER_ID)
+                        img_url = f"https://cdn.nba.com/headshots/nba/latest/1040x760/{pid}.png"
+                        images.append(dict(
+                            source=img_url,
+                            xref="paper", yref="y",
+                            x=-0.25, # Move further left to avoid name overlap
+                            y=row.player_name,
+                            sizex=0.2, sizey=0.9,
+                            xanchor="right", yanchor="middle",
+                            layer="above"
+                        ))
+
             fig = go.Figure(go.Bar(
                 x=top_under['value_gap'],
                 y=top_under['player_name'],
@@ -372,10 +393,12 @@ def create_underpaid_bar(filtered):
                 xaxis_title='<b>Value Gap</b>',
                 height=550,
                 template='plotly_dark',
-                margin=dict(l=200, r=40, t=20, b=60),
+                margin=dict(l=220, r=20, t=20, b=50), # Increased left margin significantly
+                autosize=True,
                 showlegend=False,
                 paper_bgcolor='#0f1623',
                 plot_bgcolor='#1a202c',
+                images=images,
                 hoverlabel=dict(
                     bgcolor="#1a2332",
                     bordercolor="#ff6b35",
@@ -438,7 +461,8 @@ def create_age_impact_scatter(filtered):
         hovermode='closest',
         paper_bgcolor='#0f1623',
         plot_bgcolor='#1a202c',
-        margin=dict(l=70, r=40, t=20, b=60),
+        margin=dict(l=50, r=20, t=20, b=50),
+        autosize=True,
         hoverlabel=dict(
             bgcolor="#1a2332",
             bordercolor="#ff6b35",
@@ -466,6 +490,24 @@ def create_overpaid_bar(filtered):
         overpaid_only = filtered[filtered['value_gap'] < 0]
         if len(overpaid_only) > 0:
             top_over = overpaid_only.nsmallest(20, 'value_gap').sort_values('value_gap', ascending=False)
+            
+            # Create images list
+            images = []
+            if 'PLAYER_ID' in top_over.columns:
+                for i, row in enumerate(top_over.itertuples()):
+                    if pd.notna(row.PLAYER_ID):
+                        pid = int(row.PLAYER_ID)
+                        img_url = f"https://cdn.nba.com/headshots/nba/latest/1040x760/{pid}.png"
+                        images.append(dict(
+                            source=img_url,
+                            xref="paper", yref="y",
+                            x=-0.25, # Move further left to avoid name overlap
+                            y=row.player_name,
+                            sizex=0.2, sizey=0.9,
+                            xanchor="right", yanchor="middle",
+                            layer="above"
+                        ))
+
             fig = go.Figure(go.Bar(
                 x=top_over['value_gap'],
                 y=top_over['player_name'],
@@ -484,10 +526,12 @@ def create_overpaid_bar(filtered):
                 xaxis_title='<b>Value Gap</b>',
                 height=550,
                 template='plotly_dark',
-                margin=dict(l=200, r=40, t=20, b=60),
+                margin=dict(l=220, r=20, t=20, b=50), # Increased left margin significantly
+                autosize=True,
                 showlegend=False,
                 paper_bgcolor='#0f1623',
                 plot_bgcolor='#1a202c',
+                images=images,
                 hoverlabel=dict(
                     bgcolor="#1a2332",
                     bordercolor="#ff6b35",
@@ -522,24 +566,34 @@ def create_player_table(filtered, table_type='underpaid'):
     if table_type == 'underpaid':
         data = filtered[filtered['value_gap'] > 0]
         if len(data) == 0: return html.P("No underpaid players in filter")
-        top_data = data.nlargest(20, 'value_gap')[['player_name', 'current_year_salary', 'LEBRON', 'value_gap']].copy()
+        top_data = data.nlargest(20, 'value_gap')[['player_name', 'current_year_salary', 'LEBRON', 'value_gap', 'PLAYER_ID']].copy()
         text_color = "#06d6a0"
     elif table_type == 'overpaid':
         data = filtered[filtered['value_gap'] < 0]
         if len(data) == 0: return html.P("No overpaid players in filter")
-        top_data = data.nsmallest(20, 'value_gap')[['player_name', 'current_year_salary', 'LEBRON', 'value_gap']].copy()
+        top_data = data.nsmallest(20, 'value_gap')[['player_name', 'current_year_salary', 'LEBRON', 'value_gap', 'PLAYER_ID']].copy()
         text_color = "#ef476f"
     else:
         return html.P("Invalid table type")
 
-    # Clean up player names
+    # Clean up player names and add Face Markdown
     top_data['player_name'] = top_data['player_name'].apply(
         lambda x: str(x).strip() if pd.notna(x) else 'Unknown'
     )
     
+    def get_face_markdown(pid):
+        if pd.notna(pid):
+            url = f"https://cdn.nba.com/headshots/nba/latest/1040x760/{int(pid)}.png"
+            # Use HTML for better size control
+            return f'<img src="{url}" style="height: 30px; width: auto; border-radius: 50%;" />'
+        return ""
+        
+    top_data['Face'] = top_data['PLAYER_ID'].apply(get_face_markdown)
+    
     return dash_table.DataTable(
         data=top_data.to_dict('records'),
         columns=[
+            {'name': '', 'id': 'Face', 'presentation': 'markdown'},
             {'name': 'Player', 'id': 'player_name', 'type': 'text'},
             {'name': 'Salary', 'id': 'current_year_salary', 'type': 'numeric', 
              'format': {'specifier': '$,.0f'}},
@@ -556,7 +610,8 @@ def create_player_table(filtered, table_type='underpaid'):
             'padding': '6px 12px',
             'fontSize': '12px',
             'border': 'none',
-            'borderBottom': '1px solid #2c3e50'
+            'borderBottom': '1px solid #2c3e50',
+            'verticalAlign': 'middle' # Align text with images
         },
         style_header={
             'backgroundColor': '#151b26',
@@ -581,9 +636,16 @@ def create_player_table(filtered, table_type='underpaid'):
                 'if': {'column_id': 'value_gap'},
                 'color': text_color,
                 'fontWeight': 'bold'
+            },
+            # Face column width
+            {
+                'if': {'column_id': 'Face'},
+                'width': '40px',
+                'padding': '0px'
             }
         ],
-        page_action='none'
+        page_action='none',
+        markdown_options={'html': True} # Enable HTML in markdown
     )
 
 
@@ -606,7 +668,7 @@ def create_all_players_table(df):
         
     # Prepare the data
     all_players_data = df.sort_values('value_gap', ascending=False)[
-        ['player_name', 'archetype', 'current_year_salary', 'LEBRON', 'value_gap']
+        ['player_name', 'archetype', 'current_year_salary', 'LEBRON', 'value_gap', 'PLAYER_ID']
     ].copy()
     
     # Clean up player names and archetypes
@@ -616,6 +678,15 @@ def create_all_players_table(df):
     all_players_data['archetype'] = all_players_data['archetype'].apply(
         lambda x: str(x).strip() if pd.notna(x) else 'Unknown'
     )
+    
+    # Add Face HTML
+    def get_face_html(pid):
+        if pd.notna(pid):
+            url = f"https://cdn.nba.com/headshots/nba/latest/1040x760/{int(pid)}.png"
+            return f'<img src="{url}" style="height: 30px; width: auto; border-radius: 50%;" />'
+        return ""
+        
+    all_players_data['Face'] = all_players_data['PLAYER_ID'].apply(get_face_html)
     
     # Create style conditions based on actual values (not row indices)
     # This ensures colors stay correct even when table is sorted differently
@@ -671,12 +742,19 @@ def create_all_players_table(df):
             'if': {'column_id': 'archetype'},
             'fontSize': '12px',
             'color': '#adb5bd'
+        },
+        # Face column width
+        {
+            'if': {'column_id': 'Face'},
+            'width': '40px',
+            'padding': '0px'
         }
     ]
     
     return dash_table.DataTable(
         data=all_players_data.to_dict('records'),
         columns=[
+            {'name': '', 'id': 'Face', 'presentation': 'markdown'},
             {'name': 'Player Name', 'id': 'player_name', 'type': 'text'},
             {'name': 'Archetype', 'id': 'archetype', 'type': 'text'},
             {'name': 'Salary', 'id': 'current_year_salary', 'type': 'numeric', 
@@ -697,7 +775,8 @@ def create_all_players_table(df):
             'padding': '6px 12px',
             'fontSize': '13px',
             'border': 'none',
-            'borderBottom': '1px solid #2c3e50'
+            'borderBottom': '1px solid #2c3e50',
+            'verticalAlign': 'middle' # Align text with images
         },
         style_header={
             'backgroundColor': '#151b26',
@@ -712,7 +791,8 @@ def create_all_players_table(df):
             'padding': '6px 12px'
         },
         style_data_conditional=style_conditions,
-        page_action='none'
+        page_action='none',
+        markdown_options={'html': True}
     )
 
 

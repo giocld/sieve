@@ -79,8 +79,10 @@
 
 /* Table Images */
 .dash-table-container .dash-spreadsheet-container .dash-spreadsheet-inner td img {
-    height: 50px;
+    height: 35px;
     width: auto;
+    max-width: 100%;
+    object-fit: contain;
 }
 
 /* Hero Header */
@@ -116,6 +118,12 @@
     border-color: #4a5568 !important;
 }
 
+/* Main Content Container */
+.content-container {
+    background-color: #0f1623;
+    padding: 30px 20px;
+}
+
 /* Mobile Responsiveness */
 @media (max-width: 768px) {
     .hero-header {
@@ -140,5 +148,44 @@
     .js-plotly-plot .plotly .main-svg {
         margin-left: 0 !important;
         margin-right: 0 !important;
+    }
+
+    /* Reduce padding for main container on mobile */
+    .content-container {
+        padding: 15px 10px;
+    }
+
+    /* Reduce card body padding */
+    .card-body {
+        padding: 10px !important;
+    }
+
+    /* Adjust tab font size and padding */
+    .custom-tab {
+        font-size: 12px !important;
+        padding: 8px 4px !important;
+    }
+
+    /* Ensure tabs don't overflow or wrap awkwardly */
+    .custom-tabs-container {
+        overflow-x: auto;
+        white-space: nowrap;
+        -webkit-overflow-scrolling: touch;
+        /* Smooth scrolling on iOS */
+    }
+
+    /* Adjust section titles */
+    h2 {
+        font-size: 22px !important;
+        margin-top: 1rem !important;
+        margin-bottom: 1rem !important;
+        text-align: center;
+    }
+
+    /* Prevent auto-zoom on inputs on iOS */
+    input,
+    select,
+    textarea {
+        font-size: 16px !important;
     }
 }
