@@ -81,25 +81,107 @@ except Exception as e:
 fig_quadrant = visualizations.create_efficiency_quadrant(df_teams)
 fig_grid = visualizations.create_team_grid(df_teams)
 
+# Generate lineup team options
+print("Loading lineup team options...")
+try:
+    lineup_team_options = data_processing.get_lineup_teams()
+except Exception as e:
+    print(f"Error loading lineup teams: {e}")
+    lineup_team_options = []
+
 # Generate the layout for each tab
+landing_tab_layout = layout.create_landing_tab(df, df_teams)
 player_tab_layout = layout.create_player_tab(df)
 team_tab_layout = layout.create_team_tab(df_teams, fig_quadrant, fig_grid)
+lineup_tab_layout = layout.create_lineup_tab(lineup_team_options)
 similarity_tab_layout = layout.create_similarity_tab(player_options)
 
 # Assemble the main application layout
 app.layout = layout.create_main_layout()
 
+# Callback to handle card navigation requests
 @app.callback(
-    Output('page-content', 'children'),
-    Input('view-selector', 'value')
+    Output('nav-request', 'data'),
+    [Input('card-nav-player', 'n_clicks'),
+     Input('card-nav-team', 'n_clicks'),
+     Input('card-nav-lineup', 'n_clicks'),
+     Input('card-nav-similarity', 'n_clicks')],
+    prevent_initial_call=True
 )
-def display_content(selected_view):
-    """Updates the main page content based on the selected view."""
-    if selected_view == 'team':
-        return team_tab_layout
-    elif selected_view == 'similarity':
-        return similarity_tab_layout
-    return player_tab_layout
+def handle_card_navigation(player, team, lineup, similarity):
+    """Handles clicks on quick access cards."""
+    from dash import ctx
+    card_to_nav = {
+        'card-nav-player': 'nav-player',
+        'card-nav-team': 'nav-team',
+        'card-nav-lineup': 'nav-lineup',
+        'card-nav-similarity': 'nav-similarity'
+    }
+    if ctx.triggered_id in card_to_nav:
+        return card_to_nav[ctx.triggered_id]
+    return None
+
+@app.callback(
+    [Output('page-content', 'children'),
+     Output('view-selector', 'data'),
+     Output('nav-home', 'style'),
+     Output('nav-player', 'style'),
+     Output('nav-team', 'style'),
+     Output('nav-lineup', 'style'),
+     Output('nav-similarity', 'style')],
+    [Input('nav-home', 'n_clicks'),
+     Input('nav-player', 'n_clicks'),
+     Input('nav-team', 'n_clicks'),
+     Input('nav-lineup', 'n_clicks'),
+     Input('nav-similarity', 'n_clicks'),
+     Input('nav-request', 'data')],
+    [State('view-selector', 'data')],
+    prevent_initial_call=False
+)
+def display_content(home_clicks, player_clicks, team_clicks, lineup_clicks, similarity_clicks,
+                   nav_request, current_view):
+    """Updates the main page content based on navigation clicks."""
+    from dash import ctx
+    
+    # Style templates
+    active_style = {"color": "#ffffff", "fontWeight": "600", "fontSize": "13px", "padding": "8px 16px", 
+                    "backgroundColor": "rgba(255, 107, 53, 0.15)", "borderRadius": "6px"}
+    inactive_style = {"color": "#6c757d", "fontWeight": "500", "fontSize": "13px", "padding": "8px 16px"}
+    
+    # Check if this is initial load (no actual clicks yet)
+    all_clicks = [home_clicks, player_clicks, team_clicks, lineup_clicks, similarity_clicks]
+    is_initial_load = all(c is None or c == 0 for c in all_clicks) and nav_request is None
+    
+    # Determine which nav was clicked
+    if is_initial_load or not ctx.triggered_id:
+        triggered_id = 'nav-home'
+    elif ctx.triggered_id == 'nav-request' and nav_request:
+        # Navigation request from card click
+        triggered_id = nav_request
+    else:
+        triggered_id = ctx.triggered_id
+    
+    # Map nav IDs to views and content
+    nav_map = {
+        'nav-home': ('home', landing_tab_layout),
+        'nav-player': ('player', player_tab_layout),
+        'nav-team': ('team', team_tab_layout),
+        'nav-lineup': ('lineup', lineup_tab_layout),
+        'nav-similarity': ('similarity', similarity_tab_layout)
+    }
+    
+    # Get selected view and content
+    selected_view, content = nav_map.get(triggered_id, ('home', landing_tab_layout))
+    
+    # Generate styles for all nav items
+    styles = []
+    for nav_id in ['nav-home', 'nav-player', 'nav-team', 'nav-lineup', 'nav-similarity']:
+        if nav_id == triggered_id:
+            styles.append(active_style)
+        else:
+            styles.append(inactive_style)
+    
+    return [content, selected_view] + styles
 
 
 # 4.  CALLBACKS
@@ -204,6 +286,92 @@ def update_team_radar(team1_abbr, team2_abbr):
     radar_data_1 = data_processing.get_team_radar_data(team1_abbr)
     radar_data_2 = data_processing.get_team_radar_data(team2_abbr)
     return visualizations.create_team_radar_chart(radar_data_1, radar_data_2, team1_abbr, team2_abbr)
+
+
+# ============================================================================
+# LINEUP CHEMISTRY CALLBACKS
+# ============================================================================
+
+@app.callback(
+    [Output('chart-best-lineups', 'figure'),
+     Output('chart-worst-lineups', 'figure'),
+     Output('chart-lineup-scatter', 'figure'),
+     Output('table-best-lineups', 'children'),
+     Output('table-worst-lineups', 'children')],
+    [Input('lineup-team-dropdown', 'value'),
+     Input('lineup-size-radio', 'value'),
+     Input('lineup-min-minutes', 'value')]
+)
+def update_lineup_analysis(team_abbr, group_size, min_minutes):
+    """
+    Updates all lineup visualizations based on user filters.
+    
+    This callback is triggered when the user changes the team, lineup size,
+    or minimum minutes filter. It fetches new data from the NBA API (or cache)
+    and regenerates all charts and tables.
+    
+    Args:
+        team_abbr (str): Team abbreviation or 'ALL' for league-wide.
+        group_size (int): 2 for duos, 3 for trios.
+        min_minutes (int): Minimum minutes played together.
+        
+    Returns:
+        tuple: Best chart, worst chart, scatter chart, best table, worst table.
+    """
+    try:
+        # Handle 'ALL' teams selection
+        team_filter = None if team_abbr == 'ALL' else team_abbr
+        
+        print(f"Fetching lineup data: team={team_filter}, size={group_size}, min_min={min_minutes}")
+        
+        # Get best and worst lineups
+        df_best = data_processing.get_best_lineups(
+            team_abbr=team_filter,
+            group_quantity=group_size,
+            min_minutes=min_minutes,
+            top_n=15
+        )
+        
+        df_worst = data_processing.get_worst_lineups(
+            team_abbr=team_filter,
+            group_quantity=group_size,
+            min_minutes=min_minutes,
+            top_n=15
+        )
+        
+        # Create visualizations
+        fig_best = visualizations.create_lineup_bar_chart(
+            df_best, 
+            title='Best Lineups', 
+            color='#06d6a0',
+            metric='PLUS_MINUS'
+        )
+        
+        fig_worst = visualizations.create_lineup_bar_chart(
+            df_worst, 
+            title='Worst Lineups', 
+            color='#ef476f',
+            metric='PLUS_MINUS'
+        )
+        
+        fig_scatter = visualizations.create_lineup_scatter(df_best, df_worst)
+        
+        # Create tables
+        table_best = visualizations.create_lineup_table(df_best, table_type='best')
+        table_worst = visualizations.create_lineup_table(df_worst, table_type='worst')
+        
+        return fig_best, fig_worst, fig_scatter, table_best, table_worst
+        
+    except Exception as e:
+        print(f"Error updating lineup analysis: {e}")
+        import traceback
+        traceback.print_exc()
+        
+        # Return empty figures on error
+        empty_fig = go.Figure().add_annotation(text=f"Error loading data: {str(e)}")
+        empty_fig.update_layout(template='plotly_dark', paper_bgcolor='#0f1623', height=400)
+        
+        return empty_fig, empty_fig, empty_fig, html.P(f"Error: {str(e)}"), html.P(f"Error: {str(e)}")
 
 
 

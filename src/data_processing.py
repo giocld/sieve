@@ -13,7 +13,10 @@ import time
 from sklearn.neighbors import NearestNeighbors
 from sklearn.preprocessing import StandardScaler
 from nba_api.stats.static import teams
-from nba_api.stats.endpoints import leaguedashteamstats, leaguedashplayerstats, leaguedashptstats
+from nba_api.stats.endpoints import leaguedashteamstats, leaguedashplayerstats, leaguedashptstats, leaguedashlineups
+
+# Import unified cache manager
+from src.cache_manager import cache
 
 # Suppress harmless multiprocessing cleanup warnings
 warnings.filterwarnings("ignore", category=UserWarning, module="multiprocessing.resource_tracker")
@@ -38,6 +41,194 @@ TEAM_ABBR_MAP = {
 ABBR_NORMALIZATION = {
     'PHO': 'PHX', 'CHO': 'CHA', 'BRK': 'BKN', 'NOH': 'NOP', 'TOT': 'UNK'
 }
+
+
+# =============================================================================
+# NAME MATCHING UTILITIES
+# =============================================================================
+
+def normalize_name(name):
+    """
+    Normalize a player name for matching.
+    Handles common variations like:
+    - Special characters (Şengün -> Sengun)
+    - Punctuation (A.J. -> AJ)
+    - Suffixes (Jr., Sr., II, III)
+    - Case differences
+    
+    Args:
+        name: Player name string
+        
+    Returns:
+        Normalized lowercase name
+    """
+    import unicodedata
+    import re
+    
+    if not isinstance(name, str) or pd.isna(name):
+        return ''
+    
+    # Convert to ASCII (removes accents: Şengün -> Sengun)
+    name = unicodedata.normalize('NFKD', name)
+    name = name.encode('ASCII', 'ignore').decode('ASCII')
+    
+    # Lowercase
+    name = name.lower()
+    
+    # Remove punctuation (A.J. -> aj)
+    name = re.sub(r'[.\-\']', '', name)
+    
+    # Normalize suffixes
+    name = re.sub(r'\s+(jr|sr|ii|iii|iv)$', '', name)
+    
+    # Remove extra whitespace
+    name = ' '.join(name.split())
+    
+    return name
+
+
+def build_name_matcher(target_names):
+    """
+    Build a fuzzy name matcher for a list of target names.
+    
+    Args:
+        target_names: List of names to match against
+        
+    Returns:
+        Function that takes a name and returns best match + score
+    """
+    from rapidfuzz import fuzz, process
+    
+    # Pre-normalize all target names
+    normalized_targets = {normalize_name(n): n for n in target_names if pd.notna(n)}
+    target_list = list(normalized_targets.keys())
+    
+    def match(name, threshold=90):
+        """
+        Find best match for a name.
+        
+        Uses multiple validation checks to avoid false positives like:
+        - "Jalen McDaniels" matching "Jaden McDaniels" (different players)
+        - "Jaylen Nowell" matching "Jaylen Wells" (different players)
+        
+        Args:
+            name: Name to match
+            threshold: Minimum similarity score (0-100), default 90
+            
+        Returns:
+            (matched_original_name, score) or (None, 0)
+        """
+        if not name or pd.isna(name):
+            return None, 0
+        
+        norm_name = normalize_name(name)
+        
+        # First try exact match on normalized names
+        if norm_name in normalized_targets:
+            return normalized_targets[norm_name], 100
+        
+        # Fuzzy match using token_sort_ratio for better handling of name order
+        result = process.extractOne(
+            norm_name, 
+            target_list,
+            scorer=fuzz.token_sort_ratio
+        )
+        
+        if result and result[1] >= threshold:
+            matched_norm = result[0]
+            original_name = normalized_targets[matched_norm]
+            
+            # Additional validation: first names must match closely
+            # This prevents "Jalen" matching "Jaden" 
+            name_parts = norm_name.split()
+            matched_parts = matched_norm.split()
+            
+            if name_parts and matched_parts:
+                first_name_score = fuzz.ratio(name_parts[0], matched_parts[0])
+                # First name must be at least 95% similar
+                if first_name_score < 95:
+                    return None, 0
+            
+            return original_name, result[1]
+        
+        return None, 0
+    
+    return match
+
+
+def fuzzy_merge_dataframes(df_left, df_right, left_on, right_on, threshold=85):
+    """
+    Merge two DataFrames using fuzzy name matching.
+    
+    Args:
+        df_left: Left DataFrame
+        df_right: Right DataFrame  
+        left_on: Column name in left DataFrame
+        right_on: Column name in right DataFrame
+        threshold: Minimum similarity score (0-100)
+        
+    Returns:
+        Merged DataFrame with match info
+    """
+    # Build matcher from right DataFrame names
+    right_names = df_right[right_on].dropna().unique().tolist()
+    matcher = build_name_matcher(right_names)
+    
+    # Match each name in left DataFrame
+    matches = []
+    unmatched = []
+    
+    for idx, row in df_left.iterrows():
+        name = row[left_on]
+        matched_name, score = matcher(name, threshold)
+        
+        if matched_name:
+            matches.append({
+                'left_idx': idx,
+                'left_name': name,
+                'matched_name': matched_name,
+                'match_score': score
+            })
+        else:
+            unmatched.append(name)
+    
+    # Report matching stats
+    total = len(df_left)
+    matched_count = len(matches)
+    print(f"Name matching: {matched_count}/{total} matched ({100*matched_count/total:.1f}%)")
+    
+    if unmatched:
+        print(f"  Unmatched ({len(unmatched)}): {unmatched[:5]}{'...' if len(unmatched) > 5 else ''}")
+    
+    # Create match DataFrame
+    df_matches = pd.DataFrame(matches)
+    
+    if df_matches.empty:
+        return pd.DataFrame()
+    
+    # Merge using matched names
+    df_left_matched = df_left.loc[df_matches['left_idx']].copy()
+    df_left_matched['_matched_name'] = df_matches['matched_name'].values
+    df_left_matched['_match_score'] = df_matches['match_score'].values
+    
+    # Merge with right DataFrame
+    df_merged = pd.merge(
+        df_left_matched,
+        df_right,
+        left_on='_matched_name',
+        right_on=right_on,
+        how='inner',
+        suffixes=('', '_contract')
+    )
+    
+    # Clean up temporary and duplicate columns
+    # Keep the left DataFrame's name column, drop the right's
+    cols_to_drop = ['_matched_name']
+    if right_on + '_contract' in df_merged.columns:
+        cols_to_drop.append(right_on + '_contract')
+    df_merged = df_merged.drop(columns=cols_to_drop, errors='ignore')
+    
+    return df_merged
 
 
 def load_and_merge_data(lebron_file='data/LEBRON.csv', contracts_file='data/basketball_reference_contracts.csv'):
@@ -80,13 +271,22 @@ def load_and_merge_data(lebron_file='data/LEBRON.csv', contracts_file='data/bask
     else:
         df_lebron['archetype'] = 'Unknown'
     
-    # Merge the datasets using an inner join on the player's name.
-    # Players not found in both datasets will be excluded.
-    df = pd.merge(df_lebron, df_contracts, on='player_name', how='inner')
+    # Merge the datasets using fuzzy name matching.
+    # This handles variations like "Alperen Sengun" vs "Alperen Şengün"
+    # and "A.J. Green" vs "AJ Green"
+    print("Merging LEBRON and contract data with fuzzy matching...")
+    df = fuzzy_merge_dataframes(
+        df_lebron, 
+        df_contracts, 
+        left_on='player_name', 
+        right_on='player_name',
+        threshold=90  # 90% similarity required (higher to avoid false positives)
+    )
     
     # Remove duplicate entries for the same player, keeping the first occurrence.
     # This handles cases where a player might be listed multiple times (e.g., traded players).
-    df = df.drop_duplicates(subset=['player_name'], keep='first')
+    if not df.empty:
+        df = df.drop_duplicates(subset=['player_name'], keep='first')
     
     # Handle missing salary data for the current year.
     # If 'current_year_salary' is missing, we fallback to 'year_4' (Guaranteed Amount).
@@ -99,21 +299,31 @@ def load_and_merge_data(lebron_file='data/LEBRON.csv', contracts_file='data/bask
         # If still missing, fill with 0 to allow for calculations without errors
         df['current_year_salary'] = df['current_year_salary'].fillna(0)
 
-    # --- NEW: Add Player IDs for Headshots ---
+    # --- Add Player IDs for Headshots ---
     # We try to load the historical stats cache to get a mapping of Name -> ID
-    historical_file = 'data/nba_historical_stats.csv'
-    if os.path.exists(historical_file):
-        try:
-            df_hist = pd.read_csv(historical_file)
-            if 'PLAYER_NAME' in df_hist.columns and 'PLAYER_ID' in df_hist.columns:
-                # Create a mapping dictionary (Name -> ID)
-                # We use the most recent ID found for a player
-                id_map = df_hist.set_index('PLAYER_NAME')['PLAYER_ID'].to_dict()
-                
-                # Map IDs to the main dataframe
-                df['PLAYER_ID'] = df['player_name'].map(id_map)
-        except Exception as e:
-            print(f"Warning: Could not load player IDs from history: {e}")
+    # Uses fuzzy matching to handle name variations
+    try:
+        df_hist = cache.load_player_stats()
+        if df_hist is not None and 'PLAYER_NAME' in df_hist.columns and 'PLAYER_ID' in df_hist.columns:
+            # Build fuzzy matcher from historical names
+            hist_names = df_hist['PLAYER_NAME'].dropna().unique().tolist()
+            matcher = build_name_matcher(hist_names)
+            
+            # Create ID mapping from historical data
+            id_map = df_hist.drop_duplicates('PLAYER_NAME').set_index('PLAYER_NAME')['PLAYER_ID'].to_dict()
+            
+            # Match each player name and get their ID
+            def get_player_id(name):
+                matched_name, score = matcher(name, threshold=85)
+                if matched_name and matched_name in id_map:
+                    return id_map[matched_name]
+                return None
+            
+            df['PLAYER_ID'] = df['player_name'].apply(get_player_id)
+            matched_ids = df['PLAYER_ID'].notna().sum()
+            print(f"Player ID matching: {matched_ids}/{len(df)} matched for headshots")
+    except Exception as e:
+        print(f"Warning: Could not load player IDs from history: {e}")
     
     return df
 
@@ -170,9 +380,10 @@ def calculate_player_value_metrics(df):
     return df
 
 
-def calculate_team_metrics(df_players, standings_file='data/nba_standings_cache.csv'):
+def calculate_team_metrics(df_players, season='2024-25'):
     """
     Aggregates individual player data to the team level and calculates team efficiency metrics.
+    Uses unified SQLite cache for standings data.
     
     This function performs the following steps:
     1. Loads team standings (Wins/Losses).
@@ -182,17 +393,17 @@ def calculate_team_metrics(df_players, standings_file='data/nba_standings_cache.
 
     Args:
         df_players (pd.DataFrame): DataFrame containing individual player data.
-        standings_file (str): Path to the CSV file containing cached NBA standings.
+        season (str): NBA season string for standings data.
 
     Returns:
         pd.DataFrame: A DataFrame where each row is a Team, containing aggregated metrics.
     """
-    # 1. Load Standings Data
-    if not os.path.exists(standings_file):
-        print(f"Warning: {standings_file} not found. Team metrics will be incomplete.")
+    # 1. Load Standings Data from unified cache
+    df_standings = cache.load_standings(season=season)
+    if df_standings is None:
+        print(f"Warning: No standings in cache. Team metrics will be incomplete.")
         df_standings = pd.DataFrame()
     else:
-        df_standings = pd.read_csv(standings_file)
         df_standings.columns = df_standings.columns.str.strip()
         
         # Construct Full Name if missing, to facilitate mapping to abbreviations
@@ -331,25 +542,72 @@ def add_team_logos(df_teams):
     return df_teams
 
 
-def fetch_nba_advanced_stats(cache_file='data/nba_advanced_stats_cache.csv'):
+def fetch_nba_advanced_stats(force_refresh=False, season='2024-25'):
     """
     Fetches Advanced Team Stats from NBA API and caches them.
+    Uses unified SQLite cache for storage.
+    
+    Args:
+        force_refresh (bool): If True, bypass cache and fetch fresh data.
+        season (str): NBA season string.
     
     Returns:
         pd.DataFrame: DataFrame with advanced stats.
     """
-    if os.path.exists(cache_file):
-        # Check if cache is recent (optional, skipping for now)
-        return pd.read_csv(cache_file)
+    # Check unified cache first
+    if not force_refresh:
+        df = cache.load_team_stats(stat_type='advanced', season=season)
+        if df is not None and not df.empty:
+            print(f"Loaded team advanced stats from cache")
+            return df
         
     try:
-
-        stats = leaguedashteamstats.LeagueDashTeamStats(measure_type_detailed_defense='Advanced')
+        print("Fetching team advanced stats from NBA API...")
+        stats = leaguedashteamstats.LeagueDashTeamStats(
+            measure_type_detailed_defense='Advanced',
+            season=season
+        )
         df = stats.get_data_frames()[0]
-        df.to_csv(cache_file, index=False)
+        
+        # Save to unified cache
+        cache.save_team_stats(df, stat_type='advanced', season=season)
         return df
     except Exception as e:
         print(f"Error fetching NBA API data: {e}")
+        return pd.DataFrame()
+
+
+def fetch_standings(force_refresh=False, season='2024-25'):
+    """
+    Fetches team standings from NBA API and caches them.
+    Uses unified SQLite cache for storage.
+    
+    Args:
+        force_refresh (bool): If True, bypass cache and fetch fresh data.
+        season (str): NBA season string.
+    
+    Returns:
+        pd.DataFrame: DataFrame with standings.
+    """
+    from nba_api.stats.endpoints import leaguestandings
+    
+    # Check unified cache first
+    if not force_refresh:
+        df = cache.load_standings(season=season)
+        if df is not None and not df.empty:
+            print(f"Loaded standings from cache")
+            return df
+    
+    try:
+        print("Fetching standings from NBA API...")
+        standings = leaguestandings.LeagueStandings(season=season)
+        df = standings.get_data_frames()[0]
+        
+        # Save to unified cache
+        cache.save_standings(df, season=season)
+        return df
+    except Exception as e:
+        print(f"Error fetching standings: {e}")
         return pd.DataFrame()
 
 
@@ -448,19 +706,23 @@ def get_season_list(start_year=2014):
     return seasons
 
 
-def fetch_historical_data(start_year=2003, cache_file='data/nba_historical_stats.csv', include_tracking=True):
+def fetch_historical_data(start_year=2003, include_tracking=True, force_refresh=False):
     """
     Fetches historical player stats (Base + Advanced + Tracking) for multiple seasons.
     Calculates Relative True Shooting (rTS), era-adjusted metrics, and defensive profiles.
+    Uses unified SQLite cache for storage.
     
     Args:
         start_year (int): Starting year for historical data
-        cache_file (str): Path to cache file
         include_tracking (bool): Whether to fetch tracking data (slower but more detailed)
+        force_refresh (bool): If True, bypass cache and fetch fresh data.
     """
-    if os.path.exists(cache_file):
-        print(f"Loading historical data from {cache_file}...")
-        return pd.read_csv(cache_file)
+    # Check unified cache first
+    if not force_refresh:
+        df = cache.load_player_stats()
+        if df is not None and not df.empty:
+            print(f"Loaded {len(df)} historical player stats from cache")
+            return df
 
 
 
@@ -602,9 +864,8 @@ def fetch_historical_data(start_year=2003, cache_file='data/nba_historical_stats
         
     full_history = pd.concat(all_dfs, ignore_index=True)
     
-    # Save to cache
-    os.makedirs(os.path.dirname(cache_file), exist_ok=True)
-    full_history.to_csv(cache_file, index=False)
+    # Save to unified cache
+    cache.save_player_stats(full_history)
     
     return full_history
 
@@ -863,3 +1124,233 @@ def find_similar_players(player_name, season, df_history, model, scaler, feature
             break
         
     return results
+
+
+# ============================================================================
+# LINEUP CHEMISTRY ANALYSIS
+# ============================================================================
+
+def fetch_lineup_data(team_abbr=None, group_quantity=2, min_minutes=50, 
+                      force_refresh=False, season='2024-25'):
+    """
+    Fetches lineup data (duos, trios, etc.) from the NBA API.
+    Uses unified SQLite cache for storage.
+    
+    This function retrieves performance data for player combinations that have
+    played together on the floor. It tracks metrics like Net Rating, Plus/Minus,
+    and minutes played together.
+    
+    Args:
+        team_abbr (str, optional): Filter by team abbreviation (e.g., 'BOS'). None = all teams.
+        group_quantity (int): Number of players in the lineup (2=duos, 3=trios, etc.)
+        min_minutes (int): Minimum minutes played together to be included.
+        force_refresh (bool): If True, bypass cache and fetch fresh data.
+        season (str): NBA season string (e.g., '2024-25').
+        
+    Returns:
+        pd.DataFrame: DataFrame with lineup performance metrics.
+    """
+    # Check unified cache first (unless force refresh)
+    if not force_refresh:
+        df = cache.load_lineups(group_quantity, team_abbr, season, min_minutes)
+        if df is not None and not df.empty:
+            return df
+    
+    # Custom headers to avoid NBA API blocking
+    custom_headers = {
+        'Host': 'stats.nba.com',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/113.0',
+        'Accept': 'application/json, text/plain, */*',
+        'Accept-Language': 'en-US,en;q=0.5',
+        'Accept-Encoding': 'gzip, deflate, br',
+        'x-nba-stats-origin': 'stats',
+        'x-nba-stats-token': 'true',
+        'Connection': 'keep-alive',
+        'Referer': 'https://www.nba.com/',
+        'Origin': 'https://www.nba.com',
+        'Sec-Fetch-Dest': 'empty',
+        'Sec-Fetch-Mode': 'cors',
+        'Sec-Fetch-Site': 'same-site',
+    }
+    
+    # Retry logic for transient failures
+    max_retries = 3
+    retry_delay = 2
+    
+    for attempt in range(max_retries):
+        try:
+            print(f"Fetching {group_quantity}-man lineup data from NBA API (attempt {attempt + 1}/{max_retries})...")
+            
+            # Get Team ID if team_abbr provided
+            team_id = None
+            if team_abbr:
+                nba_teams = teams.get_teams()
+                for t in nba_teams:
+                    if t['abbreviation'] == team_abbr:
+                        team_id = t['id']
+                        break
+            
+            # Add delay before API call to avoid rate limiting
+            time.sleep(1.0)
+            
+            # Fetch lineup data with custom headers and longer timeout
+            lineups = leaguedashlineups.LeagueDashLineups(
+                group_quantity=group_quantity,
+                season=season,
+                season_type_all_star='Regular Season',
+                per_mode_detailed='PerGame',
+                team_id_nullable=team_id if team_id else '',
+                headers=custom_headers,
+                timeout=60  # Increase timeout to 60 seconds
+            )
+            
+            df = lineups.get_data_frames()[0]
+            
+            if df.empty:
+                print(f"Warning: NBA API returned empty data for {group_quantity}-man lineups")
+                if attempt < max_retries - 1:
+                    time.sleep(retry_delay * (attempt + 1))
+                    continue
+                return pd.DataFrame()
+            
+            # Save to unified cache
+            cache.save_lineups(df, group_quantity, team_abbr, season)
+            
+            # Filter by minimum TOTAL minutes
+            # SUM_TIME_PLAYED / 3000 = total minutes played together
+            if 'SUM_TIME_PLAYED' in df.columns:
+                df['TOTAL_MIN'] = df['SUM_TIME_PLAYED'] / 3000  # Convert to minutes
+                df = df[df['TOTAL_MIN'] >= min_minutes]
+            
+            return df
+            
+        except Exception as e:
+            print(f"Attempt {attempt + 1} failed: {e}")
+            if attempt < max_retries - 1:
+                wait_time = retry_delay * (attempt + 1)
+                print(f"Retrying in {wait_time} seconds...")
+                time.sleep(wait_time)
+            else:
+                print(f"All {max_retries} attempts failed for lineup data")
+                # Return empty DataFrame if all retries failed
+                return pd.DataFrame()
+
+
+def get_best_lineups(team_abbr=None, group_quantity=2, min_minutes=50, top_n=15, sort_by='PLUS_MINUS'):
+    """
+    Gets the best performing lineups (duos/trios) sorted by a given metric.
+    
+    Args:
+        team_abbr (str, optional): Filter by team abbreviation.
+        group_quantity (int): 2 for duos, 3 for trios.
+        min_minutes (int): Minimum TOTAL minutes played together.
+        top_n (int): Number of top lineups to return.
+        sort_by (str): Metric to sort by ('PLUS_MINUS', 'W_PCT', 'PTS').
+        
+    Returns:
+        pd.DataFrame: Top N lineups with key metrics.
+    """
+    df = fetch_lineup_data(team_abbr=team_abbr, group_quantity=group_quantity, min_minutes=min_minutes)
+    
+    if df.empty:
+        return pd.DataFrame()
+    
+    # Select relevant columns (use TOTAL_MIN for display)
+    cols_to_keep = [
+        'GROUP_NAME', 'GROUP_ID', 'TEAM_ABBREVIATION', 'GP', 'TOTAL_MIN',
+        'W', 'L', 'W_PCT', 'PLUS_MINUS', 'PTS', 'AST', 'REB', 'FG_PCT'
+    ]
+    cols_available = [c for c in cols_to_keep if c in df.columns]
+    df_filtered = df[cols_available].copy()
+    
+    # Rename TOTAL_MIN to MIN for display consistency
+    if 'TOTAL_MIN' in df_filtered.columns:
+        df_filtered = df_filtered.rename(columns={'TOTAL_MIN': 'MIN'})
+    
+    # Sort by the specified metric (default PLUS_MINUS)
+    if sort_by in df_filtered.columns:
+        df_filtered = df_filtered.sort_values(sort_by, ascending=False)
+    elif 'PLUS_MINUS' in df_filtered.columns:
+        df_filtered = df_filtered.sort_values('PLUS_MINUS', ascending=False)
+    
+    # Get top N
+    return df_filtered.head(top_n)
+
+
+def get_worst_lineups(team_abbr=None, group_quantity=2, min_minutes=50, top_n=15, sort_by='PLUS_MINUS'):
+    """
+    Gets the worst performing lineups (duos/trios) sorted by a given metric.
+    
+    Args:
+        team_abbr (str, optional): Filter by team abbreviation.
+        group_quantity (int): 2 for duos, 3 for trios.
+        min_minutes (int): Minimum TOTAL minutes played together.
+        top_n (int): Number of worst lineups to return.
+        sort_by (str): Metric to sort by ('PLUS_MINUS', 'W_PCT', 'PTS').
+        
+    Returns:
+        pd.DataFrame: Bottom N lineups with key metrics.
+    """
+    df = fetch_lineup_data(team_abbr=team_abbr, group_quantity=group_quantity, min_minutes=min_minutes)
+    
+    if df.empty:
+        return pd.DataFrame()
+    
+    # Select relevant columns (use TOTAL_MIN for display)
+    cols_to_keep = [
+        'GROUP_NAME', 'GROUP_ID', 'TEAM_ABBREVIATION', 'GP', 'TOTAL_MIN',
+        'W', 'L', 'W_PCT', 'PLUS_MINUS', 'PTS', 'AST', 'REB', 'FG_PCT'
+    ]
+    cols_available = [c for c in cols_to_keep if c in df.columns]
+    df_filtered = df[cols_available].copy()
+    
+    # Rename TOTAL_MIN to MIN for display consistency
+    if 'TOTAL_MIN' in df_filtered.columns:
+        df_filtered = df_filtered.rename(columns={'TOTAL_MIN': 'MIN'})
+    
+    # Sort ascending (worst first)
+    if sort_by in df_filtered.columns:
+        df_filtered = df_filtered.sort_values(sort_by, ascending=True)
+    elif 'PLUS_MINUS' in df_filtered.columns:
+        df_filtered = df_filtered.sort_values('PLUS_MINUS', ascending=True)
+    
+    # Get bottom N
+    return df_filtered.head(top_n)
+
+
+def get_team_lineup_summary(team_abbr, min_minutes=30):
+    """
+    Gets a comprehensive lineup summary for a specific team.
+    
+    Returns the best and worst duos and trios for the specified team.
+    
+    Args:
+        team_abbr (str): Team abbreviation (e.g., 'BOS', 'LAL').
+        min_minutes (int): Minimum minutes played together.
+        
+    Returns:
+        dict: Dictionary containing 'best_duos', 'worst_duos', 'best_trios', 'worst_trios'.
+    """
+    return {
+        'best_duos': get_best_lineups(team_abbr=team_abbr, group_quantity=2, 
+                                       min_minutes=min_minutes, top_n=10),
+        'worst_duos': get_worst_lineups(team_abbr=team_abbr, group_quantity=2, 
+                                         min_minutes=min_minutes, top_n=10),
+        'best_trios': get_best_lineups(team_abbr=team_abbr, group_quantity=3, 
+                                        min_minutes=min_minutes, top_n=10),
+        'worst_trios': get_worst_lineups(team_abbr=team_abbr, group_quantity=3, 
+                                          min_minutes=min_minutes, top_n=10)
+    }
+
+
+def get_lineup_teams():
+    """
+    Returns a list of all NBA teams for the lineup dropdown.
+    
+    Returns:
+        list: List of dictionaries with 'label' and 'value' keys.
+    """
+    nba_teams = teams.get_teams()
+    team_options = [{'label': t['full_name'], 'value': t['abbreviation']} 
+                    for t in sorted(nba_teams, key=lambda x: x['full_name'])]
+    return team_options

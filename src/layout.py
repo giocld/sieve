@@ -10,6 +10,7 @@ import pandas as pd
 import numpy as np
 
 from .data_processing import TEAM_ABBR_MAP
+from .config import get_season_display
 
 # Create reverse mapping for display
 ABBR_TO_NAME = {v: k for k, v in TEAM_ABBR_MAP.items()}
@@ -17,22 +18,311 @@ ABBR_TO_NAME = {v: k for k, v in TEAM_ABBR_MAP.items()}
 
 # Global Style Constants
 SECTION_TITLE_STYLE = {
-    "color": "#e9ecef",
-    "fontWeight": "600",
-    "fontSize": "28px",
-    "textAlign": "center"
+    "color": "#ffffff",
+    "fontWeight": "700",
+    "fontSize": "24px",
+    "textAlign": "left",
+    "letterSpacing": "0.5px",
+    "marginBottom": "8px"
 }
 
 CARD_HEADER_TEXT_STYLE = {
     "fontWeight": "600",
-    "fontSize": "16px",
-    "color": "#e4e6eb"
+    "fontSize": "14px",
+    "color": "#e4e6eb",
+    "letterSpacing": "0.3px"
 }
 
 CARD_HEADER_BG_STYLE = {
-    "backgroundColor": "#151b26",
-    "borderBottom": "2px solid #ff6b35"
+    "backgroundColor": "#0a0e14",
+    "borderBottom": "1px solid #1e2a3a",
+    "padding": "12px 16px"
 }
+
+def create_landing_tab(df=None, df_teams=None):
+    """
+    Creates the landing page with quick stats, navigation cards and metric explanations.
+    
+    Args:
+        df: Player dataframe for stats
+        df_teams: Team dataframe for stats
+    
+    Returns:
+        dbc.Container: The landing page layout.
+    """
+    # Calculate quick stats
+    num_players = len(df) if df is not None and not df.empty else 0
+    num_teams = len(df_teams) if df_teams is not None and not df_teams.empty else 0
+    avg_salary = df['current_year_salary'].mean() / 1_000_000 if df is not None and 'current_year_salary' in df.columns else 0
+    avg_lebron = df['LEBRON'].mean() if df is not None and 'LEBRON' in df.columns else 0
+    total_payroll = df_teams['Total_Payroll'].sum() / 1_000_000_000 if df_teams is not None and 'Total_Payroll' in df_teams.columns else 0
+    
+    # Find top performers
+    top_value_player = ""
+    top_value_gap = 0
+    if df is not None and 'value_gap' in df.columns and not df.empty:
+        top_idx = df['value_gap'].idxmax()
+        top_value_player = df.loc[top_idx, 'player_name'] if 'player_name' in df.columns else "N/A"
+        top_value_gap = df.loc[top_idx, 'value_gap']
+    
+    most_efficient_team = ""
+    if df_teams is not None and 'Efficiency_Index' in df_teams.columns and not df_teams.empty:
+        top_team_idx = df_teams['Efficiency_Index'].idxmax()
+        most_efficient_team = df_teams.loc[top_team_idx, 'Abbrev'] if 'Abbrev' in df_teams.columns else "N/A"
+    
+    return dbc.Container([
+        # Header Section
+        dbc.Row([
+            dbc.Col([
+                html.Div([
+                    html.H1("Overview", style={
+                        "color": "#ffffff",
+                        "fontWeight": "700",
+                        "fontSize": "32px",
+                        "marginBottom": "8px",
+                        "letterSpacing": "0.5px"
+                    }),
+                    html.P("NBA Player Value & Efficiency Analysis Platform", style={
+                        "color": "#6c757d",
+                        "fontSize": "14px",
+                        "marginBottom": "0"
+                    })
+                ], className="pt-4 pb-2")
+            ])
+        ]),
+        
+        # Quick Stats Row
+        dbc.Row([
+            dbc.Col([
+                html.Div([
+                    html.Span(f"{num_players}", style={"color": "#ff6b35", "fontWeight": "700", "fontSize": "28px"}),
+                    html.Div("Players Tracked", style={"color": "#4a5568", "fontSize": "11px", "fontWeight": "500", "marginTop": "-4px"})
+                ], style={"textAlign": "center"})
+            ], xs=6, md=2, className="mb-3"),
+            dbc.Col([
+                html.Div([
+                    html.Span(f"{num_teams}", style={"color": "#06d6a0", "fontWeight": "700", "fontSize": "28px"}),
+                    html.Div("Teams", style={"color": "#4a5568", "fontSize": "11px", "fontWeight": "500", "marginTop": "-4px"})
+                ], style={"textAlign": "center"})
+            ], xs=6, md=2, className="mb-3"),
+            dbc.Col([
+                html.Div([
+                    html.Span(f"${avg_salary:.1f}M", style={"color": "#2D96C7", "fontWeight": "700", "fontSize": "28px"}),
+                    html.Div("Avg Salary", style={"color": "#4a5568", "fontSize": "11px", "fontWeight": "500", "marginTop": "-4px"})
+                ], style={"textAlign": "center"})
+            ], xs=6, md=2, className="mb-3"),
+            dbc.Col([
+                html.Div([
+                    html.Span(f"{avg_lebron:+.2f}", style={"color": "#ffd166", "fontWeight": "700", "fontSize": "28px"}),
+                    html.Div("Avg LEBRON", style={"color": "#4a5568", "fontSize": "11px", "fontWeight": "500", "marginTop": "-4px"})
+                ], style={"textAlign": "center"})
+            ], xs=6, md=2, className="mb-3"),
+            dbc.Col([
+                html.Div([
+                    html.Span(f"${total_payroll:.1f}B", style={"color": "#ef476f", "fontWeight": "700", "fontSize": "28px"}),
+                    html.Div("League Payroll", style={"color": "#4a5568", "fontSize": "11px", "fontWeight": "500", "marginTop": "-4px"})
+                ], style={"textAlign": "center"})
+            ], xs=6, md=2, className="mb-3"),
+            dbc.Col([
+                html.Div([
+                    html.Span(most_efficient_team if most_efficient_team else "N/A", style={"color": "#06d6a0", "fontWeight": "700", "fontSize": "28px"}),
+                    html.Div("Most Efficient", style={"color": "#4a5568", "fontSize": "11px", "fontWeight": "500", "marginTop": "-4px"})
+                ], style={"textAlign": "center"})
+            ], xs=6, md=2, className="mb-3"),
+        ], className="py-3 mb-2", style={"backgroundColor": "#0a0e14", "borderRadius": "8px", "border": "1px solid #1e2a3a"}),
+        
+        # Top Performer Highlight
+        dbc.Row([
+            dbc.Col([
+                html.Div([
+                    html.Span("Best Value: ", style={"color": "#4a5568", "fontSize": "12px"}),
+                    html.Span(top_value_player, style={"color": "#06d6a0", "fontSize": "12px", "fontWeight": "600"}),
+                    html.Span(f" (+{top_value_gap:.1f} gap)", style={"color": "#6c757d", "fontSize": "11px"}) if top_value_gap > 0 else None
+                ], style={"textAlign": "center", "marginBottom": "16px"})
+            ])
+        ]) if top_value_player else None,
+        
+        # Quick Navigation Cards
+        html.H6("Quick Access", style={"color": "#4a5568", "fontWeight": "600", "fontSize": "11px", 
+                                        "textTransform": "uppercase", "letterSpacing": "1px", "marginBottom": "12px"}),
+        dbc.Row([
+            dbc.Col([
+                html.Div([
+                    dbc.Card([
+                        dbc.CardBody([
+                            html.Div([
+                                html.Span("Players", style={"color": "#ff6b35", "fontWeight": "700", "fontSize": "16px"})
+                            ], className="mb-2"),
+                            html.P("Find underpaid gems and overpaid contracts. Compare salary vs. on-court impact.", 
+                                   style={"color": "#6c757d", "fontSize": "12px", "marginBottom": "12px", "lineHeight": "1.5"}),
+                            html.Div([
+                                html.Span("Value Gap", style={"color": "#06d6a0", "fontSize": "11px", "fontWeight": "600"}),
+                                html.Span(" | ", style={"color": "#2d3748"}),
+                                html.Span("LEBRON", style={"color": "#ff6b35", "fontSize": "11px", "fontWeight": "600"}),
+                                html.Span(" | ", style={"color": "#2d3748"}),
+                                html.Span("WAR", style={"color": "#2D96C7", "fontSize": "11px", "fontWeight": "600"}),
+                            ])
+                        ], style={"padding": "16px"})
+                    ], style={"backgroundColor": "#12171f", "border": "1px solid #1e2a3a", "cursor": "pointer"}, className="h-100")
+                ], id="card-nav-player", n_clicks=0, className="h-100")
+            ], md=3, className="mb-3"),
+            
+            dbc.Col([
+                html.Div([
+                    dbc.Card([
+                        dbc.CardBody([
+                            html.Div([
+                                html.Span("Teams", style={"color": "#06d6a0", "fontWeight": "700", "fontSize": "16px"})
+                            ], className="mb-2"),
+                            html.P("Evaluate team efficiency. Which franchises are maximizing their payroll investment?", 
+                                   style={"color": "#6c757d", "fontSize": "12px", "marginBottom": "12px", "lineHeight": "1.5"}),
+                            html.Div([
+                                html.Span("Efficiency Index", style={"color": "#ffd166", "fontSize": "11px", "fontWeight": "600"}),
+                                html.Span(" | ", style={"color": "#2d3748"}),
+                                html.Span("Cost/Win", style={"color": "#ef476f", "fontSize": "11px", "fontWeight": "600"}),
+                            ])
+                        ], style={"padding": "16px"})
+                    ], style={"backgroundColor": "#12171f", "border": "1px solid #1e2a3a", "cursor": "pointer"}, className="h-100")
+                ], id="card-nav-team", n_clicks=0, className="h-100")
+            ], md=3, className="mb-3"),
+            
+            dbc.Col([
+                html.Div([
+                    dbc.Card([
+                        dbc.CardBody([
+                            html.Div([
+                                html.Span("Lineups", style={"color": "#2D96C7", "fontWeight": "700", "fontSize": "16px"})
+                            ], className="mb-2"),
+                            html.P("Discover which duos and trios dominate together or struggle when sharing minutes.", 
+                                   style={"color": "#6c757d", "fontSize": "12px", "marginBottom": "12px", "lineHeight": "1.5"}),
+                            html.Div([
+                                html.Span("Plus/Minus", style={"color": "#2D96C7", "fontSize": "11px", "fontWeight": "600"}),
+                                html.Span(" | ", style={"color": "#2d3748"}),
+                                html.Span("Minutes Together", style={"color": "#6c757d", "fontSize": "11px", "fontWeight": "600"}),
+                            ])
+                        ], style={"padding": "16px"})
+                    ], style={"backgroundColor": "#12171f", "border": "1px solid #1e2a3a", "cursor": "pointer"}, className="h-100")
+                ], id="card-nav-lineup", n_clicks=0, className="h-100")
+            ], md=3, className="mb-3"),
+            
+            dbc.Col([
+                html.Div([
+                    dbc.Card([
+                        dbc.CardBody([
+                            html.Div([
+                                html.Span("Comps", style={"color": "#ffd166", "fontWeight": "700", "fontSize": "16px"})
+                            ], className="mb-2"),
+                            html.P("Find historical statistical matches. Who does a player compare to from past seasons?", 
+                                   style={"color": "#6c757d", "fontSize": "12px", "marginBottom": "12px", "lineHeight": "1.5"}),
+                            html.Div([
+                                html.Span("20+ Features", style={"color": "#ff6b35", "fontSize": "11px", "fontWeight": "600"}),
+                                html.Span(" | ", style={"color": "#2d3748"}),
+                                html.Span("10 Years Data", style={"color": "#6c757d", "fontSize": "11px", "fontWeight": "600"}),
+                            ])
+                        ], style={"padding": "16px"})
+                    ], style={"backgroundColor": "#12171f", "border": "1px solid #1e2a3a", "cursor": "pointer"}, className="h-100")
+                ], id="card-nav-similarity", n_clicks=0, className="h-100")
+            ], md=3, className="mb-3"),
+        ], className="mb-4"),
+        
+        # Divider
+        html.Hr(style={"borderColor": "#1e2a3a", "margin": "16px 0 24px 0"}),
+        
+        # Metrics Reference Section
+        html.H6("Metrics Reference", style={"color": "#4a5568", "fontWeight": "600", "fontSize": "11px", 
+                                             "textTransform": "uppercase", "letterSpacing": "1px", "marginBottom": "12px"}),
+        
+        # Primary Metrics Row
+        dbc.Row([
+            dbc.Col([
+                dbc.Card([
+                    dbc.CardBody([
+                        html.Div([
+                            html.Span("LEBRON", style={"color": "#ff6b35", "fontWeight": "700", "fontSize": "15px"}),
+                        ], className="mb-1"),
+                        html.P("Luck-adjusted Estimate of Box score Rating On-court / Off-court Net", 
+                               style={"color": "#4a5568", "fontSize": "10px", "fontStyle": "italic", "marginBottom": "8px"}),
+                        html.P("Points per 100 possessions added vs. replacement level.", 
+                               style={"color": "#adb5bd", "fontSize": "11px", "marginBottom": "10px"}),
+                        html.Div([
+                            html.Span("+3.0+ All-Star", style={"color": "#06d6a0", "fontSize": "10px", "marginRight": "8px"}),
+                            html.Span("+1 to +3 Starter", style={"color": "#2D96C7", "fontSize": "10px", "marginRight": "8px"}),
+                            html.Span("<-1 Below Avg", style={"color": "#ef476f", "fontSize": "10px"}),
+                        ])
+                    ], style={"padding": "14px"})
+                ], style={"backgroundColor": "#12171f", "border": "1px solid #1e2a3a", "borderTop": "2px solid #ff6b35"})
+            ], lg=3, md=6, className="mb-3"),
+            
+            dbc.Col([
+                dbc.Card([
+                    dbc.CardBody([
+                        html.Div([
+                            html.Span("Value Gap", style={"color": "#06d6a0", "fontWeight": "700", "fontSize": "15px"}),
+                        ], className="mb-1"),
+                        html.P("Normalized Impact - Normalized Salary", 
+                               style={"color": "#4a5568", "fontSize": "10px", "fontStyle": "italic", "marginBottom": "8px"}),
+                        html.P("Difference between contribution and cost, scaled 0-100.", 
+                               style={"color": "#adb5bd", "fontSize": "11px", "marginBottom": "10px"}),
+                        html.Div([
+                            html.Span("+ Underpaid", style={"color": "#06d6a0", "fontSize": "10px", "marginRight": "8px"}),
+                            html.Span("0 Fair", style={"color": "#ffd166", "fontSize": "10px", "marginRight": "8px"}),
+                            html.Span("- Overpaid", style={"color": "#ef476f", "fontSize": "10px"}),
+                        ])
+                    ], style={"padding": "14px"})
+                ], style={"backgroundColor": "#12171f", "border": "1px solid #1e2a3a", "borderTop": "2px solid #06d6a0"})
+            ], lg=3, md=6, className="mb-3"),
+            
+            dbc.Col([
+                dbc.Card([
+                    dbc.CardBody([
+                        html.Div([
+                            html.Span("Plus/Minus", style={"color": "#2D96C7", "fontWeight": "700", "fontSize": "15px"}),
+                        ], className="mb-1"),
+                        html.P("Point differential while on floor together", 
+                               style={"color": "#4a5568", "fontSize": "10px", "fontStyle": "italic", "marginBottom": "8px"}),
+                        html.P("Total points scored minus allowed for lineup combos.", 
+                               style={"color": "#adb5bd", "fontSize": "11px", "marginBottom": "10px"}),
+                        html.Div([
+                            html.Span("+100 Elite", style={"color": "#06d6a0", "fontSize": "10px", "marginRight": "8px"}),
+                            html.Span("+ Good", style={"color": "#2D96C7", "fontSize": "10px", "marginRight": "8px"}),
+                            html.Span("- Poor", style={"color": "#ef476f", "fontSize": "10px"}),
+                        ])
+                    ], style={"padding": "14px"})
+                ], style={"backgroundColor": "#12171f", "border": "1px solid #1e2a3a", "borderTop": "2px solid #2D96C7"})
+            ], lg=3, md=6, className="mb-3"),
+            
+            dbc.Col([
+                dbc.Card([
+                    dbc.CardBody([
+                        html.Div([
+                            html.Span("Efficiency Index", style={"color": "#ffd166", "fontWeight": "700", "fontSize": "15px"}),
+                        ], className="mb-1"),
+                        html.P("(2x Wins Z-Score) - Payroll Z-Score", 
+                               style={"color": "#4a5568", "fontSize": "10px", "fontStyle": "italic", "marginBottom": "8px"}),
+                        html.P("Team wins generated relative to spending.", 
+                               style={"color": "#adb5bd", "fontSize": "11px", "marginBottom": "10px"}),
+                        html.Div([
+                            html.Span("+ Efficient", style={"color": "#06d6a0", "fontSize": "10px", "marginRight": "8px"}),
+                            html.Span("- Inefficient", style={"color": "#ef476f", "fontSize": "10px"}),
+                        ])
+                    ], style={"padding": "14px"})
+                ], style={"backgroundColor": "#12171f", "border": "1px solid #1e2a3a", "borderTop": "2px solid #ffd166"})
+            ], lg=3, md=6, className="mb-3"),
+        ]),
+        
+        # Data Info
+        html.Div([
+            html.P([
+                html.Span("Data: ", style={"color": "#4a5568", "fontWeight": "600"}),
+                html.Span(get_season_display(), style={"color": "#6c757d"}),
+                html.Span(" | ", style={"color": "#2d3748"}),
+                html.Span("Source: ", style={"color": "#4a5568", "fontWeight": "600"}),
+                html.Span("BBall Index LEBRON, NBA API, Basketball Reference", style={"color": "#6c757d"}),
+            ], style={"fontSize": "11px", "textAlign": "center", "marginTop": "16px", "marginBottom": "0"})
+        ])
+        
+    ], fluid=True, style={"padding": "0 24px"})
+
 
 def create_player_tab(df):
     """
@@ -57,8 +347,25 @@ def create_player_tab(df):
     max_lebron = float(df['LEBRON'].max())
     
     return dbc.Container([
-        html.H2("Player Value Analysis", className="mt-4 mb-4", 
-                style=SECTION_TITLE_STYLE),
+        # Header
+        dbc.Row([
+            dbc.Col([
+                html.Div([
+                    html.H1("Player Value Analysis", style={
+                        "color": "#ffffff",
+                        "fontWeight": "700",
+                        "fontSize": "28px",
+                        "marginBottom": "4px",
+                        "letterSpacing": "0.5px"
+                    }),
+                    html.P("Identify underpaid and overpaid players based on impact vs. salary", style={
+                        "color": "#6c757d",
+                        "fontSize": "13px",
+                        "marginBottom": "0"
+                    })
+                ], className="pt-3 pb-3")
+            ])
+        ]),
         
         # Filter Controls Card
         # Contains sliders to filter the dataset by Salary and LEBRON Impact
@@ -109,61 +416,71 @@ def create_player_tab(df):
             ])
         ], className="mb-4", style={"backgroundColor": "#1a2332", "border": "1px solid #2c3e50"}),
         
-        # Charts Row 1: Scatter Plot and Underpaid Bar Chart
+        # Charts Row 1: Scatter Plot and Age Curve
         dbc.Row([
             dbc.Col([
                 dbc.Card([
-                    dbc.CardHeader(html.H5("Salary vs Impact", className="mb-0", 
-                                          style=CARD_HEADER_TEXT_STYLE),
-                                  style=CARD_HEADER_BG_STYLE),
-                    dbc.CardBody([dcc.Graph(id='chart-salary-impact')], style={"padding": "10px"})
+                    dbc.CardHeader([
+                        html.H5("Salary vs Impact", className="mb-0 d-inline", style=CARD_HEADER_TEXT_STYLE),
+                    ], style=CARD_HEADER_BG_STYLE),
+                    dbc.CardBody([
+                        dbc.Alert([
+                            html.Strong("How to read: "),
+                            "X-axis = LEBRON impact score | Y-axis = Salary | ",
+                            "Size = WAR (total wins added) | Color = Value Gap (green=underpaid, red=overpaid). ",
+                            "Top-left = high impact, low salary (best value)."
+                        ], color="info", className="mb-2 py-2", style={"fontSize": "12px", "backgroundColor": "rgba(45, 150, 199, 0.15)", "border": "1px solid #2D96C7", "color": "#e4e6eb"}),
+                        dcc.Graph(id='chart-salary-impact')
+                    ], style={"padding": "10px"})
                 ], style={"backgroundColor": "#1a2332", "border": "1px solid #2c3e50"})
             ], xs=12, lg=6, className="mb-4"),
             
             dbc.Col([
                 dbc.Card([
-                    dbc.CardHeader(html.H5("Age vs Impact Curve", className="mb-0", 
-                                          style=CARD_HEADER_TEXT_STYLE),
-                                  style=CARD_HEADER_BG_STYLE),
-                    dbc.CardBody([dcc.Graph(id='chart-off-def')], style={"padding": "10px"})
+                    dbc.CardHeader([
+                        html.H5("Age vs Impact Curve", className="mb-0 d-inline", style=CARD_HEADER_TEXT_STYLE),
+                    ], style=CARD_HEADER_BG_STYLE),
+                    dbc.CardBody([
+                        dbc.Alert([
+                            html.Strong("How to read: "),
+                            "X-axis = Player age | Y-axis = Value Gap | ",
+                            "Size = Salary | Color = Value Gap. ",
+                            "The orange band (26-30) marks typical peak performance years."
+                        ], color="info", className="mb-2 py-2", style={"fontSize": "12px", "backgroundColor": "rgba(45, 150, 199, 0.15)", "border": "1px solid #2D96C7", "color": "#e4e6eb"}),
+                        dcc.Graph(id='chart-off-def')
+                    ], style={"padding": "10px"})
                 ], style={"backgroundColor": "#1a2332", "border": "1px solid #2c3e50"})
             ], xs=12, lg=6, className="mb-4")
         ]),
         
-        # Charts Row 2: Age Curve and Overpaid Bar Chart
+        # Value Analysis Row: Underpaid and Overpaid side by side
         dbc.Row([
             dbc.Col([
                 dbc.Card([
-                    dbc.CardHeader(html.H5("Top Underpaid Players", className="mb-0", 
+                    dbc.CardHeader(html.H5("Best Value (Underpaid)", className="mb-0", 
                                           style=CARD_HEADER_TEXT_STYLE),
                                   style=CARD_HEADER_BG_STYLE),
-                    dbc.CardBody([dcc.Graph(id='chart-underpaid')], style={"padding": "10px"})
+                    dbc.CardBody([
+                        dcc.Graph(id='chart-underpaid'),
+                        html.Hr(style={"borderColor": "#2c3e50", "margin": "16px 0"}),
+                        html.Div(id='table-underpaid', style={"maxHeight": "300px", "overflowY": "auto"})
+                    ], style={"padding": "12px"})
                 ], style={"backgroundColor": "#1a2332", "border": "1px solid #2c3e50"})
             ], xs=12, lg=6, className="mb-4"),
             
             dbc.Col([
                 dbc.Card([
-                    dbc.CardHeader(html.H5("Top Overpaid Players", className="mb-0", 
+                    dbc.CardHeader(html.H5("Worst Value (Overpaid)", className="mb-0", 
                                           style=CARD_HEADER_TEXT_STYLE),
                                   style=CARD_HEADER_BG_STYLE),
-                    dbc.CardBody([dcc.Graph(id='chart-overpaid')], style={"padding": "10px"})
+                    dbc.CardBody([
+                        dcc.Graph(id='chart-overpaid'),
+                        html.Hr(style={"borderColor": "#2c3e50", "margin": "16px 0"}),
+                        html.Div(id='table-overpaid', style={"maxHeight": "300px", "overflowY": "auto"})
+                    ], style={"padding": "12px"})
                 ], style={"backgroundColor": "#1a2332", "border": "1px solid #2c3e50"})
             ], xs=12, lg=6, className="mb-4")
         ]),
-        
-        # Tables Row: Side-by-side lists of Top 10 Underpaid and Overpaid
-        dbc.Row([
-            dbc.Col([
-                html.H5("Top Underpaid Players (Best Value)", className="mb-3", 
-                       style={"fontWeight": "600", "color": "#06d6a0"}),
-                html.Div(id='table-underpaid', style={"maxHeight": "300px", "overflowY": "auto"})
-            ], xs=12, md=6, className="mb-4 mb-md-0"),
-            dbc.Col([
-                html.H5("Top Overpaid Players (Worst Value)", className="mb-3", 
-                       style={"fontWeight": "600", "color": "#ef476f"}),
-                html.Div(id='table-overpaid', style={"maxHeight": "300px", "overflowY": "auto"})
-            ], xs=12, md=6)
-        ], className="mb-4"),
         
         # All Players Table Row: Full dataset listing
         dbc.Row([
@@ -221,8 +538,25 @@ def create_team_tab(df_teams, fig_quadrant, fig_grid):
     """
     
     return dbc.Container([
-        html.H2("Team Analysis", className="mt-4 mb-4", 
-                style=SECTION_TITLE_STYLE),
+        # Header
+        dbc.Row([
+            dbc.Col([
+                html.Div([
+                    html.H1("Team Analysis", style={
+                        "color": "#ffffff",
+                        "fontWeight": "700",
+                        "fontSize": "28px",
+                        "marginBottom": "4px",
+                        "letterSpacing": "0.5px"
+                    }),
+                    html.P("Compare team efficiency, payroll spending, and performance metrics", style={
+                        "color": "#6c757d",
+                        "fontSize": "13px",
+                        "marginBottom": "0"
+                    })
+                ], className="pt-3 pb-3")
+            ])
+        ]),
         
         # Charts Row: Quadrant and Treemap side-by-side
         dbc.Row([
@@ -328,111 +662,303 @@ def create_team_tab(df_teams, fig_quadrant, fig_grid):
 
 def create_main_layout():
     """
-    Creates the main application shell.
-    
-    This function wraps the individual tabs in a top-level container, adding
-    the application header and the view selection dropdown.
+    Creates the main application shell with professional tabbed navigation.
 
     Returns:
         html.Div: The root HTML element of the application.
     """
-    return html.Div([
-        # Header Section (Hero)
-        html.Div([
-            dbc.Container([
-                dbc.Row([
-                    dbc.Col([
-                        html.H1("Sieve", className="display-3 text-center mb-2", 
-                               style={"fontWeight": "700", "color": "#e9ecef", "letterSpacing": "2px"}),
-                        html.P("NBA Player Value Analytics", 
-                               className="text-center mb-4", 
-                               style={"color": "#adb5bd", "fontSize": "16px", "fontWeight": "300"})
+    
+    # Professional navigation bar with tabs
+    navbar = dbc.Navbar(
+        dbc.Container([
+            # Brand
+            dbc.Row([
+                dbc.Col([
+                    html.Div([
+                        html.Span("SIEVE", style={
+                            "fontWeight": "800", 
+                            "fontSize": "24px", 
+                            "color": "#ffffff",
+                            "letterSpacing": "3px"
+                        }),
+                        html.Span(" Analytics", style={
+                            "fontWeight": "300", 
+                            "fontSize": "14px", 
+                            "color": "#6c757d",
+                            "marginLeft": "8px",
+                            "textTransform": "uppercase",
+                            "letterSpacing": "2px"
+                        })
                     ])
-                ]),
-                
-                # Navigation Tabs
-                dbc.Row([
-                    dbc.Col([
-                        dcc.Tabs(
-                            id='view-selector',
-                            value='player',
-                            children=[
-                                dcc.Tab(label='Player Analysis', value='player', className='custom-tab', selected_className='custom-tab--selected'),
-                                dcc.Tab(label='Team Analysis', value='team', className='custom-tab', selected_className='custom-tab--selected'),
-                                dcc.Tab(label='Historical Comps', value='similarity', className='custom-tab', selected_className='custom-tab--selected'),
-                            ],
-                            colors={
-                                "border": "#2c3e50",
-                                "primary": "#ff6b35",
-                                "background": "#0f1623"
-                            },
-                            parent_className="custom-tabs",
-                            className="custom-tabs-container"
-                        )
-                    ], width=12)
-                ])
-            ], fluid=True)
-        ], className="hero-header"),
+                ], width="auto")
+            ], align="center", className="g-0"),
+            
+            # Navigation Tabs
+            dbc.Row([
+                dbc.Col([
+                    dbc.Nav([
+                        dbc.NavItem(dbc.NavLink("Overview", id="nav-home", href="#", active=True,
+                            style={"color": "#e4e6eb", "fontWeight": "500", "fontSize": "13px", "padding": "8px 16px"})),
+                        dbc.NavItem(dbc.NavLink("Players", id="nav-player", href="#",
+                            style={"color": "#6c757d", "fontWeight": "500", "fontSize": "13px", "padding": "8px 16px"})),
+                        dbc.NavItem(dbc.NavLink("Teams", id="nav-team", href="#",
+                            style={"color": "#6c757d", "fontWeight": "500", "fontSize": "13px", "padding": "8px 16px"})),
+                        dbc.NavItem(dbc.NavLink("Lineups", id="nav-lineup", href="#",
+                            style={"color": "#6c757d", "fontWeight": "500", "fontSize": "13px", "padding": "8px 16px"})),
+                        dbc.NavItem(dbc.NavLink("Comps", id="nav-similarity", href="#",
+                            style={"color": "#6c757d", "fontWeight": "500", "fontSize": "13px", "padding": "8px 16px"})),
+                    ], pills=True, className="ms-auto")
+                ], width="auto")
+            ], align="center", className="g-0 ms-auto"),
+        ], fluid=True),
+        color="#0a0e14",
+        dark=True,
+        sticky="top",
+        style={"borderBottom": "1px solid #1e2a3a", "padding": "12px 0"}
+    )
+    
+    # Hidden store for view selection (replaces dcc.Tabs)
+    view_store = dcc.Store(id='view-selector', data='home')
+    
+    # Store for quick navigation from cards (will be updated by card clicks)
+    nav_request_store = dcc.Store(id='nav-request', data=None)
+    
+    return html.Div([
+        view_store,
+        nav_request_store,
+        navbar,
         
         # Content Area
-        html.Div(id='page-content', style={"minHeight": "calc(100vh - 350px)"}),
+        html.Div(id='page-content', style={
+            "minHeight": "calc(100vh - 120px)",
+            "padding": "0"
+        }),
         
         # Footer
         html.Div([
             dbc.Container([
-                html.Hr(style={"borderColor": "#2c3e50", "opacity": "0.5"}),
-                html.P([
-                    "Sieve Analytics © 2025 | ",
-                    html.A("Documentation", href="https://github.com/giocld/sieve", target="_blank", style={"color": "#2D96C7", "textDecoration": "none"}),
-                    " | ",
-                    html.Span("Built with Dash & Plotly", style={"color": "#adb5bd"})
-                ], className="text-center mt-4 mb-4", style={"color": "#6c757d", "fontSize": "14px"})
+                html.Hr(style={"borderColor": "#1e2a3a", "opacity": "0.5", "margin": "0"}),
+                dbc.Row([
+                    dbc.Col([
+                        html.P("Sieve Analytics", style={
+                            "color": "#4a5568", 
+                            "fontSize": "12px", 
+                            "fontWeight": "600",
+                            "marginBottom": "4px"
+                        }),
+                        html.P("NBA Player Value & Efficiency Analysis", style={
+                            "color": "#2d3748", 
+                            "fontSize": "11px",
+                            "marginBottom": "0"
+                        })
+                    ], md=6, className="text-start"),
+                    dbc.Col([
+                        html.P([
+                            html.A("GitHub", href="https://github.com/giocld/sieve", target="_blank", 
+                                   style={"color": "#4a5568", "textDecoration": "none", "fontSize": "11px"}),
+                            html.Span(" | ", style={"color": "#2d3748"}),
+                            html.Span("Built with Dash", style={"color": "#2d3748", "fontSize": "11px"})
+                        ], className="mb-0", style={"textAlign": "right"})
+                    ], md=6, className="text-end d-flex align-items-center justify-content-end")
+                ], className="py-3", align="center")
             ], fluid=True)
-        ])
+        ], style={"backgroundColor": "#0a0e14"})
         
-    ], style={"backgroundColor": "#0f1623", "minHeight": "100vh", "display": "flex", "flexDirection": "column"})
+    ], style={"backgroundColor": "#0f1623", "minHeight": "100vh"})
+
+def create_lineup_tab(team_options):
+    """
+    Creates the layout for the 'Lineup Chemistry' tab.
+    
+    This tab allows users to analyze which duos and trios perform best/worst
+    when playing together on the floor.
+    
+    Args:
+        team_options (list): List of team dropdown options.
+        
+    Returns:
+        dbc.Container: The complete layout container for the lineup tab.
+    """
+    return dbc.Container([
+        # Header
+        dbc.Row([
+            dbc.Col([
+                html.Div([
+                    html.H1("Lineup Chemistry", style={
+                        "color": "#ffffff",
+                        "fontWeight": "700",
+                        "fontSize": "28px",
+                        "marginBottom": "4px",
+                        "letterSpacing": "0.5px"
+                    }),
+                    html.P("Analyze duo and trio performance when sharing the floor", style={
+                        "color": "#6c757d",
+                        "fontSize": "13px",
+                        "marginBottom": "0"
+                    })
+                ], className="pt-3 pb-3")
+            ])
+        ]),
+        
+        # Controls Card
+        dbc.Card([
+            dbc.CardHeader(html.H5("Analysis Controls", className="mb-0", 
+                                  style=CARD_HEADER_TEXT_STYLE),
+                          style=CARD_HEADER_BG_STYLE),
+            dbc.CardBody([
+                dbc.Row([
+                    dbc.Col([
+                        html.Label("Select Team:", className="fw-bold mb-2", 
+                                  style={"fontSize": "14px", "color": "#e4e6eb"}),
+                        dbc.Select(
+                            id='lineup-team-dropdown',
+                            options=[{'label': 'League-Wide (All Teams)', 'value': 'ALL'}] + team_options,
+                            value='ALL',
+                            class_name="bg-dark text-white border-secondary",
+                            style={'fontSize': '13px'}
+                        )
+                    ], xs=12, md=4, className="mb-3 mb-md-0"),
+                    
+                    dbc.Col([
+                        html.Label("Lineup Size:", className="fw-bold mb-2", 
+                                  style={"fontSize": "14px", "color": "#e4e6eb"}),
+                        dbc.RadioItems(
+                            id='lineup-size-radio',
+                            options=[
+                                {'label': '  Duos (2-man)', 'value': 2},
+                                {'label': '  Trios (3-man)', 'value': 3}
+                            ],
+                            value=2,
+                            inline=True,
+                            className="text-white",
+                            inputStyle={"marginRight": "5px"},
+                            labelStyle={"marginRight": "20px"}
+                        )
+                    ], xs=12, md=4, className="mb-3 mb-md-0"),
+                    
+                    dbc.Col([
+                        html.Label("Min. Minutes Together:", className="fw-bold mb-2", 
+                                  style={"fontSize": "14px", "color": "#e4e6eb"}),
+                        dcc.Slider(
+                            id='lineup-min-minutes',
+                            min=10,
+                            max=500,
+                            value=100,
+                            step=10,
+                            marks={10: '10', 50: '50', 100: '100', 200: '200', 300: '300', 500: '500'},
+                            tooltip={"placement": "bottom", "always_visible": False}
+                        )
+                    ], xs=12, md=4)
+                ])
+            ])
+        ], className="mb-4", style={"backgroundColor": "#1a2332", "border": "1px solid #2c3e50"}),
+        
+        # Info Alert
+        dbc.Alert([
+            html.Strong("How to read: "),
+            "Plus/Minus (+/-) = total point differential when these players share the floor. ",
+            "Positive = outscored opponents | Negative = got outscored. ",
+            "MIN = total minutes played together over the season."
+        ], color="info", className="mb-4 py-2", style={"fontSize": "12px", "backgroundColor": "rgba(45, 150, 199, 0.15)", "border": "1px solid #2D96C7", "color": "#e4e6eb"}),
+        
+        # Tabbed view for Best/Worst
+        dbc.Tabs([
+            dbc.Tab(label="Top Performers", tab_id="best-tab", children=[
+                dbc.Card([
+                    dbc.CardBody([
+                        dcc.Loading(
+                            dcc.Graph(id='chart-best-lineups'),
+                            type="circle",
+                            color="#06d6a0"
+                        ),
+                        html.Hr(style={"borderColor": "#2c3e50"}),
+                        html.H6("Detailed Statistics", className="mb-3", style={"color": "#06d6a0", "fontWeight": "600"}),
+                        html.Div(id='table-best-lineups', style={"maxHeight": "400px", "overflowY": "auto"})
+                    ], style={"padding": "20px"})
+                ], style={"backgroundColor": "#1a2332", "border": "1px solid #1e2a3a", "borderTop": "3px solid #06d6a0"})
+            ], label_style={"color": "#06d6a0", "fontWeight": "500"}, 
+               active_label_style={"backgroundColor": "#06d6a0", "color": "#0f1623", "fontWeight": "600"}),
+            
+            dbc.Tab(label="Underperformers", tab_id="worst-tab", children=[
+                dbc.Card([
+                    dbc.CardBody([
+                        dcc.Loading(
+                            dcc.Graph(id='chart-worst-lineups'),
+                            type="circle",
+                            color="#ef476f"
+                        ),
+                        html.Hr(style={"borderColor": "#2c3e50"}),
+                        html.H6("Detailed Statistics", className="mb-3", style={"color": "#ef476f", "fontWeight": "600"}),
+                        html.Div(id='table-worst-lineups', style={"maxHeight": "400px", "overflowY": "auto"})
+                    ], style={"padding": "20px"})
+                ], style={"backgroundColor": "#1a2332", "border": "1px solid #1e2a3a", "borderTop": "3px solid #ef476f"})
+            ], label_style={"color": "#ef476f", "fontWeight": "500"}, 
+               active_label_style={"backgroundColor": "#ef476f", "color": "#0f1623", "fontWeight": "600"}),
+        ], id="lineup-tabs", active_tab="best-tab", className="mb-4"),
+        
+        # Hidden graph for callback (not displayed)
+        html.Div(dcc.Graph(id='chart-lineup-scatter', style={'display': 'none'}), style={'display': 'none'})
+        
+    ], fluid=True, className="content-container")
+
 
 def create_similarity_tab(player_options):
     """
     Creates the layout for the 'Historical Comps' tab.
     """
     return dbc.Container([
-        html.H2("Historical Comps", className="mt-4 mb-4", 
-                style=SECTION_TITLE_STYLE),
+        # Header
+        dbc.Row([
+            dbc.Col([
+                html.Div([
+                    html.H1("Historical Comparisons", style={
+                        "color": "#ffffff",
+                        "fontWeight": "700",
+                        "fontSize": "28px",
+                        "marginBottom": "4px",
+                        "letterSpacing": "0.5px"
+                    }),
+                    html.P("Find statistical matches from the past decade based on production and playstyle", style={
+                        "color": "#6c757d",
+                        "fontSize": "13px",
+                        "marginBottom": "0"
+                    })
+                ], className="pt-3 pb-3")
+            ])
+        ]),
         
         dbc.Row([
             dbc.Col([
                 dbc.Card([
-                    dbc.CardHeader(html.H5("Find Historical Comps", className="mb-0", 
-                                          style=CARD_HEADER_TEXT_STYLE),
-                                  style=CARD_HEADER_BG_STYLE),
                     dbc.CardBody([
-                        html.Label("Select a Player:", className="fw-bold mb-2", style={"color": "#e4e6eb"}),
+                        html.H5("Search Parameters", className="mb-3", style={"color": "#ffffff", "fontWeight": "600"}),
+                        html.Label("Player", className="mb-2", style={"color": "#6c757d", "fontSize": "12px", "fontWeight": "500"}),
                         dcc.Dropdown(
                             id='similarity-player-dropdown',
                             options=player_options,
-                            placeholder="Type to search...",
+                            placeholder="Search players...",
                             className="mb-3",
                             style={'color': '#000'}
                         ),
-                        html.Label("Select a Season:", className="fw-bold mb-2", style={"color": "#e4e6eb"}),
+                        html.Label("Season", className="mb-2", style={"color": "#6c757d", "fontSize": "12px", "fontWeight": "500"}),
                         dcc.Dropdown(
                             id='similarity-season-dropdown',
-                            placeholder="First select a player...",
+                            placeholder="Select season...",
                             className="mb-3",
                             style={'color': '#000'}
                         ),
                         dcc.Checklist(
                             id='similarity-exclude-self',
-                            options=[{'label': ' Exclude Player from Results', 'value': 'exclude'}],
+                            options=[{'label': ' Exclude player from results', 'value': 'exclude'}],
                             value=['exclude'],
-                            className="mb-3 text-white",
-                            inputStyle={"marginRight": "5px"}
+                            className="mb-3",
+                            style={"color": "#adb5bd", "fontSize": "13px"},
+                            inputStyle={"marginRight": "8px"}
                         ),
-                        html.P("Finds the top 5 statistical matches from the last 10 years based on production and playstyle.",
-                               className="text-muted small")
-                    ], style={"padding": "20px"})
-                ], style={"backgroundColor": "#1a2332", "border": "1px solid #2c3e50"})
+                        html.P("Returns the top 5 statistical matches based on 20+ weighted features including production, efficiency, and playstyle metrics.",
+                               style={"color": "#4a5568", "fontSize": "12px", "marginBottom": "0"})
+                    ], style={"padding": "24px"})
+                ], style={"backgroundColor": "#12171f", "border": "1px solid #1e2a3a"})
             ], md=6, className="offset-md-3 mb-4")
         ]),
         
