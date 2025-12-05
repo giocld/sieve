@@ -1,5 +1,124 @@
 /* Custom CSS for Sieve Dashboard */
 
+/* Navigation Pills - Dark Theme */
+.nav-pills-dark {
+    gap: 4px;
+}
+
+.nav-pill-custom {
+    background-color: transparent !important;
+    color: #6c757d !important;
+    border: none !important;
+    padding: 8px 16px !important;
+    font-size: 13px !important;
+    font-weight: 500 !important;
+    border-radius: 6px !important;
+    transition: all 0.2s ease !important;
+}
+
+.nav-pill-custom:hover {
+    background-color: #1a2332 !important;
+    color: #e4e6eb !important;
+}
+
+.nav-pill-custom.active,
+.nav-link.active.nav-pill-custom {
+    background-color: #ff6b35 !important;
+    color: #ffffff !important;
+}
+
+/* Dropdown Menu Styling (for other dropdowns) */
+.dropdown-menu {
+    background-color: #0f1623 !important;
+    border: 1px solid #2d3748 !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5) !important;
+}
+
+.dropdown-item {
+    color: #e4e6eb !important;
+    font-size: 13px !important;
+}
+
+.dropdown-item:hover {
+    background-color: #1a2332 !important;
+    color: #ff6b35 !important;
+}
+
+/* Dark Dropdown Styling - Modern Dash (react-select) */
+.dark-dropdown .Select-control,
+.dark-dropdown .Select-menu-outer,
+.dark-dropdown .Select-option,
+.dark-dropdown .Select-value,
+.dark-dropdown .Select-placeholder,
+.dark-dropdown .VirtualizedSelectOption,
+.dark-dropdown .VirtualizedSelectFocusedOption {
+    background-color: #1a1f2e !important;
+    color: #e4e6eb !important;
+    border-color: #2d3748 !important;
+}
+
+.dark-dropdown .Select-control {
+    background-color: #1a1f2e !important;
+    border: 1px solid #2d3748 !important;
+}
+
+.dark-dropdown .Select-menu-outer,
+.dark-dropdown .Select-menu {
+    background-color: #1a1f2e !important;
+    border: 1px solid #2d3748 !important;
+}
+
+.dark-dropdown .Select-option,
+.dark-dropdown .VirtualizedSelectOption {
+    background-color: #1a1f2e !important;
+    color: #e4e6eb !important;
+}
+
+.dark-dropdown .Select-option:hover,
+.dark-dropdown .Select-option.is-focused,
+.dark-dropdown .VirtualizedSelectFocusedOption {
+    background-color: #2d3748 !important;
+    color: #ffffff !important;
+}
+
+.dark-dropdown .Select-option.is-selected {
+    background-color: #ff6b35 !important;
+    color: #ffffff !important;
+}
+
+.dark-dropdown .Select-value-label,
+.dark-dropdown .Select-placeholder,
+.dark-dropdown .Select-input input {
+    color: #e4e6eb !important;
+}
+
+.dark-dropdown .Select-arrow {
+    border-color: #e4e6eb transparent transparent !important;
+}
+
+.dark-dropdown .Select.is-open .Select-arrow {
+    border-color: transparent transparent #e4e6eb !important;
+}
+
+/* Also target dash-specific dropdown wrapper */
+.dark-dropdown > div {
+    background-color: #1a1f2e !important;
+}
+
+.dark-dropdown input {
+    color: #e4e6eb !important;
+}
+
+/* Single value text color */
+.dark-dropdown .Select-value-label {
+    color: #e4e6eb !important;
+}
+
+/* Placeholder text */
+.dark-dropdown .Select-placeholder {
+    color: #6c757d !important;
+}
+
 /* Slider Track (The filled part) */
 .rc-slider-track {
     background-color: #2D96C7 !important;

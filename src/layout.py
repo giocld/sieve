@@ -10,10 +10,27 @@ import pandas as pd
 import numpy as np
 
 from .data_processing import TEAM_ABBR_MAP
-from .config import get_season_display
+from .config import get_season_display, CURRENT_SEASON
+from .cache_manager import cache
 
 # Create reverse mapping for display
 ABBR_TO_NAME = {v: k for k, v in TEAM_ABBR_MAP.items()}
+
+
+def _get_season_options():
+    """Get available seasons for the dropdown."""
+    # Get seasons that have LEBRON data
+    try:
+        seasons = cache.list_lebron_seasons()
+        if not seasons:
+            seasons = [CURRENT_SEASON]
+    except:
+        seasons = [CURRENT_SEASON]
+    
+    # Sort descending (most recent first)
+    seasons = sorted(seasons, reverse=True)
+    
+    return [{'label': s, 'value': s} for s in seasons]
 
 
 # Global Style Constants
@@ -367,6 +384,46 @@ def create_player_tab(df):
             ])
         ]),
         
+        # Diamond Finder Row: KNN-based replacement finder (FIRST)
+        dbc.Row([
+            dbc.Col([
+                dbc.Card([
+                    dbc.CardHeader([
+                        html.H5("Diamond Finder", className="mb-0 d-inline", style=CARD_HEADER_TEXT_STYLE),
+                        html.Span(" - Find Cheaper Replacements", style={"color": "#06d6a0", "fontSize": "12px", "marginLeft": "8px"})
+                    ], style=CARD_HEADER_BG_STYLE),
+                    dbc.CardBody([
+                        dbc.Alert([
+                            html.Strong("How it works: "),
+                            "Select a player to find statistically similar alternatives at a lower cost. ",
+                            "Uses KNN similarity (8 features) + archetype/position filtering."
+                        ], color="success", className="mb-2 py-2", style={"fontSize": "12px", "backgroundColor": "rgba(6, 214, 160, 0.15)", "border": "1px solid #06d6a0", "color": "#e4e6eb"}),
+                        
+                        # Player selector dropdown
+                        dbc.Row([
+                            dbc.Col([
+                                html.Label("Select player to replace:", style={"color": "#adb5bd", "fontSize": "13px", "marginBottom": "4px"}),
+                                dcc.Dropdown(
+                                    id='diamond-finder-player',
+                                    placeholder="Choose a player...",
+                                    style={
+                                        'fontSize': '13px',
+                                    },
+                                    className="dark-dropdown"
+                                )
+                            ], md=6),
+                            dbc.Col([
+                                html.Div(id='diamond-finder-target-info', className="mt-4")
+                            ], md=6)
+                        ], className="mb-3"),
+                        
+                        # Results container
+                        html.Div(id='diamond-finder-results', style={"minHeight": "200px"})
+                    ], style={"padding": "15px"})
+                ], style={"backgroundColor": "#1a2332", "border": "1px solid #2c3e50"})
+            ], xs=12, className="mb-4")
+        ]),
+        
         # Filter Controls Card
         # Contains sliders to filter the dataset by Salary and LEBRON Impact
         dbc.Card([
@@ -416,7 +473,7 @@ def create_player_tab(df):
             ])
         ], className="mb-4", style={"backgroundColor": "#1a2332", "border": "1px solid #2c3e50"}),
         
-        # Charts Row 1: Scatter Plot and Age Curve
+        # Charts Row: Scatter Plot and Beeswarm - EQUAL WIDTH
         dbc.Row([
             dbc.Col([
                 dbc.Card([
@@ -430,28 +487,27 @@ def create_player_tab(df):
                             "Size = WAR (total wins added) | Color = Value Gap (green=underpaid, red=overpaid). ",
                             "Top-left = high impact, low salary (best value)."
                         ], color="info", className="mb-2 py-2", style={"fontSize": "12px", "backgroundColor": "rgba(45, 150, 199, 0.15)", "border": "1px solid #2D96C7", "color": "#e4e6eb"}),
-                        dcc.Graph(id='chart-salary-impact')
+                        dcc.Graph(id='chart-salary-impact', style={"height": "500px", "width": "100%"}, config={"displayModeBar": False, "responsive": True})
                     ], style={"padding": "10px"})
-                ], style={"backgroundColor": "#1a2332", "border": "1px solid #2c3e50"})
+                ], style={"backgroundColor": "#1a2332", "border": "1px solid #2c3e50", "height": "100%"})
             ], xs=12, lg=6, className="mb-4"),
             
             dbc.Col([
                 dbc.Card([
                     dbc.CardHeader([
-                        html.H5("Age vs Impact Curve", className="mb-0 d-inline", style=CARD_HEADER_TEXT_STYLE),
+                        html.H5("All Players by Impact", className="mb-0 d-inline", style=CARD_HEADER_TEXT_STYLE),
                     ], style=CARD_HEADER_BG_STYLE),
                     dbc.CardBody([
                         dbc.Alert([
-                            html.Strong("How to read: "),
-                            "X-axis = Player age | Y-axis = Value Gap | ",
-                            "Size = Salary | Color = Value Gap. ",
-                            "The orange band (26-30) marks typical peak performance years."
+                            html.Strong("Player Impact Map: "),
+                            "Every player shown by LEBRON impact. ",
+                            "Green border = underpaid, Red border = overpaid. Hover for details."
                         ], color="info", className="mb-2 py-2", style={"fontSize": "12px", "backgroundColor": "rgba(45, 150, 199, 0.15)", "border": "1px solid #2D96C7", "color": "#e4e6eb"}),
-                        dcc.Graph(id='chart-off-def')
+                        dcc.Graph(id='chart-beeswarm', style={"height": "500px", "width": "100%"}, config={"displayModeBar": False, "responsive": True})
                     ], style={"padding": "10px"})
-                ], style={"backgroundColor": "#1a2332", "border": "1px solid #2c3e50"})
+                ], style={"backgroundColor": "#1a2332", "border": "1px solid #2c3e50", "height": "100%"})
             ], xs=12, lg=6, className="mb-4")
-        ]),
+        ], className="g-3"),
         
         # Value Analysis Row: Underpaid and Overpaid side by side
         dbc.Row([
@@ -668,10 +724,10 @@ def create_main_layout():
         html.Div: The root HTML element of the application.
     """
     
-    # Professional navigation bar with tabs
+    # Professional navigation bar with dropdown menu
     navbar = dbc.Navbar(
         dbc.Container([
-            # Brand
+            # Brand - clickable to go home
             dbc.Row([
                 dbc.Col([
                     html.Div([
@@ -689,26 +745,35 @@ def create_main_layout():
                             "textTransform": "uppercase",
                             "letterSpacing": "2px"
                         })
-                    ])
+                    ], id="nav-brand", style={"cursor": "pointer"})
                 ], width="auto")
             ], align="center", className="g-0"),
             
-            # Navigation Tabs
+            # Horizontal Navigation + Season Selector
             dbc.Row([
                 dbc.Col([
                     dbc.Nav([
-                        dbc.NavItem(dbc.NavLink("Overview", id="nav-home", href="#", active=True,
-                            style={"color": "#e4e6eb", "fontWeight": "500", "fontSize": "13px", "padding": "8px 16px"})),
-                        dbc.NavItem(dbc.NavLink("Players", id="nav-player", href="#",
-                            style={"color": "#6c757d", "fontWeight": "500", "fontSize": "13px", "padding": "8px 16px"})),
-                        dbc.NavItem(dbc.NavLink("Teams", id="nav-team", href="#",
-                            style={"color": "#6c757d", "fontWeight": "500", "fontSize": "13px", "padding": "8px 16px"})),
-                        dbc.NavItem(dbc.NavLink("Lineups", id="nav-lineup", href="#",
-                            style={"color": "#6c757d", "fontWeight": "500", "fontSize": "13px", "padding": "8px 16px"})),
-                        dbc.NavItem(dbc.NavLink("Comps", id="nav-similarity", href="#",
-                            style={"color": "#6c757d", "fontWeight": "500", "fontSize": "13px", "padding": "8px 16px"})),
-                    ], pills=True, className="ms-auto")
-                ], width="auto")
+                        dbc.NavItem(dbc.NavLink("Overview", id="nav-home", href="#", active=True, className="nav-pill-custom")),
+                        dbc.NavItem(dbc.NavLink("Players", id="nav-player", href="#", className="nav-pill-custom")),
+                        dbc.NavItem(dbc.NavLink("Teams", id="nav-team", href="#", className="nav-pill-custom")),
+                        dbc.NavItem(dbc.NavLink("Lineups", id="nav-lineup", href="#", className="nav-pill-custom")),
+                        dbc.NavItem(dbc.NavLink("Comps", id="nav-similarity", href="#", className="nav-pill-custom")),
+                    ], pills=True, className="nav-pills-dark")
+                ], width="auto"),
+                # Season Selector
+                dbc.Col([
+                    dcc.Dropdown(
+                        id='season-selector',
+                        options=_get_season_options(),
+                        value=CURRENT_SEASON,
+                        clearable=False,
+                        style={
+                            "width": "110px",
+                            "fontSize": "13px",
+                        },
+                        className="dark-dropdown"
+                    )
+                ], width="auto", className="ms-3")
             ], align="center", className="g-0 ms-auto"),
         ], fluid=True),
         color="#0a0e14",
@@ -723,9 +788,13 @@ def create_main_layout():
     # Store for quick navigation from cards (will be updated by card clicks)
     nav_request_store = dcc.Store(id='nav-request', data=None)
     
+    # Store for season-specific data (will be populated by callback)
+    season_data_store = dcc.Store(id='season-data-store', data={'season': CURRENT_SEASON})
+    
     return html.Div([
         view_store,
         nav_request_store,
+        season_data_store,
         navbar,
         
         # Content Area

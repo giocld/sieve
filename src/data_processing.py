@@ -15,8 +15,9 @@ from sklearn.preprocessing import StandardScaler
 from nba_api.stats.static import teams
 from nba_api.stats.endpoints import leaguedashteamstats, leaguedashplayerstats, leaguedashptstats, leaguedashlineups
 
-# Import unified cache manager
+# Import unified cache manager and config
 from src.cache_manager import cache
+from src.config import CURRENT_SEASON
 
 # Suppress harmless multiprocessing cleanup warnings
 warnings.filterwarnings("ignore", category=UserWarning, module="multiprocessing.resource_tracker")
@@ -231,28 +232,59 @@ def fuzzy_merge_dataframes(df_left, df_right, left_on, right_on, threshold=85):
     return df_merged
 
 
-def load_and_merge_data(lebron_file='data/LEBRON.csv', contracts_file='data/basketball_reference_contracts.csv'):
+def load_and_merge_data(lebron_file='data/LEBRON.csv', contracts_file='data/basketball_reference_contracts.csv', 
+                        season=None, from_db=False):
     """
     Loads player impact data (LEBRON) and contract data, merges them into a single dataset,
     and performs initial data cleaning and type conversion.
+    
+    Data sources:
+    - LEBRON: From DB (primary) or CSV (fallback/initial load)
+    - Contracts: From DB (primary) or CSV (fallback)
 
     Args:
-        lebron_file (str): Path to the CSV file containing LEBRON impact metrics.
-        contracts_file (str): Path to the CSV file containing player contract details.
+        lebron_file (str): Path to the CSV file containing LEBRON impact metrics (fallback).
+        contracts_file (str): Path to the CSV file containing player contract details (fallback).
+        season (str): NBA season to load (e.g., '2024-25'). Defaults to CURRENT_SEASON.
+        from_db (bool): If True, prefer loading from database; if False, prefer CSV.
 
     Returns:
         pd.DataFrame: A merged DataFrame containing both performance and financial data for each player.
     """
-    # Verify that source files exist before attempting to load
-    if not os.path.exists(lebron_file) or not os.path.exists(contracts_file):
-        raise FileNotFoundError(f"Missing {lebron_file} or {contracts_file}")
+    # Use provided season or default to CURRENT_SEASON
+    target_season = season or CURRENT_SEASON
+    print(f"Loading data for season: {target_season}")
     
-    df_lebron = pd.read_csv(lebron_file)
-    df_contracts = pd.read_csv(contracts_file)
+    # Load LEBRON data - try DB first if from_db=True, else prefer CSV
+    df_lebron = None
     
-    # Standardize the player name column to 'player_name' to ensure a successful merge
-    if 'Player' in df_lebron.columns:
-        df_lebron = df_lebron.rename(columns={'Player': 'player_name'})
+    if from_db:
+        df_lebron = cache.load_lebron_metrics(season=target_season)
+        if df_lebron is not None and not df_lebron.empty:
+            print(f"Loaded {len(df_lebron)} LEBRON records from database")
+            # Rename player_name back to standard format if needed
+            if 'player_name' in df_lebron.columns and 'Player' not in df_lebron.columns:
+                df_lebron = df_lebron.rename(columns={'player_name': 'Player'})
+    
+    if df_lebron is None or df_lebron.empty:
+        # Fallback to CSV
+        if not os.path.exists(lebron_file):
+            raise FileNotFoundError(f"Missing LEBRON file: {lebron_file}")
+        
+        df_lebron = pd.read_csv(lebron_file)
+        print(f"Loaded {len(df_lebron)} LEBRON records from CSV: {lebron_file}")
+    
+    # Load contracts from DB (primary), fallback to CSV
+    df_contracts = cache.load_contracts(season=target_season)
+    if df_contracts is None or df_contracts.empty:
+        print("Contracts not in DB, loading from CSV...")
+        if not os.path.exists(contracts_file):
+            raise FileNotFoundError(f"Missing contracts file: {contracts_file}")
+        df_contracts = pd.read_csv(contracts_file)
+        # Save to DB for future use
+        cache.save_contracts(df_contracts, season=target_season)
+    else:
+        print(f"Loaded {len(df_contracts)} contracts from database")
     
     # Convert key numerical columns to numeric types, coercing errors to NaN
     # This prevents string formatting issues from breaking calculations later
@@ -270,6 +302,11 @@ def load_and_merge_data(lebron_file='data/LEBRON.csv', contracts_file='data/bask
         )
     else:
         df_lebron['archetype'] = 'Unknown'
+    
+    # Standardize the player name column to 'player_name' for merging
+    # Do this AFTER processing but BEFORE saving to DB
+    if 'Player' in df_lebron.columns and 'player_name' not in df_lebron.columns:
+        df_lebron = df_lebron.rename(columns={'Player': 'player_name'})
     
     # Merge the datasets using fuzzy name matching.
     # This handles variations like "Alperen Sengun" vs "Alperen Şengün"
@@ -329,7 +366,7 @@ def load_and_merge_data(lebron_file='data/LEBRON.csv', contracts_file='data/bask
 
 
 
-def calculate_player_value_metrics(df):
+def calculate_player_value_metrics(df, season=None):
     """
     Calculates the 'Value Gap' for each player.
     
@@ -347,10 +384,12 @@ def calculate_player_value_metrics(df):
 
     Args:
         df (pd.DataFrame): DataFrame containing player data with 'current_year_salary' and 'LEBRON'.
+        season (str): NBA season for caching (e.g., '2024-25'). Defaults to CURRENT_SEASON.
 
     Returns:
         pd.DataFrame: The input DataFrame with added columns: 'salary_norm', 'impact_norm', 'value_gap'.
     """
+    target_season = season or CURRENT_SEASON
     df = df.copy()
     
     # Ensure required columns exist before calculation
@@ -376,6 +415,9 @@ def calculate_player_value_metrics(df):
             df['value_gap'] = 0
     else:
         df['value_gap'] = 0
+    
+    # Save player analysis to DB
+    cache.save_player_analysis(df, season=target_season)
     
     return df
 
@@ -492,6 +534,9 @@ def calculate_team_metrics(df_players, season='2024-25'):
         df_teams['CPW_Display'] = df_teams['Cost_Per_Win'].apply(
             lambda x: f"${x/1_000_000:.2f}M" if x > 0 else "N/A"
         )
+    
+    # Save team efficiency to DB
+    cache.save_team_efficiency(df_teams, season=season)
     
     return df_teams
 
@@ -1009,6 +1054,470 @@ def build_similarity_model(df):
         'features': available_features,
         'weights': feature_weights
     }
+
+
+# =============================================================================
+# CURRENT SEASON SIMILARITY (for Diamond Finder)
+# =============================================================================
+
+def fetch_advanced_stats(season='2024-25'):
+    """
+    Fetches advanced player stats from NBA API for archetype building.
+    
+    Returns stats like USG_PCT, AST_PCT, TS_PCT, DEF_RATING that define playstyle.
+    """
+    from nba_api.stats.endpoints import leaguedashplayerstats
+    
+    try:
+        print(f"  Fetching advanced stats for {season}...")
+        time.sleep(0.6)
+        
+        stats = leaguedashplayerstats.LeagueDashPlayerStats(
+            season=season,
+            per_mode_detailed='PerGame',
+            measure_type_detailed_defense='Advanced'
+        )
+        df = stats.get_data_frames()[0]
+        
+        # Rename for consistency
+        df = df.rename(columns={'PLAYER_NAME': 'player_name', 'PLAYER_ID': 'PLAYER_ID_ADV'})
+        
+        print(f"  Fetched {len(df)} players with advanced stats")
+        return df
+        
+    except Exception as e:
+        print(f"  Warning: Could not fetch advanced stats: {e}")
+        return None
+
+
+def build_current_season_similarity(df, season='2024-25'):
+    """
+    Builds an ARCHETYPE-BASED KNN similarity model using advanced metrics.
+    
+    Unlike the previous version that used LEBRON impact scores, this version
+    focuses on PLAYSTYLE metrics that define HOW a player plays:
+    
+    Archetype Dimensions:
+    - Ball Dominance: USG_PCT (how much they handle the ball)
+    - Playmaking: AST_PCT, AST_TO (passing ability)
+    - Scoring Efficiency: TS_PCT (how efficiently they score)
+    - Rebounding: REB_PCT, OREB_PCT (glass presence)
+    - Defense: DEF_RATING (defensive impact)
+    
+    LEBRON scores are intentionally de-weighted to find players who
+    PLAY SIMILARLY, not just players who are EQUALLY GOOD.
+    
+    Args:
+        df (pd.DataFrame): Merged LEBRON + contracts data
+        season (str): Season to fetch advanced stats for
+        
+    Returns:
+        tuple: (model, scaler, df_filtered, feature_info)
+    """
+    required_cols = ['player_name', 'LEBRON', 'Minutes']
+    if not all(col in df.columns for col in required_cols):
+        print(f"ERROR: Missing required columns")
+        return None, None, None, None
+    
+    # Filter for players with meaningful minutes
+    df_filtered = df[df['Minutes'] >= 200].copy()
+    
+    if len(df_filtered) < 20:
+        print(f"ERROR: Not enough qualified players ({len(df_filtered)})")
+        return None, None, None, None
+    
+    print(f"Building ARCHETYPE-BASED similarity model:")
+    print(f"  Base players: {len(df_filtered)}")
+    
+    # Fetch advanced stats from NBA API
+    df_advanced = fetch_advanced_stats(season)
+    
+    if df_advanced is not None and len(df_advanced) > 0:
+        # Merge advanced stats with our data
+        # Use fuzzy matching on player names
+        from rapidfuzz import fuzz
+        
+        def find_best_match(name, candidates, threshold=85):
+            best_score = 0
+            best_match = None
+            for candidate in candidates:
+                score = fuzz.ratio(name.lower(), candidate.lower())
+                if score > best_score and score >= threshold:
+                    best_score = score
+                    best_match = candidate
+            return best_match
+        
+        adv_names = df_advanced['player_name'].tolist()
+        matches = {}
+        for name in df_filtered['player_name']:
+            match = find_best_match(name, adv_names)
+            if match:
+                matches[name] = match
+        
+        print(f"  Matched {len(matches)}/{len(df_filtered)} players to advanced stats")
+        
+        # Create mapping DataFrame
+        df_filtered['adv_name'] = df_filtered['player_name'].map(matches)
+        
+        # Merge the advanced stats
+        adv_cols = ['player_name', 'USG_PCT', 'AST_PCT', 'AST_TO', 'TS_PCT', 
+                    'REB_PCT', 'OREB_PCT', 'DREB_PCT', 'DEF_RATING', 'OFF_RATING', 'NET_RATING']
+        adv_subset = df_advanced[[c for c in adv_cols if c in df_advanced.columns]].copy()
+        adv_subset = adv_subset.rename(columns={'player_name': 'adv_name'})
+        
+        df_filtered = df_filtered.merge(adv_subset, on='adv_name', how='left')
+        has_advanced = True
+    else:
+        has_advanced = False
+        print("  No advanced stats available - using derived features only")
+    
+    # ARCHETYPE FEATURE CONFIGURATION
+    # These weights prioritize PLAYSTYLE over IMPACT
+    feature_config = {
+        # PRIMARY STYLE METRICS (highest weight - defines archetype)
+        'USG_PCT': 2.5,        # Ball dominance - most important for archetype
+        'AST_PCT': 2.5,        # Playmaking ability
+        'TS_PCT': 2.0,         # Scoring efficiency/style
+        
+        # SECONDARY STYLE (moderate-high weight)
+        'REB_PCT': 1.8,        # Glass presence
+        'OREB_PCT': 1.5,       # Offensive rebounding (big man indicator)
+        'DEF_RATING': 1.5,     # Defensive impact (inverted - lower is better)
+        
+        # LEBRON ARCHETYPES (encode as features)
+        'archetype_ball_handler': 2.0,    # Primary/Secondary Ball Handler
+        'archetype_scorer': 1.8,          # Shot Creator
+        'archetype_shooter': 1.8,         # Movement/Off Screen Shooter
+        'archetype_big': 1.5,             # Post Scorer/Stretch Big/Athletic Finisher
+        
+        # DEFENSIVE ROLE (encode as features)
+        'defense_rim': 1.5,               # Anchor Big
+        'defense_perimeter': 1.5,         # Chaser/Point of Attack
+        'defense_wing': 1.2,              # Wing Stopper
+        
+        # CONTEXT (low weight - don't want to match just by role/minutes)
+        'Minutes': 0.3,
+        'Age': 0.2,
+        
+        # IMPACT (very low weight - we want style similarity, not impact similarity)
+        'LEBRON': 0.5,         # Reduced from 2.0 - just a tiebreaker
+    }
+    
+    # Create archetype encoding from categorical columns
+    if 'Offensive Archetype' in df_filtered.columns:
+        df_filtered['archetype_ball_handler'] = df_filtered['Offensive Archetype'].isin(
+            ['Primary Ball Handler', 'Secondary Ball Handler']).astype(float)
+        df_filtered['archetype_scorer'] = df_filtered['Offensive Archetype'].isin(
+            ['Shot Creator']).astype(float)
+        df_filtered['archetype_shooter'] = df_filtered['Offensive Archetype'].isin(
+            ['Movement Shooter', 'Off Screen Shooter']).astype(float)
+        df_filtered['archetype_big'] = df_filtered['Offensive Archetype'].isin(
+            ['Post Scorer', 'Stretch Big', 'Athletic Finisher', 'Versatile Big']).astype(float)
+    
+    if 'Defensive Role' in df_filtered.columns:
+        df_filtered['defense_rim'] = df_filtered['Defensive Role'].isin(
+            ['Anchor Big', 'Mobile Big']).astype(float)
+        df_filtered['defense_perimeter'] = df_filtered['Defensive Role'].isin(
+            ['Chaser', 'Point of Attack']).astype(float)
+        df_filtered['defense_wing'] = df_filtered['Defensive Role'].isin(
+            ['Wing Stopper']).astype(float)
+    
+    # Filter to available features
+    available_features = []
+    feature_weights = []
+    
+    for feature, weight in feature_config.items():
+        if feature in df_filtered.columns:
+            available_features.append(feature)
+            feature_weights.append(weight)
+    
+    print(f"  Features ({len(available_features)}): {', '.join(available_features)}")
+    
+    if len(available_features) < 5:
+        print(f"ERROR: Not enough features ({len(available_features)})")
+        return None, None, None, None
+    
+    # Handle NaN values
+    df_filtered = df_filtered.fillna(0)
+    
+    # Handle DEF_RATING (lower is better, so invert)
+    if 'DEF_RATING' in df_filtered.columns:
+        max_def = df_filtered['DEF_RATING'].max()
+        df_filtered['DEF_RATING'] = max_def - df_filtered['DEF_RATING']
+    
+    # Extract feature matrix
+    X = df_filtered[available_features].values
+    
+    # Normalize with StandardScaler
+    scaler = StandardScaler()
+    X_scaled = scaler.fit_transform(X)
+    
+    # Apply feature weights
+    weights_array = np.array(feature_weights).reshape(1, -1)
+    X_weighted = X_scaled * weights_array
+    
+    # Classify position groups based on defensive role
+    POSITION_GROUPS = {
+        'big': ['Anchor Big', 'Mobile Big'],
+        'guard': ['Chaser', 'Point of Attack'],
+        'wing': ['Wing Stopper'],
+        'versatile': ['Helper', 'Low Activity']
+    }
+    
+    def get_position_group(row):
+        def_role = row.get('Defensive Role', '')
+        for group, roles in POSITION_GROUPS.items():
+            if def_role in roles:
+                return group
+        return 'versatile'
+    
+    df_filtered['position_group'] = df_filtered.apply(get_position_group, axis=1)
+    
+    # Train KNN with cosine similarity
+    model = NearestNeighbors(
+        n_neighbors=min(40, len(df_filtered) - 1),
+        metric='cosine',
+        n_jobs=1
+    )
+    model.fit(X_weighted)
+    
+    print(f"  Model trained with {len(available_features)} archetype features")
+    
+    return model, scaler, df_filtered, {
+        'features': available_features,
+        'weights': feature_weights,
+        'X_weighted': X_weighted,
+        'has_advanced': has_advanced
+    }
+
+
+def find_replacement_players(player_name, df, model, scaler, feature_info, max_results=8):
+    """
+    Finds cheaper replacement players using ARCHETYPE-BASED similarity.
+    
+    This version creates real differentiation between matches by:
+    1. Using a scoring formula that spreads scores across 50-95 range
+    2. Heavy penalties for archetype mismatches
+    3. Bonus for matching advanced stats (USG, AST_PCT, etc.)
+    
+    Args:
+        player_name (str): Name of the player to find replacements for
+        df (pd.DataFrame): The filtered DataFrame from build_current_season_similarity
+        model: Trained KNN model
+        scaler: Fitted StandardScaler
+        feature_info (dict): Feature configuration from build_current_season_similarity
+        max_results (int): Maximum number of replacements to return
+        
+    Returns:
+        list: List of replacement player dictionaries with comparison data
+    """
+    # Find target player
+    target_mask = df['player_name'] == player_name
+    if not target_mask.any():
+        return []
+    
+    target_row = df[target_mask].iloc[0]
+    target_salary = target_row.get('current_year_salary', 0)
+    target_archetype = target_row.get('Offensive Archetype', '')
+    target_defense = target_row.get('Defensive Role', '')
+    target_position = target_row.get('position_group', 'versatile')
+    
+    # Get target's advanced stats for comparison
+    target_usg = target_row.get('USG_PCT', 0)
+    target_ast = target_row.get('AST_PCT', 0)
+    target_ts = target_row.get('TS_PCT', 0)
+    
+    # Get target's feature vector
+    features = feature_info['features']
+    weights = np.array(feature_info['weights']).reshape(1, -1)
+    
+    target_vector = target_row[features].values.reshape(1, -1)
+    target_scaled = scaler.transform(target_vector)
+    target_weighted = target_scaled * weights
+    
+    # Find neighbors (get more than needed to allow for filtering)
+    n_neighbors = min(60, len(df) - 1)
+    distances, indices = model.kneighbors(target_weighted, n_neighbors=n_neighbors)
+    
+    # Define position compatibility
+    position_compat = {
+        'big': ['big'],
+        'guard': ['guard', 'wing', 'versatile'],
+        'wing': ['guard', 'wing', 'versatile'],
+        'versatile': ['guard', 'wing', 'versatile']
+    }
+    compatible_positions = position_compat.get(target_position, ['guard', 'wing', 'versatile'])
+    
+    replacements = []
+    
+    # Get min/max distances for normalization
+    all_dists = distances[0]
+    dist_min = all_dists.min()
+    dist_max = all_dists.max()
+    dist_range = max(dist_max - dist_min, 0.01)
+    
+    for i in range(len(indices[0])):
+        idx = indices[0][i]
+        dist = distances[0][i]
+        
+        match_row = df.iloc[idx]
+        match_name = match_row['player_name']
+        match_salary = match_row.get('current_year_salary', 0)
+        match_archetype = match_row.get('Offensive Archetype', '')
+        match_defense = match_row.get('Defensive Role', '')
+        match_position = match_row.get('position_group', 'versatile')
+        
+        # Skip self
+        if match_name == player_name:
+            continue
+        
+        # Must be cheaper (at least 10% less)
+        if match_salary >= target_salary * 0.9:
+            continue
+        
+        # Position compatibility check
+        if match_position not in compatible_positions:
+            continue
+        
+        # ================================================================
+        # NEW SCORING SYSTEM - Creates real differentiation
+        # ================================================================
+        
+        # 1. BASE SCORE from KNN distance (0-60 range)
+        # Normalize distance to 0-1 range, then convert to score
+        normalized_dist = (dist - dist_min) / dist_range
+        base_score = 60 * (1 - normalized_dist)  # Closer = higher score
+        
+        # 2. ARCHETYPE MATCH BONUS/PENALTY (-15 to +25)
+        archetype_score = 0
+        
+        # Exact archetype match = big bonus
+        if match_archetype == target_archetype:
+            archetype_score += 20
+        # Same archetype family = small bonus
+        elif match_archetype in _get_archetype_family(target_archetype):
+            archetype_score += 8
+        # Different archetype = penalty
+        else:
+            archetype_score -= 10
+        
+        # Exact defensive role match = bonus
+        if match_defense == target_defense:
+            archetype_score += 5
+        elif match_defense in _get_defense_family(target_defense):
+            archetype_score += 2
+        
+        # 3. ADVANCED STATS SIMILARITY BONUS (0-15)
+        style_score = 0
+        
+        match_usg = match_row.get('USG_PCT', 0)
+        match_ast = match_row.get('AST_PCT', 0)
+        match_ts = match_row.get('TS_PCT', 0)
+        
+        # USG similarity (within 5% = +5)
+        if target_usg > 0 and match_usg > 0:
+            usg_diff = abs(target_usg - match_usg)
+            if usg_diff < 0.03:
+                style_score += 5
+            elif usg_diff < 0.06:
+                style_score += 3
+            elif usg_diff < 0.10:
+                style_score += 1
+        
+        # AST_PCT similarity (within 5% = +5)
+        if target_ast > 0 and match_ast > 0:
+            ast_diff = abs(target_ast - match_ast)
+            if ast_diff < 0.05:
+                style_score += 5
+            elif ast_diff < 0.10:
+                style_score += 3
+            elif ast_diff < 0.15:
+                style_score += 1
+        
+        # TS% similarity (within 3% = +5)
+        if target_ts > 0 and match_ts > 0:
+            ts_diff = abs(target_ts - match_ts)
+            if ts_diff < 0.03:
+                style_score += 5
+            elif ts_diff < 0.05:
+                style_score += 3
+            elif ts_diff < 0.08:
+                style_score += 1
+        
+        # FINAL SCORE (typically 40-95 range)
+        match_score = base_score + archetype_score + style_score
+        match_score = max(30, min(98, match_score))  # Clamp to reasonable range
+        
+        # Calculate savings
+        savings = target_salary - match_salary
+        savings_pct = (savings / target_salary * 100) if target_salary > 0 else 0
+        
+        # Build comparison data
+        replacements.append({
+            'player_name': match_name,
+            'PLAYER_ID': match_row.get('PLAYER_ID'),
+            'salary': match_salary,
+            'LEBRON': match_row.get('LEBRON', 0),
+            'O-LEBRON': match_row.get('O-LEBRON', 0),
+            'D-LEBRON': match_row.get('D-LEBRON', 0),
+            'archetype': match_archetype,
+            'defense_role': match_defense,
+            'position_group': match_position,
+            'match_score': round(match_score, 1),
+            'distance': dist,
+            'savings': savings,
+            'savings_pct': round(savings_pct, 1),
+            # Target comparison data
+            'target_LEBRON': target_row.get('LEBRON', 0),
+            'target_O_LEBRON': target_row.get('O-LEBRON', 0),
+            'target_D_LEBRON': target_row.get('D-LEBRON', 0),
+            # Advanced stats for display
+            'USG_PCT': match_usg,
+            'AST_PCT': match_ast,
+            'TS_PCT': match_ts,
+            'target_USG': target_usg,
+            'target_AST': target_ast,
+            'target_TS': target_ts,
+        })
+        
+        if len(replacements) >= max_results * 2:  # Get more, then filter
+            break
+    
+    # Sort by match score (highest first)
+    replacements.sort(key=lambda x: x['match_score'], reverse=True)
+    
+    return replacements[:max_results]
+
+
+def _get_archetype_family(archetype):
+    """Returns related archetypes for soft matching."""
+    families = {
+        'Shot Creator': ['Primary Ball Handler', 'Secondary Ball Handler'],
+        'Primary Ball Handler': ['Shot Creator', 'Secondary Ball Handler'],
+        'Secondary Ball Handler': ['Shot Creator', 'Primary Ball Handler'],
+        'Movement Shooter': ['Off Screen Shooter', 'Stretch Big'],
+        'Off Screen Shooter': ['Movement Shooter'],
+        'Stretch Big': ['Movement Shooter', 'Versatile Big'],
+        'Post Scorer': ['Athletic Finisher', 'Versatile Big'],
+        'Athletic Finisher': ['Post Scorer', 'Slasher'],
+        'Versatile Big': ['Stretch Big', 'Post Scorer'],
+        'Slasher': ['Athletic Finisher', 'Shot Creator'],
+    }
+    return families.get(archetype, [])
+
+
+def _get_defense_family(defense_role):
+    """Returns related defensive roles for soft matching."""
+    families = {
+        'Anchor Big': ['Mobile Big'],
+        'Mobile Big': ['Anchor Big', 'Helper'],
+        'Chaser': ['Point of Attack'],
+        'Point of Attack': ['Chaser', 'Wing Stopper'],
+        'Wing Stopper': ['Point of Attack', 'Helper'],
+        'Helper': ['Wing Stopper', 'Mobile Big'],
+        'Low Activity': ['Helper'],
+    }
+    return families.get(defense_role, [])
 
 
 def find_similar_players(player_name, season, df_history, model, scaler, feature_info=None, exclude_self=True):

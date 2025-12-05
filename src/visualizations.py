@@ -308,35 +308,59 @@ def create_salary_impact_scatter(filtered):
             # Color markers by Value Gap to highlight efficiency
             color=filtered['value_gap'] if 'value_gap' in filtered.columns else 0,
             colorscale=[[0, '#ef476f'], [0.5, '#ffd166'], [1, '#06d6a0']],
-            colorbar=dict(
-                title=dict(text="<b>Value<br>Gap</b>", font=dict(size=11)),
-                thickness=15,
-                len=0.6,
-                tickfont=dict(size=10)
-            ),
+            showscale=False,  # Hide colorbar to match other chart width
             line=dict(width=1.5, color='rgba(255,255,255,0.4)'),
-            opacity=0.85
+            opacity=0.95
         ),
         text=[f"<b>{n}</b><br>Gap: {g:.1f}" for n, g in 
               zip(filtered['player_name'], filtered['value_gap'] if 'value_gap' in filtered.columns else [0]*len(filtered))],
         hovertemplate='%{text}<extra></extra>'
     ))
+    
+    # Calculate axis ranges for arrow positioning
+    x_min = filtered['LEBRON'].min() if len(filtered) > 0 else -2
+    x_max = filtered['LEBRON'].max() if len(filtered) > 0 else 8
+    y_col = 'current_year_salary' if 'current_year_salary' in filtered.columns else 'total_contract_value'
+    y_min = filtered[y_col].min() if len(filtered) > 0 else 0
+    y_max = filtered[y_col].max() if len(filtered) > 0 else 50000000
+    
+    # Add axis indicator arrows with labels
     fig.update_layout(
-        # title='<b style="font-size:16px">Salary vs Impact</b><br><sub style="color:#adb5bd">Size = WAR | Color = Value Gap</sub>',
         xaxis_title='<b>LEBRON Total</b>',
         yaxis_title='<b>Salary ($)</b>',
-        height=550,
+        height=500,
         template='plotly_dark',
         hovermode='closest',
         paper_bgcolor='#0f1623',
         plot_bgcolor='#1a202c',
-        margin=dict(l=50, r=20, t=20, b=50),
+        margin=dict(l=50, r=50, t=50, b=50),
         autosize=True,
         hoverlabel=dict(
             bgcolor="#1a2332",
             bordercolor="#ff6b35",
             font=dict(color="#e4e6eb")
-        )
+        ),
+        annotations=[
+            # Right arrow - "Better Impact"
+            dict(
+                x=1.0, y=0.02,
+                xref='paper', yref='paper',
+                text='Better Impact  \u2192',
+                showarrow=False,
+                font=dict(size=11, color='#06d6a0', family='Arial'),
+                xanchor='right'
+            ),
+            # Up arrow - "More Expensive"  
+            dict(
+                x=0.02, y=1.0,
+                xref='paper', yref='paper',
+                text='\u2191  More $',
+                showarrow=False,
+                font=dict(size=11, color='#ef476f', family='Arial'),
+                xanchor='left', yanchor='top',
+                textangle=0
+            ),
+        ]
     )
     return fig
 
@@ -474,6 +498,233 @@ def create_age_impact_scatter(filtered):
     fig.add_vrect(x0=26, x1=30, fillcolor="rgba(255,107,53,0.1)", 
                    line_width=0, annotation_text="Peak Years", 
                    annotation_position="top left")
+    return fig
+
+
+def create_age_ridge_plot(filtered):
+    """
+    Creates a Ridge Plot showing LEBRON distribution by age group.
+    
+    Ridge plots (also called joy plots) show distribution curves stacked vertically,
+    making it easy to compare how player impact varies across age brackets.
+    
+    Args:
+        filtered (pd.DataFrame): Filtered DataFrame of players.
+        
+    Returns:
+        go.Figure: A Plotly ridge plot.
+    """
+    import plotly.figure_factory as ff
+    
+    fig = go.Figure()
+    
+    if len(filtered) == 0 or 'Age' not in filtered.columns or 'LEBRON' not in filtered.columns:
+        fig.add_annotation(text="No data available", font=dict(size=14, color='#adb5bd'))
+        fig.update_layout(height=500, template='plotly_dark', paper_bgcolor='#0f1623')
+        return fig
+    
+    # Create age groups
+    age_bins = [(19, 22, 'Rookies (19-22)'), (23, 25, 'Rising (23-25)'), 
+                (26, 30, 'Prime (26-30)'), (31, 34, 'Veteran (31-34)'), (35, 45, 'Twilight (35+)')]
+    
+    colors = ['#06d6a0', '#2D96C7', '#ff6b35', '#ffd166', '#ef476f']
+    
+    # Build traces for each age group
+    for i, (min_age, max_age, label) in enumerate(age_bins):
+        group_data = filtered[(filtered['Age'] >= min_age) & (filtered['Age'] <= max_age)]['LEBRON']
+        
+        if len(group_data) >= 3:  # Need at least 3 points for KDE
+            # Create KDE-like distribution using histogram
+            hist_values, bin_edges = np.histogram(group_data, bins=20, density=True)
+            bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
+            
+            # Offset each distribution vertically
+            y_offset = i * 0.8
+            
+            # Add filled area
+            fig.add_trace(go.Scatter(
+                x=bin_centers,
+                y=hist_values + y_offset,
+                mode='lines',
+                fill='tonexty' if i > 0 else 'tozeroy',
+                fillcolor=f'rgba({int(colors[i][1:3], 16)}, {int(colors[i][3:5], 16)}, {int(colors[i][5:7], 16)}, 0.4)',
+                line=dict(color=colors[i], width=2),
+                name=f'{label} (n={len(group_data)})',
+                hovertemplate=f'<b>{label}</b><br>LEBRON: %{{x:.2f}}<extra></extra>'
+            ))
+            
+            # Add baseline for next trace
+            if i < len(age_bins) - 1:
+                fig.add_trace(go.Scatter(
+                    x=bin_centers,
+                    y=[y_offset + 0.8] * len(bin_centers),
+                    mode='lines',
+                    line=dict(color='rgba(0,0,0,0)', width=0),
+                    showlegend=False,
+                    hoverinfo='skip'
+                ))
+    
+    fig.update_layout(
+        xaxis_title='<b>LEBRON Impact</b>',
+        yaxis=dict(
+            showticklabels=False,
+            showgrid=False,
+            zeroline=False
+        ),
+        height=500,
+        template='plotly_dark',
+        paper_bgcolor='#0f1623',
+        plot_bgcolor='#1a202c',
+        margin=dict(l=50, r=20, t=30, b=50),
+        legend=dict(
+            orientation='h',
+            yanchor='bottom',
+            y=1.02,
+            xanchor='center',
+            x=0.5,
+            font=dict(size=11)
+        ),
+        hoverlabel=dict(
+            bgcolor="#1a2332",
+            bordercolor="#ff6b35",
+            font=dict(color="#e4e6eb")
+        )
+    )
+    
+    # Add vertical line at 0 (league average)
+    fig.add_vline(x=0, line_dash="dash", line_color="#6c757d", 
+                  annotation_text="Avg", annotation_position="top")
+    
+    return fig
+
+
+def create_player_beeswarm(filtered):
+    """
+    Creates a Beeswarm plot showing all players by LEBRON impact with player headshots.
+    
+    Each player is shown as their NBA headshot with a colored border indicating value gap.
+    Players are arranged to minimize overlap.
+    
+    Args:
+        filtered (pd.DataFrame): Filtered DataFrame of players.
+        
+    Returns:
+        go.Figure: A Plotly figure with player headshot images.
+    """
+    fig = go.Figure()
+    
+    if len(filtered) == 0 or 'LEBRON' not in filtered.columns:
+        fig.add_annotation(text="No data available", font=dict(size=14, color='#adb5bd'))
+        fig.update_layout(height=550, template='plotly_dark', paper_bgcolor='#0f1623')
+        return fig
+    
+    df = filtered.copy()
+    df = df.sort_values('LEBRON', ascending=True).reset_index(drop=True)
+    
+    # Create beeswarm-like y-positions to avoid overlap
+    df['lebron_bin'] = pd.cut(df['LEBRON'], bins=25, labels=False)
+    
+    y_positions = []
+    for bin_id in df['lebron_bin'].unique():
+        bin_mask = df['lebron_bin'] == bin_id
+        bin_count = bin_mask.sum()
+        if bin_count > 1:
+            offsets = np.linspace(-bin_count/2, bin_count/2, bin_count) * 0.4
+        else:
+            offsets = [0]
+        
+        for i, (idx, row) in enumerate(df[bin_mask].iterrows()):
+            y_positions.append((idx, offsets[i % len(offsets)]))
+    
+    y_positions.sort(key=lambda x: x[0])
+    df['y_offset'] = [yp[1] for yp in y_positions]
+    
+    # Get data ranges for image sizing
+    x_min, x_max = df['LEBRON'].min(), df['LEBRON'].max()
+    y_min, y_max = df['y_offset'].min(), df['y_offset'].max()
+    x_range = x_max - x_min
+    y_range = max(y_max - y_min, 1)
+    
+    # Image size in data units (smaller for more players)
+    img_size_x = x_range * 0.025
+    img_size_y = y_range * 0.08
+    
+    # Add invisible scatter for hover functionality
+    value_gaps = df['value_gap'] if 'value_gap' in df.columns else [0]*len(df)
+    salaries = df['current_year_salary'] if 'current_year_salary' in df.columns else [0]*len(df)
+    
+    fig.add_trace(go.Scatter(
+        x=df['LEBRON'],
+        y=df['y_offset'],
+        mode='markers',
+        marker=dict(size=28, opacity=0),  # Invisible but clickable
+        text=[f"<b>{n}</b><br>LEBRON: {l:.2f}<br>Value Gap: {g:+.1f}<br>${s/1e6:.1f}M" 
+              for n, l, g, s in zip(df['player_name'], df['LEBRON'], value_gaps, salaries)],
+        hovertemplate='%{text}<extra></extra>',
+        showlegend=False
+    ))
+    
+    # Add player headshot images
+    for _, row in df.iterrows():
+        player_id = row.get('PLAYER_ID', None)
+        if pd.isna(player_id):
+            continue
+            
+        # Determine border color based on value gap
+        vg = row['value_gap'] if 'value_gap' in df.columns else 0
+        if vg > 5:
+            border_color = '#06d6a0'  # Green - underpaid
+        elif vg > 0:
+            border_color = '#2D96C7'  # Blue - slight value
+        elif vg > -5:
+            border_color = '#ffd166'  # Yellow - slight overpay
+        else:
+            border_color = '#ef476f'  # Red - overpaid
+        
+        img_url = f"https://cdn.nba.com/headshots/nba/latest/1040x760/{int(player_id)}.png"
+        
+        fig.add_layout_image(
+            dict(
+                source=img_url,
+                x=row['LEBRON'],
+                y=row['y_offset'],
+                xref="x",
+                yref="y",
+                sizex=img_size_x,
+                sizey=img_size_y,
+                xanchor="center",
+                yanchor="middle",
+                layer="above"
+            )
+        )
+    
+    # Add reference line at 0
+    fig.add_vline(x=0, line_dash="dash", line_color="#6c757d", line_width=1)
+    
+    fig.update_layout(
+        xaxis=dict(
+            title='<b>LEBRON Impact</b>',
+            showgrid=True,
+            gridcolor='rgba(255,255,255,0.1)'
+        ),
+        yaxis=dict(
+            showticklabels=False,
+            showgrid=False,
+            zeroline=False,
+        ),
+        height=500,
+        template='plotly_dark',
+        paper_bgcolor='#0f1623',
+        plot_bgcolor='#1a202c',
+        margin=dict(l=50, r=50, t=50, b=50),
+        autosize=True,
+        hoverlabel=dict(
+            bgcolor="#1a2332",
+            bordercolor="#ff6b35",
+            font=dict(color="#e4e6eb")
+        )
+    )
+    
     return fig
 
 
@@ -1383,3 +1634,289 @@ def create_lineup_table(df, table_type='best'):
         page_action='none',
         sort_action='native'
     )
+
+
+# =============================================================================
+# DIAMOND FINDER VISUALIZATIONS
+# =============================================================================
+
+def create_mini_radar(target_lebron, target_o, target_d, match_lebron, match_o, match_d):
+    """
+    Creates a mini radar chart comparing target and match player LEBRON metrics.
+    
+    Args:
+        target_lebron, target_o, target_d: Target player's LEBRON, O-LEBRON, D-LEBRON
+        match_lebron, match_o, match_d: Match player's LEBRON, O-LEBRON, D-LEBRON
+        
+    Returns:
+        go.Figure: A compact radar chart
+    """
+    categories = ['Overall', 'Offense', 'Defense']
+    
+    # Normalize values to 0-10 scale for visual comparison
+    # LEBRON typically ranges from -4 to +8
+    def normalize(val):
+        return max(0, min(10, (val + 4) * 0.8))
+    
+    target_vals = [normalize(target_lebron), normalize(target_o), normalize(target_d)]
+    match_vals = [normalize(match_lebron), normalize(match_o), normalize(match_d)]
+    
+    fig = go.Figure()
+    
+    # Target player (outline only)
+    fig.add_trace(go.Scatterpolar(
+        r=target_vals + [target_vals[0]],  # Close the shape
+        theta=categories + [categories[0]],
+        fill='none',
+        line=dict(color='#ff6b35', width=2, dash='dot'),
+        name='Target',
+        hoverinfo='skip'
+    ))
+    
+    # Match player (filled)
+    fig.add_trace(go.Scatterpolar(
+        r=match_vals + [match_vals[0]],
+        theta=categories + [categories[0]],
+        fill='toself',
+        fillcolor='rgba(6, 214, 160, 0.3)',
+        line=dict(color='#06d6a0', width=2),
+        name='Match',
+        hoverinfo='skip'
+    ))
+    
+    fig.update_layout(
+        polar=dict(
+            radialaxis=dict(
+                visible=False,
+                range=[0, 10]
+            ),
+            angularaxis=dict(
+                tickfont=dict(size=9, color='#adb5bd'),
+                rotation=90,
+                direction='clockwise'
+            ),
+            bgcolor='rgba(0,0,0,0)'
+        ),
+        showlegend=False,
+        margin=dict(l=20, r=20, t=20, b=20),
+        paper_bgcolor='rgba(0,0,0,0)',
+        plot_bgcolor='rgba(0,0,0,0)',
+        height=120,
+        width=120
+    )
+    
+    return fig
+
+
+def _create_stat_comparison(label, match_val, target_val):
+    """Creates a small stat comparison row for the replacement card."""
+    from dash import html
+    
+    if match_val == 0 and target_val == 0:
+        return html.Div()
+    
+    # Format as percentage
+    match_str = f"{match_val:.1%}" if match_val > 0 else "N/A"
+    target_str = f"{target_val:.1%}" if target_val > 0 else "N/A"
+    
+    # Determine color based on closeness
+    if match_val > 0 and target_val > 0:
+        diff = abs(match_val - target_val)
+        if diff < 0.03:
+            color = "#06d6a0"  # Very close
+        elif diff < 0.06:
+            color = "#2D96C7"  # Close
+        elif diff < 0.10:
+            color = "#ffd166"  # Moderate
+        else:
+            color = "#adb5bd"  # Different
+    else:
+        color = "#6c757d"
+    
+    return html.Div([
+        html.Span(f"{label}: ", style={"color": "#6c757d", "fontSize": "9px"}),
+        html.Span(match_str, style={"color": color, "fontWeight": "600", "fontSize": "10px"}),
+        html.Span(f" ({target_str})", style={"color": "#4a5568", "fontSize": "9px"})
+    ], style={"marginBottom": "2px"})
+
+
+def create_replacement_card(replacement, target_name, target_salary):
+    """
+    Creates a styled card for a replacement player in the Diamond Finder.
+    
+    Shows player headshot, match score, mini radar comparison, archetype, and savings.
+    
+    Args:
+        replacement (dict): Replacement player data from find_replacement_players()
+        target_name (str): Name of the target player being replaced
+        target_salary (float): Target player's salary
+        
+    Returns:
+        dbc.Card: A styled Bootstrap card component
+    """
+    from dash import html, dcc
+    import dash_bootstrap_components as dbc
+    
+    player_id = replacement.get('PLAYER_ID')
+    img_url = f"https://cdn.nba.com/headshots/nba/latest/1040x760/{int(player_id)}.png" if pd.notna(player_id) else ""
+    
+    # Determine match quality color
+    score = replacement['match_score']
+    if score >= 90:
+        score_color = '#06d6a0'  # Excellent
+        score_label = 'Excellent Match'
+    elif score >= 75:
+        score_color = '#2D96C7'  # Good
+        score_label = 'Good Match'
+    elif score >= 60:
+        score_color = '#ffd166'  # Decent
+        score_label = 'Decent Match'
+    else:
+        score_color = '#adb5bd'  # Fair
+        score_label = 'Fair Match'
+    
+    # Create mini radar
+    radar_fig = create_mini_radar(
+        replacement['target_LEBRON'], replacement['target_O_LEBRON'], replacement['target_D_LEBRON'],
+        replacement['LEBRON'], replacement['O-LEBRON'], replacement['D-LEBRON']
+    )
+    
+    card = dbc.Card([
+        dbc.CardBody([
+            # Top row: Headshot + Match Score
+            dbc.Row([
+                dbc.Col([
+                    html.Img(
+                        src=img_url,
+                        style={
+                            "width": "60px", "height": "60px", 
+                            "borderRadius": "50%", 
+                            "border": f"3px solid {score_color}",
+                            "objectFit": "cover"
+                        }
+                    ) if img_url else html.Div(style={"width": "60px", "height": "60px"})
+                ], width=4, className="text-center"),
+                dbc.Col([
+                    html.Div(replacement['player_name'], style={
+                        "fontWeight": "700", "fontSize": "14px", "color": "#e4e6eb",
+                        "whiteSpace": "nowrap", "overflow": "hidden", "textOverflow": "ellipsis"
+                    }),
+                    html.Div([
+                        html.Span(f"{score:.0f}%", style={
+                            "color": score_color, "fontWeight": "700", "fontSize": "18px"
+                        }),
+                        html.Span(f" {score_label}", style={
+                            "color": "#6c757d", "fontSize": "10px", "marginLeft": "4px"
+                        })
+                    ]),
+                    html.Div(f"${replacement['salary']/1e6:.1f}M", style={
+                        "color": "#06d6a0", "fontWeight": "600", "fontSize": "13px"
+                    })
+                ], width=8)
+            ], className="mb-2"),
+            
+            # Middle: Advanced stats comparison (style similarity)
+            dbc.Row([
+                dbc.Col([
+                    # Advanced stats comparison
+                    _create_stat_comparison("USG", replacement.get('USG_PCT', 0), replacement.get('target_USG', 0)),
+                    _create_stat_comparison("AST%", replacement.get('AST_PCT', 0), replacement.get('target_AST', 0)),
+                    _create_stat_comparison("TS%", replacement.get('TS_PCT', 0), replacement.get('target_TS', 0)),
+                ], width=6),
+                dbc.Col([
+                    # Archetype badges
+                    html.Div([
+                        html.Span(replacement['archetype'], style={
+                            "backgroundColor": "rgba(45, 150, 199, 0.3)",
+                            "color": "#2D96C7",
+                            "padding": "2px 6px",
+                            "borderRadius": "4px",
+                            "fontSize": "9px",
+                            "display": "block",
+                            "marginBottom": "4px"
+                        })
+                    ]),
+                    html.Div(replacement['defense_role'], style={
+                        "fontSize": "9px", "color": "#6c757d", "marginBottom": "8px"
+                    }),
+                    # LEBRON comparison (smaller)
+                    html.Div([
+                        html.Span(f"LEBRON: {replacement['LEBRON']:.1f}", style={
+                            "color": "#06d6a0" if replacement['LEBRON'] > 0 else "#ffd166", 
+                            "fontSize": "10px", "fontWeight": "600"
+                        }),
+                        html.Span(f" vs {replacement['target_LEBRON']:.1f}", style={
+                            "color": "#ff6b35", "fontSize": "10px"
+                        })
+                    ])
+                ], width=6, className="d-flex flex-column justify-content-center")
+            ], className="mb-2"),
+            
+            # Bottom: Savings highlight
+            html.Div([
+                html.Span(f"Save ${replacement['savings']/1e6:.1f}M ", style={
+                    "color": "#06d6a0", "fontWeight": "700", "fontSize": "12px"
+                }),
+                html.Span(f"({replacement['savings_pct']:.0f}% cheaper)", style={
+                    "color": "#6c757d", "fontSize": "10px"
+                })
+            ], className="text-center mt-2", style={
+                "backgroundColor": "rgba(6, 214, 160, 0.1)",
+                "padding": "6px",
+                "borderRadius": "4px"
+            })
+        ], style={"padding": "12px"})
+    ], style={
+        "backgroundColor": "#151b26",
+        "border": f"1px solid {score_color}",
+        "borderRadius": "8px",
+        "minWidth": "220px",
+        "maxWidth": "260px",
+        "flexShrink": "0"
+    })
+    
+    return card
+
+
+def create_diamond_finder_results(replacements, target_name, target_salary, target_lebron):
+    """
+    Creates the full Diamond Finder results display.
+    
+    Args:
+        replacements (list): List of replacement dicts from find_replacement_players()
+        target_name (str): Target player name
+        target_salary (float): Target player salary
+        target_lebron (float): Target player LEBRON score
+        
+    Returns:
+        html.Div: Container with all replacement cards
+    """
+    from dash import html
+    
+    if not replacements:
+        return html.Div([
+            html.P("No cheaper replacements found for this player.", 
+                   className="text-muted text-center py-4"),
+            html.P("Try selecting a higher-paid player.", 
+                   className="text-muted text-center", style={"fontSize": "12px"})
+        ])
+    
+    cards = [create_replacement_card(r, target_name, target_salary) for r in replacements]
+    
+    return html.Div([
+        # Header
+        html.Div([
+            html.Span(f"Found {len(replacements)} replacements for ", style={"color": "#adb5bd"}),
+            html.Span(target_name, style={"color": "#ff6b35", "fontWeight": "600"}),
+            html.Span(f" (${target_salary/1e6:.1f}M, LEBRON: {target_lebron:.2f})", 
+                     style={"color": "#6c757d", "fontSize": "12px"})
+        ], className="mb-3"),
+        
+        # Cards row (horizontal scrollable)
+        html.Div(cards, style={
+            "display": "flex",
+            "overflowX": "auto",
+            "paddingBottom": "10px",
+            "gap": "12px"
+        })
+    ])

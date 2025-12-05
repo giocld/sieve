@@ -1,11 +1,17 @@
 """
 Data Scraper for Sieve NBA Analytics.
 
-This module provides two methods to get player contract data from Basketball Reference:
-1. parse_bbref_csv() - Parse a manually downloaded CSV (recommended, includes player IDs)
+This module provides methods to get player data from external sources:
+
+Contract Data (Basketball Reference):
+1. parse_bbref_csv() - Parse a manually downloaded CSV (recommended)
 2. scrape_bball_ref() - Web scrape using Selenium (fallback)
 
-The CSV method is preferred because it includes BBRef player IDs for accurate matching.
+LEBRON Data (BBall Index):
+3. scrape_lebron() - Scrape from https://www.bball-index.com/lebron-application/
+4. parse_lebron_csv() - Parse manually downloaded CSV (fallback)
+
+Data is saved to the unified SQLite database via cache_manager.
 """
 
 from selenium import webdriver
@@ -18,6 +24,10 @@ import pandas as pd
 import time
 import re
 import os
+
+# Import unified cache manager
+from src.cache_manager import cache
+from src.config import CURRENT_SEASON
 
 
 def clean_money(money_str):
@@ -205,10 +215,13 @@ def parse_bbref_csv(csv_path='data/bbref_contracts_raw.csv', output_path='data/b
     
     df_final = df_out[output_cols].copy()
     
-    # Save
+    # Save to database (primary storage)
+    cache.save_contracts(df_final, season=CURRENT_SEASON)
+    
+    # Also save CSV as backup (can be removed after full migration)
     df_final.to_csv(output_path, index=False)
     
-    print(f"\nSaved {len(df_final)} players to {output_path}")
+    print(f"\nSaved {len(df_final)} players to database and {output_path}")
     print(f"Players with BBRef IDs: {(df_final['bbref_id'] != '').sum()}")
     print("\nTop 10 by salary:")
     print(df_final[['player_name', 'team', 'bbref_id', 'current_year_salary']].head(10).to_string(index=False))
@@ -386,18 +399,561 @@ def scrape_bball_ref():
     print(f"\nExtracted {len(output_df)} players")
     print(output_df.head(10).to_string(index=False))
     
+    # Save to database (primary storage)
+    cache.save_contracts(output_df, season=CURRENT_SEASON)
+    
+    # Also save CSV as backup (can be removed after full migration)
     output_df.to_csv('data/basketball_reference_contracts.csv', index=False)
+    
+    return output_df
+
+
+# =============================================================================
+# LEBRON DATA SCRAPING (bball-index.com)
+# =============================================================================
+
+def scrape_lebron(season='2025-26', save_csv=True, headless=True, show_all=True, max_retries=3):
+    """
+    Scrape LEBRON player impact data from BBall Index with retry logic.
+    
+    Source: https://www.bball-index.com/lebron-application/
+    
+    LEBRON (Luck-adjusted player Estimate using a Box prior Regularized ON-off)
+    is a comprehensive player impact metric that combines box score and on/off data.
+    
+    Args:
+        season (str): NBA season to scrape (e.g., '2024-25' or '2025-26')
+        save_csv (bool): Whether to also save a CSV backup
+        headless (bool): Run browser in headless mode (set False for debugging)
+        show_all (bool): Try to show all entries (not just first page)
+        max_retries (int): Number of retry attempts (default: 3)
+        
+    Returns:
+        pd.DataFrame: LEBRON data for all players, or None if scraping failed
+    """
+    from selenium.webdriver.common.action_chains import ActionChains
+    from selenium.webdriver.common.keys import Keys
+    from selenium.webdriver.support.ui import Select
+    
+    print("=" * 70)
+    print("BBall Index LEBRON Scraper")
+    print("Target: https://www.bball-index.com/lebron-application/")
+    print(f"Season: {season}")
+    print(f"Max retries: {max_retries}")
+    print("=" * 70)
+    
+    url = "https://www.bball-index.com/lebron-application/"
+    
+    for attempt in range(1, max_retries + 1):
+        print(f"\n[Attempt {attempt}/{max_retries}]")
+        all_data = []
+        driver = None
+        
+        try:
+            # Setup Chrome with robust options
+            chrome_options = Options()
+            if headless:
+                chrome_options.add_argument("--headless=new")
+            chrome_options.add_argument("--no-sandbox")
+            chrome_options.add_argument("--disable-dev-shm-usage")
+            chrome_options.add_argument("--window-size=1920,1200")
+            chrome_options.add_argument("--disable-gpu")
+            chrome_options.add_argument("--disable-blink-features=AutomationControlled")
+            chrome_options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+            
+            driver = webdriver.Chrome(options=chrome_options)
+            driver.set_page_load_timeout(120)
+            
+            print(f"Loading: {url}")
+            driver.get(url)
+            
+            # Wait for initial load with exponential backoff
+            wait_time = 8 + (attempt - 1) * 4  # 8s, 12s, 16s
+            print(f"Waiting {wait_time}s for page to load...")
+            time.sleep(wait_time)
+            
+            wait = WebDriverWait(driver, 60 + attempt * 15)
+            
+            # Find and switch to the Shiny iframe
+            iframes = driver.find_elements(By.TAG_NAME, "iframe")
+            print(f"Found {len(iframes)} iframes")
+            
+            shiny_frame = None
+            for iframe in iframes:
+                try:
+                    src = iframe.get_attribute('src') or ''
+                    if 'shiny' in src.lower() or 'bball-index' in src.lower() or 'rstudio' in src.lower():
+                        shiny_frame = iframe
+                        print(f"Found Shiny iframe: {src[:80]}...")
+                        break
+                except:
+                    continue
+            
+            if shiny_frame:
+                driver.switch_to.frame(shiny_frame)
+                print("Switched to Shiny iframe")
+                time.sleep(5 + attempt)
+            else:
+                print("No Shiny iframe found, trying main content...")
+            
+            # Try to select the season using multiple approaches
+            print(f"Looking for season selector to set: {season}...")
+            season_year = season.split('-')[0]
+            season_short = season.replace('20', '', 1)  # "2025-26" -> "25-26"
+            
+            season_selected = False
+            
+            # Approach 1: Shiny selectize inputs (most common in R Shiny apps)
+            shiny_selectors = [
+                f"//*[contains(@class, 'selectize-input')]",
+                f"//*[contains(@class, 'shiny-input-select')]",
+                f"//select[contains(@id, 'season')]",
+                f"//select[contains(@id, 'Season')]",
+            ]
+            
+            for selector in shiny_selectors:
+                try:
+                    elements = driver.find_elements(By.XPATH, selector)
+                    for elem in elements:
+                        try:
+                            elem.click()
+                            time.sleep(1)
+                            # Look for season option
+                            options = driver.find_elements(By.XPATH, 
+                                f"//*[contains(text(), '{season}') or contains(text(), '{season_year}') or contains(text(), '{season_short}')]")
+                            for opt in options:
+                                try:
+                                    opt.click()
+                                    print(f"Selected season: {season}")
+                                    season_selected = True
+                                    time.sleep(3)
+                                    break
+                                except:
+                                    continue
+                            if season_selected:
+                                break
+                        except:
+                            continue
+                    if season_selected:
+                        break
+                except:
+                    continue
+            
+            # Approach 2: Direct option selection
+            if not season_selected:
+                option_selectors = [
+                    f"//option[contains(text(), '{season}')]",
+                    f"//option[contains(text(), '{season_year}')]",
+                    f"//*[contains(@data-value, '{season}')]",
+                ]
+                for selector in option_selectors:
+                    try:
+                        element = driver.find_element(By.XPATH, selector)
+                        element.click()
+                        print(f"Selected season using: {selector[:50]}...")
+                        season_selected = True
+                        time.sleep(3)
+                        break
+                    except:
+                        continue
+            
+            # Try to show all entries
+            if show_all:
+                print("Trying to show all entries...")
+                show_all_selectors = [
+                    "//select[contains(@name, 'length')]",
+                    "//select[contains(@class, 'form-control')]",
+                    "//*[contains(@class, 'dataTables_length')]//select",
+                ]
+                
+                for selector in show_all_selectors:
+                    try:
+                        select_elem = driver.find_element(By.XPATH, selector)
+                        # Try to select "All" or the highest number
+                        options = select_elem.find_elements(By.TAG_NAME, 'option')
+                        for opt in reversed(options):  # Start from last (usually "All" or highest)
+                            try:
+                                text = opt.text.lower()
+                                if 'all' in text or text.isdigit():
+                                    opt.click()
+                                    print(f"Selected: Show {opt.text}")
+                                    time.sleep(5)
+                                    break
+                            except:
+                                continue
+                        break
+                    except:
+                        continue
+            
+            # Wait for data to load
+            time.sleep(5 + attempt)
+            
+            # Parse the page
+            soup = BeautifulSoup(driver.page_source, 'html.parser')
+            
+            # Find DataTables with multiple selectors
+            tables = soup.select('table.dataTable, table.display, #DataTables_Table_0, table.table, table')
+            print(f"Found {len(tables)} tables")
+            
+            # Find the best table with player data
+            best_table = None
+            max_rows = 0
+            
+            for table in tables:
+                rows = table.find_all('tr')
+                text = table.get_text().lower()
+                # Look for LEBRON-specific indicators
+                if len(rows) > max_rows and ('lebron' in text or 'player' in text or 'war' in text):
+                    max_rows = len(rows)
+                    best_table = table
+            
+            if best_table and max_rows > 5:
+                print(f"Processing table with {max_rows} rows")
+                
+                # Extract headers
+                headers = []
+                thead = best_table.find('thead')
+                if thead:
+                    header_row = thead.find('tr')
+                    if header_row:
+                        headers = [th.get_text(strip=True) for th in header_row.find_all(['th', 'td'])]
+                
+                if not headers:
+                    first_row = best_table.find('tr')
+                    if first_row:
+                        headers = [c.get_text(strip=True) for c in first_row.find_all(['th', 'td'])]
+                
+                print(f"Headers ({len(headers)}): {headers}")
+                
+                # Extract data rows
+                tbody = best_table.find('tbody')
+                rows = tbody.find_all('tr') if tbody else best_table.find_all('tr')[1:]
+                
+                for row in rows:
+                    cells = row.find_all(['td', 'th'])
+                    if len(cells) >= 5:
+                        row_data = {}
+                        for i, cell in enumerate(cells):
+                            col_name = headers[i] if i < len(headers) else f'col_{i}'
+                            row_data[col_name] = cell.get_text(strip=True)
+                        
+                        first_val = str(list(row_data.values())[0]).lower().strip()
+                        if first_val in ['player', 'rank', '#', '', 'name', 'number']:
+                            continue
+                        
+                        if any(c.replace('.', '').replace('-', '').isdigit() 
+                               for c in list(row_data.values())[-4:]):
+                            all_data.append(row_data)
+                
+                print(f"Extracted {len(all_data)} player rows")
+            else:
+                print("Could not find suitable data table")
+                print("\nPage debug info:")
+                for table in tables[:3]:
+                    rows = len(table.find_all('tr'))
+                    classes = table.get('class', [])
+                    print(f"  Table: {classes}, {rows} rows")
+            
+            driver.switch_to.default_content()
+                
+        except Exception as e:
+            print(f"Error on attempt {attempt}: {e}")
+            import traceback
+            traceback.print_exc()
+        finally:
+            if driver:
+                driver.quit()
+        
+        # If we got data, process and return
+        if all_data:
+            break
+        
+        # Exponential backoff before retry
+        if attempt < max_retries:
+            backoff = 5 * (2 ** (attempt - 1))  # 5s, 10s, 20s
+            print(f"Retrying in {backoff} seconds...")
+            time.sleep(backoff)
+    
+    # Check if scraping was successful
+    if not all_data:
+        print("\n" + "=" * 70)
+        print("AUTOMATED SCRAPING UNSUCCESSFUL")
+        print(f"Failed after {max_retries} attempts")
+        print("=" * 70)
+        print("\nThe BBall Index app requires manual interaction.")
+        print("\nManual download instructions:")
+        print("  1. Visit: https://www.bball-index.com/lebron-application/")
+        print("  2. Select season (e.g., 2025-26) from dropdown")
+        print("  3. Set 'Show entries' to 'All' or highest number")
+        print("  4. Select all data in the table (Ctrl+A on table)")
+        print("  5. Copy and paste into a text file")
+        print("  6. Save as: data/LEBRON_raw.csv")
+        print("  7. Run: python -m src.scraper --lebron-csv data/LEBRON_raw.csv --season {season}")
+        print("=" * 70)
+        return None
+    
+    # Process extracted data
+    df = pd.DataFrame(all_data)
+    print(f"Raw columns: {list(df.columns)}")
+    
+    # Standardize column names
+    col_map = {}
+    for col in df.columns:
+        col_lower = col.lower().strip()
+        if 'player' in col_lower or col_lower == 'name':
+            col_map[col] = 'Player'
+        elif col_lower in ['team', 'team(s)', 'tm', 'teams']:
+            col_map[col] = 'Team(s)'
+        elif col_lower == 'age':
+            col_map[col] = 'Age'
+        elif col_lower in ['min', 'minutes']:
+            col_map[col] = 'Minutes'
+        elif col_lower == 'lebron war' or col_lower == 'war':
+            col_map[col] = 'LEBRON WAR'
+        elif col_lower == 'lebron':
+            col_map[col] = 'LEBRON'
+        elif col_lower == 'o-lebron':
+            col_map[col] = 'O-LEBRON'
+        elif col_lower == 'd-lebron':
+            col_map[col] = 'D-LEBRON'
+        elif 'rotation' in col_lower or 'role' in col_lower:
+            col_map[col] = 'Rotation Role'
+        elif 'offensive' in col_lower or 'off' in col_lower:
+            col_map[col] = 'Offensive Archetype'
+        elif 'defensive' in col_lower or 'def' in col_lower:
+            col_map[col] = 'Defensive Role'
+    
+    df = df.rename(columns=col_map)
+    df['Season'] = season
+    
+    # Convert numeric columns
+    for col in ['Age', 'Minutes', 'LEBRON WAR', 'LEBRON', 'O-LEBRON', 'D-LEBRON']:
+        if col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors='coerce')
+    
+    # Remove rows with no player name
+    if 'Player' in df.columns:
+        df = df[df['Player'].notna() & (df['Player'] != '')]
+    
+    print(f"\nProcessed {len(df)} players")
+    if 'LEBRON' in df.columns:
+        print("\nTop 10 by LEBRON:")
+        print(df.nlargest(10, 'LEBRON')[['Player', 'Team(s)', 'LEBRON', 'LEBRON WAR']].to_string(index=False))
+    
+    # Save to database
+    cache.save_lebron_metrics(df, season=season)
+    
+    if save_csv:
+        csv_path = f'data/LEBRON_{season.replace("-", "_")}.csv'
+        df.to_csv(csv_path, index=False)
+        print(f"\nSaved: {csv_path}")
+    
+    return df
+
+
+def parse_lebron_csv(csv_path='data/LEBRON.csv', season=None):
+    """
+    Parse a manually downloaded/copy-pasted LEBRON data from BBall Index.
+    
+    Handles multiple formats:
+    - Standard CSV (comma-separated)
+    - Tab-separated (from copy-paste)
+    - BBall Index specific format with merged "Number Player" header
+    
+    How to get the data:
+    1. Go to https://www.bball-index.com/lebron-application/
+    2. Select the desired season (e.g., 2025-26)
+    3. Set "Show entries" to "All" or maximum
+    4. Select all table data and copy (Ctrl+A, Ctrl+C on table)
+    5. Paste into a text file and save as .csv
+    6. Run: python -m src.scraper --lebron-csv <path>
+    
+    Args:
+        csv_path (str): Path to the LEBRON CSV/TSV file
+        season (str): Override season value (auto-detected from data if not provided)
+        
+    Returns:
+        pd.DataFrame: Processed LEBRON data
+    """
+    print("=" * 70)
+    print("BBall Index LEBRON CSV Parser")
+    print(f"Input: {csv_path}")
+    print("=" * 70)
+    
+    if not os.path.exists(csv_path):
+        print(f"Error: {csv_path} not found")
+        print("\nTo get LEBRON data:")
+        print("1. Go to https://www.bball-index.com/lebron-application/")
+        print("2. Select season, set 'Show entries' to All")
+        print("3. Copy table data and paste into text file")
+        print(f"4. Save as {csv_path}")
+        return None
+    
+    # Read raw file to detect format
+    with open(csv_path, 'r', encoding='utf-8') as f:
+        first_lines = [f.readline() for _ in range(3)]
+    
+    # Detect delimiter
+    tab_count = sum(line.count('\t') for line in first_lines)
+    comma_count = sum(line.count(',') for line in first_lines)
+    
+    if tab_count > comma_count:
+        print("Detected: Tab-separated format (BBall Index copy-paste)")
+        delimiter = '\t'
+    else:
+        print("Detected: Comma-separated format")
+        delimiter = ','
+    
+    # Check for BBall Index specific format (merged "Number Player" header)
+    header_line = first_lines[0]
+    if 'Number' in header_line and 'Player' in header_line and delimiter == '\t':
+        print("Detected: BBall Index raw copy-paste format")
+        
+        # The data has: Number, (empty), Player, Age, Team, Minutes, Role, Off, Def, WAR, LEBRON, O-LEB, D-LEB
+        columns = ['_num', '_empty', 'Player', 'Age', 'Team(s)', 'Minutes', 
+                   'Rotation Role', 'Offensive Archetype', 'Defensive Role', 
+                   'LEBRON WAR', 'LEBRON', 'O-LEBRON', 'D-LEBRON']
+        
+        df = pd.read_csv(csv_path, sep='\t', skiprows=1, names=columns, 
+                         on_bad_lines='skip', encoding='utf-8')
+        
+        # Drop helper columns
+        df = df.drop(columns=['_num', '_empty'], errors='ignore')
+    else:
+        # Standard format
+        df = pd.read_csv(csv_path, sep=delimiter, on_bad_lines='skip', encoding='utf-8')
+    
+    print(f"Loaded {len(df)} rows")
+    print(f"Columns: {list(df.columns)}")
+    
+    # Clean up column names
+    df.columns = df.columns.str.strip()
+    
+    # Standardize column names
+    col_map = {}
+    for col in df.columns:
+        col_lower = col.lower().strip()
+        if col_lower in ['player', 'name']:
+            col_map[col] = 'Player'
+        elif col_lower in ['team', 'team(s)', 'tm', 'teams']:
+            col_map[col] = 'Team(s)'
+        elif col_lower == 'age':
+            col_map[col] = 'Age'
+        elif col_lower in ['min', 'minutes']:
+            col_map[col] = 'Minutes'
+        elif col_lower in ['lebron war', 'war']:
+            col_map[col] = 'LEBRON WAR'
+        elif col_lower == 'lebron':
+            col_map[col] = 'LEBRON'
+        elif col_lower == 'o-lebron':
+            col_map[col] = 'O-LEBRON'
+        elif col_lower == 'd-lebron':
+            col_map[col] = 'D-LEBRON'
+        elif 'rotation' in col_lower:
+            col_map[col] = 'Rotation Role'
+        elif 'offensive' in col_lower:
+            col_map[col] = 'Offensive Archetype'
+        elif 'defensive' in col_lower:
+            col_map[col] = 'Defensive Role'
+    
+    df = df.rename(columns=col_map)
+    
+    # Detect season from data or use provided value
+    if season:
+        detected_season = season
+    elif 'Season' in df.columns:
+        detected_season = df['Season'].mode().iloc[0] if not df['Season'].mode().empty else CURRENT_SEASON
+    else:
+        detected_season = CURRENT_SEASON
+    
+    print(f"Season: {detected_season}")
+    
+    # Ensure Season column exists
+    if 'Season' not in df.columns:
+        df['Season'] = detected_season
+    
+    # Convert numeric columns
+    numeric_cols = ['LEBRON WAR', 'LEBRON', 'O-LEBRON', 'D-LEBRON', 'Minutes', 'Age']
+    for col in numeric_cols:
+        if col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors='coerce')
+    
+    # Remove empty/invalid rows
+    df = df.dropna(how='all')
+    
+    if 'Player' in df.columns:
+        df = df[df['Player'].notna()]
+        df = df[df['Player'].astype(str).str.strip() != '']
+        df = df[~df['Player'].str.lower().isin(['player', 'name', 'number'])]
+    
+    # Reorder columns for consistency
+    desired_order = ['Season', 'Player', 'Age', 'Team(s)', 'Minutes', 'Rotation Role',
+                     'Offensive Archetype', 'Defensive Role', 'LEBRON WAR', 'LEBRON', 
+                     'O-LEBRON', 'D-LEBRON']
+    existing_cols = [c for c in desired_order if c in df.columns]
+    other_cols = [c for c in df.columns if c not in desired_order]
+    df = df[existing_cols + other_cols]
+    
+    print(f"Processed {len(df)} valid player records")
+    
+    # Show sample
+    if 'Player' in df.columns and 'LEBRON' in df.columns:
+        print("\nTop 10 by LEBRON:")
+        top_cols = ['Player', 'Team(s)', 'LEBRON', 'LEBRON WAR', 'O-LEBRON', 'D-LEBRON']
+        available_cols = [c for c in top_cols if c in df.columns]
+        print(df.nlargest(10, 'LEBRON')[available_cols].to_string(index=False))
+    
+    # Save to database
+    cache.save_lebron_metrics(df, season=detected_season)
+    print(f"\nSaved to database (season: {detected_season})")
+    
+    return df
 
 
 if __name__ == "__main__":
     import sys
     
     if '--csv' in sys.argv:
-        # Use CSV parser (preferred)
+        # Use CSV parser for contracts (preferred)
         csv_path = 'data/bbref_contracts_raw.csv'
         if len(sys.argv) > 2 and not sys.argv[-1].startswith('-'):
             csv_path = sys.argv[-1]
         parse_bbref_csv(csv_path)
+    
+    elif '--lebron' in sys.argv:
+        # Scrape LEBRON data from bball-index
+        season = CURRENT_SEASON
+        for i, arg in enumerate(sys.argv):
+            if arg == '--season' and i + 1 < len(sys.argv):
+                season = sys.argv[i + 1]
+        scrape_lebron(season=season)
+    
+    elif '--lebron-csv' in sys.argv:
+        # Parse LEBRON CSV
+        csv_path = 'data/LEBRON.csv'
+        season = None
+        for i, arg in enumerate(sys.argv):
+            if arg == '--lebron-csv' and i + 1 < len(sys.argv) and not sys.argv[i + 1].startswith('-'):
+                csv_path = sys.argv[i + 1]
+            if arg == '--season' and i + 1 < len(sys.argv):
+                season = sys.argv[i + 1]
+        parse_lebron_csv(csv_path, season=season)
+    
+    elif '--help' in sys.argv or '-h' in sys.argv:
+        print("Sieve Data Scraper")
+        print("-" * 50)
+        print("\nUsage: python -m src.scraper [options]")
+        print("\nContract Data (Basketball Reference):")
+        print("  --csv [path]              Parse BBRef contracts CSV")
+        print("  (no args)                 Scrape BBRef with Selenium")
+        print("\nLEBRON Data (BBall Index):")
+        print("  --lebron [--season YYYY-YY]   Scrape from bball-index.com")
+        print("  --lebron-csv [path] [--season YYYY-YY]  Parse LEBRON CSV")
+        print("\nExamples:")
+        print("  python -m src.scraper --csv")
+        print("  python -m src.scraper --lebron --season 2025-26")
+        print("  python -m src.scraper --lebron-csv data/LEBRON.csv")
+    
     else:
-        # Use Selenium scraper (fallback)
+        # Default: Use Selenium scraper for contracts
         scrape_bball_ref()
