@@ -42,13 +42,36 @@ def load_season_data(season):
     print(f"Loading data for season {season}...")
     
     try:
+        # 1. Try to load fully processed data from DB Cache first
+        # This avoids the expensive fuzzy matching in load_and_merge_data
+        df_players = cache.load_player_analysis(season=season)
+        df_teams = cache.load_team_efficiency(season=season)
+        
+        if df_players is not None and not df_players.empty:
+            print(f"Loaded fully processed data for {season} from DB Cache.")
+            
+            # If teams cache is missing, recalculate it from players
+            if df_teams is None or df_teams.empty:
+                print(f"Teams cache missing for {season}, recalculating...")
+                df_teams = data_processing.calculate_team_metrics(df_players, season=season)
+            
+            # Add team logos (URLs are not cached)
+            df_teams = data_processing.add_team_logos(df_teams)
+            
+            # Cache and return
+            _season_data_cache[season] = (df_players, df_teams)
+            return df_players, df_teams
+
+        # 2. Fallback: Full Processing Pipeline (Slow)
+        print(f"Cache miss for {season}. Running full processing pipeline...")
+        
         # Determine LEBRON file
         if season == '2024-25':
             lebron_file = 'data/LEBRON.csv'
         else:
             lebron_file = f'data/LEBRON_{season.replace("-", "_")}.csv'
         
-        # Load and merge player data
+        # Load and merge player data (Expensive Fuzzy Match)
         df_players = data_processing.load_and_merge_data(
             lebron_file=lebron_file,
             season=season,

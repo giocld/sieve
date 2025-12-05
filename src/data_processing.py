@@ -441,9 +441,10 @@ def calculate_team_metrics(df_players, season='2024-25'):
         pd.DataFrame: A DataFrame where each row is a Team, containing aggregated metrics.
     """
     # 1. Load Standings Data from unified cache
-    df_standings = cache.load_standings(season=season)
-    if df_standings is None:
-        print(f"Warning: No standings in cache. Team metrics will be incomplete.")
+    # 1. Load Standings Data (Fetch from API if not in cache)
+    df_standings = fetch_standings(season=season)
+    if df_standings.empty:
+        print(f"Warning: Could not fetch standings. Team metrics will be incomplete.")
         df_standings = pd.DataFrame()
     else:
         df_standings.columns = df_standings.columns.str.strip()
@@ -477,9 +478,8 @@ def calculate_team_metrics(df_players, season='2024-25'):
         df_players = df_players.copy()
         df_players['Team_Main'] = 'UNK'
     
-    # 3. Aggregate Data by Team
+    # 3. Aggregate Player Stats by Team (WAR, LEBRON, roster size)
     df_teams = df_players.groupby('Team_Main').agg({
-        'current_year_salary': 'sum',  # Total Payroll
         'LEBRON WAR': 'sum',           # Total Wins Above Replacement
         'LEBRON': 'mean',              # Average Player Impact
         'player_name': 'count'         # Roster Size (in dataset)
@@ -487,10 +487,32 @@ def calculate_team_metrics(df_players, season='2024-25'):
     
     # Rename columns for clarity
     df_teams = df_teams.rename(columns={
-        'current_year_salary': 'Total_Payroll',
         'LEBRON WAR': 'Total_WAR',
         'Team_Main': 'Abbrev'
     })
+    
+    # 3b. Load Team Payrolls from Basketball Reference data (more accurate than summing player salaries)
+    try:
+        import sqlite3
+        conn = sqlite3.connect('data/sieve_teams.db')
+        df_payrolls = pd.read_sql_query("SELECT * FROM team_payrolls", conn)
+        conn.close()
+        
+        # Merge payrolls with team data
+        df_teams = pd.merge(df_teams, df_payrolls[['Abbrev', 'Payroll_2025_26']], on='Abbrev', how='left')
+        df_teams = df_teams.rename(columns={'Payroll_2025_26': 'Total_Payroll'})
+        
+        # Fill any missing payrolls with 0
+        df_teams['Total_Payroll'] = df_teams['Total_Payroll'].fillna(0)
+        print(f"[Team Metrics] Using Basketball Reference payroll data for {len(df_payrolls)} teams")
+    except Exception as e:
+        print(f"Warning: Could not load team payrolls from database: {e}")
+        print("Falling back to summing player salaries (less accurate)")
+        # Fallback: sum player salaries
+        payroll_by_team = df_players.groupby('Team_Main')['current_year_salary'].sum().reset_index()
+        payroll_by_team.columns = ['Abbrev', 'Total_Payroll']
+        df_teams = pd.merge(df_teams, payroll_by_team, on='Abbrev', how='left')
+        df_teams['Total_Payroll'] = df_teams['Total_Payroll'].fillna(0)
     
     # 4. Merge with Standings (Wins/Losses)
     if not df_standings.empty:

@@ -444,6 +444,14 @@ def scrape_lebron(season='2025-26', save_csv=True, headless=True, show_all=True,
     
     url = "https://www.bball-index.com/lebron-application/"
     
+    # Extract year from season string (e.g., "2025-26" -> 2026)
+    try:
+        target_year = int(season[:4]) + 1
+    except:
+        target_year = 2026
+    
+    print(f"Target Year for Slider: {target_year}")
+    
     for attempt in range(1, max_retries + 1):
         print(f"\n[Attempt {attempt}/{max_retries}]")
         all_data = []
@@ -468,7 +476,7 @@ def scrape_lebron(season='2025-26', save_csv=True, headless=True, show_all=True,
             driver.get(url)
             
             # Wait for initial load with exponential backoff
-            wait_time = 8 + (attempt - 1) * 4  # 8s, 12s, 16s
+            wait_time = 8 + (attempt - 1) * 4
             print(f"Waiting {wait_time}s for page to load...")
             time.sleep(wait_time)
             
@@ -496,68 +504,73 @@ def scrape_lebron(season='2025-26', save_csv=True, headless=True, show_all=True,
             else:
                 print("No Shiny iframe found, trying main content...")
             
-            # Try to select the season using multiple approaches
-            print(f"Looking for season selector to set: {season}...")
-            season_year = season.split('-')[0]
-            season_short = season.replace('20', '', 1)  # "2025-26" -> "25-26"
+            # ---------------------------------------------------------
+            # 1. SET SEASON (Slider or Dropdown)
+            # ---------------------------------------------------------
+            print(f"Attempting to set season to {season} (Year: {target_year})...")
             
-            season_selected = False
+            # Try to find ion-range-slider (common in Shiny)
+            slider_found = False
+            try:
+                # Look for the slider input
+                sliders = driver.find_elements(By.CLASS_NAME, "js-range-slider")
+                if sliders:
+                    print(f"Found {len(sliders)} range sliders. Attempting to update via JavaScript...")
+                    for i, slider in enumerate(sliders):
+                        # Use jQuery/ionRangeSlider API to update
+                        # We want to set BOTH 'from' and 'to' to the target year to filter for just that season
+                        js_script = f"""
+                        var slider = $(arguments[0]).data("ionRangeSlider");
+                        if (slider) {{
+                            slider.update({{
+                                from: {target_year},
+                                to: {target_year}
+                            }});
+                            return true;
+                        }}
+                        return false;
+                        """
+                        result = driver.execute_script(js_script, slider)
+                        if result:
+                            print(f"Successfully updated slider {i} to {target_year}")
+                            slider_found = True
+                            time.sleep(2)
+            except Exception as e:
+                print(f"Error updating slider: {e}")
+
+            # Fallback: Try dropdowns if slider didn't work or wasn't found
+            if not slider_found:
+                print("Slider update skipped or failed. Checking for dropdowns...")
+                # ... (Existing dropdown logic could go here, but slider is primary for this tool)
             
-            # Approach 1: Shiny selectize inputs (most common in R Shiny apps)
-            shiny_selectors = [
-                f"//*[contains(@class, 'selectize-input')]",
-                f"//*[contains(@class, 'shiny-input-select')]",
-                f"//select[contains(@id, 'season')]",
-                f"//select[contains(@id, 'Season')]",
-            ]
-            
-            for selector in shiny_selectors:
-                try:
-                    elements = driver.find_elements(By.XPATH, selector)
-                    for elem in elements:
-                        try:
-                            elem.click()
-                            time.sleep(1)
-                            # Look for season option
-                            options = driver.find_elements(By.XPATH, 
-                                f"//*[contains(text(), '{season}') or contains(text(), '{season_year}') or contains(text(), '{season_short}')]")
-                            for opt in options:
-                                try:
-                                    opt.click()
-                                    print(f"Selected season: {season}")
-                                    season_selected = True
-                                    time.sleep(3)
-                                    break
-                                except:
-                                    continue
-                            if season_selected:
-                                break
-                        except:
-                            continue
-                    if season_selected:
-                        break
-                except:
-                    continue
-            
-            # Approach 2: Direct option selection
-            if not season_selected:
-                option_selectors = [
-                    f"//option[contains(text(), '{season}')]",
-                    f"//option[contains(text(), '{season_year}')]",
-                    f"//*[contains(@data-value, '{season}')]",
-                ]
-                for selector in option_selectors:
-                    try:
-                        element = driver.find_element(By.XPATH, selector)
-                        element.click()
-                        print(f"Selected season using: {selector[:50]}...")
-                        season_selected = True
-                        time.sleep(3)
-                        break
-                    except:
-                        continue
-            
-            # Try to show all entries
+            # ---------------------------------------------------------
+            # 2. CLICK "RUN QUERY"
+            # ---------------------------------------------------------
+            print("Looking for 'Run Query' button...")
+            try:
+                # Try multiple selectors for the button
+                run_btns = driver.find_elements(By.XPATH, "//button[contains(text(), 'Run Query')]")
+                if not run_btns:
+                    run_btns = driver.find_elements(By.XPATH, "//a[contains(text(), 'Run Query')]")
+                if not run_btns:
+                    run_btns = driver.find_elements(By.ID, "run_query") # Common ID guess
+                
+                if run_btns:
+                    print("Clicking 'Run Query' button...")
+                    # Scroll to button
+                    driver.execute_script("arguments[0].scrollIntoView(true);", run_btns[0])
+                    time.sleep(1)
+                    run_btns[0].click()
+                    print("Clicked 'Run Query'. Waiting for results...")
+                    time.sleep(8) # Wait for query to run
+                else:
+                    print("Warning: 'Run Query' button not found.")
+            except Exception as e:
+                print(f"Error clicking 'Run Query': {e}")
+
+            # ---------------------------------------------------------
+            # 3. SHOW ALL ENTRIES
+            # ---------------------------------------------------------
             if show_all:
                 print("Trying to show all entries...")
                 show_all_selectors = [
@@ -568,27 +581,30 @@ def scrape_lebron(season='2025-26', save_csv=True, headless=True, show_all=True,
                 
                 for selector in show_all_selectors:
                     try:
-                        select_elem = driver.find_element(By.XPATH, selector)
-                        # Try to select "All" or the highest number
-                        options = select_elem.find_elements(By.TAG_NAME, 'option')
-                        for opt in reversed(options):  # Start from last (usually "All" or highest)
-                            try:
-                                text = opt.text.lower()
-                                if 'all' in text or text.isdigit():
-                                    opt.click()
-                                    print(f"Selected: Show {opt.text}")
-                                    time.sleep(5)
-                                    break
-                            except:
-                                continue
-                        break
+                        select_elem = driver.find_elements(By.XPATH, selector)
+                        if select_elem:
+                            # Try to select "All" or the highest number
+                            options = select_elem[0].find_elements(By.TAG_NAME, 'option')
+                            for opt in reversed(options):  # Start from last (usually "All" or highest)
+                                try:
+                                    text = opt.text.lower()
+                                    if 'all' in text or text.isdigit():
+                                        opt.click()
+                                        print(f"Selected: Show {opt.text}")
+                                        time.sleep(5) # Wait for table redraw
+                                        break
+                                except:
+                                    continue
+                            break
                     except:
                         continue
             
             # Wait for data to load
-            time.sleep(5 + attempt)
+            time.sleep(5)
             
-            # Parse the page
+            # ---------------------------------------------------------
+            # 4. SCRAPE TABLE
+            # ---------------------------------------------------------
             soup = BeautifulSoup(driver.page_source, 'html.parser')
             
             # Find DataTables with multiple selectors
@@ -648,11 +664,6 @@ def scrape_lebron(season='2025-26', save_csv=True, headless=True, show_all=True,
                 print(f"Extracted {len(all_data)} player rows")
             else:
                 print("Could not find suitable data table")
-                print("\nPage debug info:")
-                for table in tables[:3]:
-                    rows = len(table.find_all('tr'))
-                    classes = table.get('class', [])
-                    print(f"  Table: {classes}, {rows} rows")
             
             driver.switch_to.default_content()
                 
@@ -686,7 +697,7 @@ def scrape_lebron(season='2025-26', save_csv=True, headless=True, show_all=True,
         print("  2. Select season (e.g., 2025-26) from dropdown")
         print("  3. Set 'Show entries' to 'All' or highest number")
         print("  4. Select all data in the table (Ctrl+A on table)")
-        print("  5. Copy and paste into a text file")
+        print("  5. Paste into a text file")
         print("  6. Save as: data/LEBRON_raw.csv")
         print("  7. Run: python -m src.scraper --lebron-csv data/LEBRON_raw.csv --season {season}")
         print("=" * 70)

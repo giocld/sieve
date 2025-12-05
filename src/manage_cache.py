@@ -166,6 +166,12 @@ def cmd_clear(args):
     if args.name:
         cache.clear_cache(args.name)
         print(f"Cleared cache: {args.name}")
+        
+        # Handle dependencies
+        if args.name == 'standings':
+            cache.clear_cache('team_efficiency')
+            print("Automatically cleared dependent cache: team_efficiency")
+            
     elif args.yes:
         cache.clear_cache()
         print("All caches cleared.")

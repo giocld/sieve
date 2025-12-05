@@ -1,0 +1,492 @@
+1		Shai Gilgeous-Alexander	27	OKC	739	Star	Shot Creator	Helper	4.84	8.67	6.45	2.22
+2		Nikola Jokić	30	DEN	732	Star	Post Scorer	Anchor Big	4.55	7.99	7.32	0.67
+3		Luka Dončić	26	LAL	591	Star	Shot Creator	Helper	3.31	6.80	6.42	0.38
+4		Karl-Anthony Towns	30	NYK	707	Star	Versatile Big	Mobile Big	2.83	3.98	3.01	0.97
+5		Mikal Bridges	29	NYK	736	Starter	Movement Shooter	Point of Attack	2.72	3.46	1.85	1.62
+6		Cade Cunningham	24	DET	697	Star	Shot Creator	Chaser	2.71	3.79	3.20	0.59
+7		Tyrese Maxey	25	PHI	802	Star	Shot Creator	Chaser	2.61	2.75	3.25	-0.50
+8		Franz Wagner	24	ORL	760	Star	Shot Creator	Wing Stopper	2.57	2.96	2.29	0.67
+9		Alperen Sengun	23	HOU	682	Star	Shot Creator	Helper	2.45	3.32	2.23	1.09
+10		Austin Reaves	27	LAL	622	Star	Shot Creator	Chaser	2.43	3.82	4.02	-0.20
+11		Donovan Mitchell	29	CLE	721	Star	Shot Creator	Helper	2.42	2.91	3.71	-0.80
+12		Derrick White	31	BOS	667	Star	Primary Ball Handler	Chaser	2.37	3.22	2.16	1.07
+13		James Harden	36	LAC	738	Star	Shot Creator	Chaser	2.36	2.65	3.90	-1.26
+14		Evan Mobley	24	CLE	750	Star	Stretch Big	Mobile Big	2.31	2.46	1.13	1.33
+15		Jalen Brunson	29	NYK	660	Star	Shot Creator	Low Activity	2.29	3.10	4.06	-0.96
+16		Jamal Murray	28	DEN	697	Star	Primary Ball Handler	Chaser	2.28	2.78	3.42	-0.65
+17		Deni Avdija	25	POR	755	Starter	Shot Creator	Helper	2.27	2.35	2.64	-0.29
+18		Scottie Barnes	24	TOR	739	Starter	Athletic Finisher	Wing Stopper	2.23	2.35	0.76	1.59
+19		Jaylen Brown	29	BOS	702	Star	Shot Creator	Helper	2.18	2.50	3.13	-0.64
+20		Julius Randle	31	MIN	703	Starter	Shot Creator	Helper	2.17	2.47	2.67	-0.20
+21		Devin Booker	29	PHO	763	Star	Shot Creator	Helper	2.16	2.06	2.13	-0.07
+22		Isaiah Hartenstein	27	OKC	528	Key Rotation	Athletic Finisher	Mobile Big	2.16	4.12	0.99	3.13
+23		Ajay Mitchell	23	OKC	588	Key Rotation	Slasher	Chaser	2.15	3.42	1.07	2.35
+24		Jalen Johnson	24	ATL	697	Starter	Shot Creator	Helper	2.10	2.36	1.61	0.75
+25		Chet Holmgren	23	OKC	532	Star	Stretch Big	Helper	2.08	3.84	1.01	2.83
+26		Jimmy Butler	36	GSW	617	Star	Shot Creator	Helper	2.05	2.86	2.42	0.44
+27		Giannis Antetokounmpo	31	MIL	495	Star	Shot Creator	Helper	1.96	3.89	4.44	-0.55
+28		Victor Wembanyama	22	SAS	416	Star	Shot Creator	Anchor Big	1.94	5.10	1.94	3.16
+29		Payton Pritchard	28	BOS	677	Starter	Shot Creator	Chaser	1.84	1.87	2.48	-0.61
+30		Desmond Bane	27	ORL	726	Starter	Primary Ball Handler	Chaser	1.81	1.51	1.27	0.24
+31		Josh Hart	30	NYK	584	Starter	Movement Shooter	Wing Stopper	1.79	2.43	1.08	1.35
+32		Anthony Edwards	24	MIN	580	Star	Shot Creator	Chaser	1.79	2.46	3.41	-0.95
+33		Amen Thompson	23	HOU	690	Starter	Shot Creator	Point of Attack	1.79	1.68	0.83	0.85
+34		Cason Wallace	22	OKC	599	Starter	Movement Shooter	Point of Attack	1.78	2.30	-0.48	2.78
+35		Kevin Durant	37	HOU	607	Starter	Shot Creator	Helper	1.74	2.10	1.56	0.54
+36		Immanuel Quickley	26	TOR	712	Starter	Primary Ball Handler	Point of Attack	1.67	1.29	0.91	0.37
+37		Collin Gillespie	26	PHO	589	Starter	Primary Ball Handler	Point of Attack	1.64	1.99	1.41	0.58
+38		Jalen Duren	22	DET	553	Starter	Shot Creator	Mobile Big	1.62	2.23	1.12	1.10
+39		Josh Giddey	23	CHI	649	Starter	Primary Ball Handler	Helper	1.50	1.22	1.63	-0.41
+40		Donte DiVincenzo	29	MIN	662	Starter	Off Screen Shooter	Chaser	1.48	1.10	0.96	0.13
+41		Donovan Clingan	21	POR	530	Key Rotation	Stretch Big	Anchor Big	1.45	1.91	0.78	1.13
+42		Stephen Curry	37	GSW	496	Star	Primary Ball Handler	Chaser	1.45	2.21	2.92	-0.70
+43		LaMelo Ball	24	CHO	451	Star	Primary Ball Handler	Point of Attack	1.42	2.57	3.13	-0.57
+44		Jabari Smith Jr.	22	HOU	599	Starter	Shot Creator	Helper	1.40	1.28	0.06	1.22
+45		Rudy Gobert	33	MIN	675	Starter	Athletic Finisher	Anchor Big	1.39	0.83	-0.93	1.76
+46		Kel'el Ware	21	MIA	538	Key Rotation	Athletic Finisher	Mobile Big	1.36	1.56	-0.38	1.94
+47		Anthony Black	22	ORL	609	Starter	Primary Ball Handler	Point of Attack	1.34	1.05	-0.07	1.12
+48		Onyeka Okongwu	25	ATL	674	Starter	Stretch Big	Mobile Big	1.32	0.66	-0.49	1.16
+49		Devin Vassell	25	SAS	689	Starter	Off Screen Shooter	Chaser	1.31	0.58	0.33	0.25
+50		Bam Adebayo	28	MIA	485	Star	Shot Creator	Mobile Big	1.30	1.83	0.81	1.01
+51		Neemias Queta	26	BOS	452	Starter	Athletic Finisher	Anchor Big	1.29	2.11	0.19	1.92
+52		Dyson Daniels	22	ATL	779	Starter	Slasher	Point of Attack	1.29	0.17	-1.17	1.34
+53		Paolo Banchero	23	ORL	393	Starter	Shot Creator	Wing Stopper	1.28	2.73	1.70	1.03
+54		Keldon Johnson	26	SAS	513	Key Rotation	Movement Shooter	Helper	1.27	1.50	1.21	0.29
+55		Jalen Suggs	24	ORL	418	Key Rotation	Primary Ball Handler	Point of Attack	1.27	2.40	1.25	1.15
+56		Naz Reid	26	MIN	530	Key Rotation	Movement Shooter	Helper	1.26	1.33	0.24	1.09
+57		Mark Williams	24	PHO	457	Key Rotation	Athletic Finisher	Anchor Big	1.24	1.85	-0.07	1.93
+58		Santi Aldama	25	MEM	572	Starter	Movement Shooter	Helper	1.23	0.96	0.06	0.91
+59		Royce O'Neale	32	PHO	665	Starter	Movement Shooter	Helper	1.22	0.47	-0.68	1.15
+60		Wendell Carter Jr.	26	ORL	620	Starter	Stretch Big	Mobile Big	1.22	0.68	-0.47	1.15
+61		Julian Champagnie	24	SAS	599	Key Rotation	Movement Shooter	Helper	1.21	0.75	-0.23	0.98
+62		Moussa Diabate	24	CHO	500	Key Rotation	Athletic Finisher	Mobile Big	1.20	1.36	0.17	1.19
+63		Reed Sheppard	21	HOU	481	Starter	Primary Ball Handler	Chaser	1.19	1.47	0.54	0.94
+64		Davion Mitchell	27	MIA	664	Starter	Shot Creator	Point of Attack	1.18	0.38	-0.38	0.76
+65		Kawhi Leonard	34	LAC	378	Star	Shot Creator	Wing Stopper	1.18	2.53	2.42	0.11
+66		Myles Turner	29	MIL	670	Starter	Movement Shooter	Mobile Big	1.17	0.33	-0.86	1.19
+67		De'Aaron Fox	28	SAS	428	Star	Shot Creator	Point of Attack	1.16	1.88	2.59	-0.71
+68		Miles Bridges	27	CHO	764	Starter	Shot Creator	Helper	1.16	-0.03	1.06	-1.09
+69		Goga Bitadze	26	ORL	356	Rotation	Athletic Finisher	Mobile Big	1.16	2.74	-0.15	2.88
+70		Duncan Robinson	31	DET	641	Starter	Off Screen Shooter	Low Activity	1.16	0.43	-0.11	0.54
+71		Ausar Thompson	23	DET	507	Starter	Athletic Finisher	Point of Attack	1.16	1.18	-0.53	1.71
+72		Brandon Ingram	28	TOR	747	Starter	Shot Creator	Helper	1.13	-0.05	-0.11	0.06
+73		Ivica Zubac	28	LAC	713	Starter	Post Scorer	Anchor Big	1.13	0.07	-0.13	0.20
+74		Stephon Castle	21	SAS	416	Starter	Primary Ball Handler	Point of Attack	1.13	1.88	1.31	0.57
+75		Lauri Markkanen	28	UTA	712	Starter	Off Screen Shooter	Wing Stopper	1.12	0.06	2.03	-1.97
+76		Peyton Watson	23	DEN	568	Key Rotation	Movement Shooter	Point of Attack	1.12	0.67	-0.30	0.97
+77		Norman Powell	32	MIA	521	Starter	Shot Creator	Chaser	1.11	0.94	1.27	-0.33
+78		Jaylin Williams	23	OKC	383	Rotation	Movement Shooter	Anchor Big	1.11	2.15	-0.01	2.16
+79		Michael Porter Jr.	27	BRK	591	Starter	Movement Shooter	Helper	1.05	0.37	1.83	-1.46
+80		Jaime Jaquez Jr.	24	MIA	608	Key Rotation	Shot Creator	Helper	1.05	0.30	0.07	0.23
+81		Jerami Grant	31	POR	618	Starter	Movement Shooter	Helper	1.04	0.23	0.66	-0.43
+82		Isaiah Joe	26	OKC	397	Key Rotation	Movement Shooter	Low Activity	1.03	1.70	1.42	0.27
+83		Kristaps Porziņģis	30	ATL	316	Key Rotation	Versatile Big	Mobile Big	1.03	2.75	2.46	0.29
+84		Nickeil Alexander-Walker	27	ATL	687	Starter	Primary Ball Handler	Point of Attack	1.02	-0.09	0.31	-0.40
+85		Deandre Ayton	27	LAL	529	Starter	Athletic Finisher	Anchor Big	1.00	0.56	-0.38	0.94
+86		Ryan Rollins	23	MIL	751	Starter	Primary Ball Handler	Point of Attack	1.00	-0.32	0.26	-0.58
+87		Harrison Barnes	33	SAS	651	Starter	Movement Shooter	Wing Stopper	1.00	0.00	-0.05	0.05
+88		Grayson Allen	30	PHO	443	Starter	Primary Ball Handler	Chaser	0.99	1.10	1.17	-0.08
+89		Brandin Podziemski	22	GSW	623	Starter	Primary Ball Handler	Chaser	0.99	0.07	-0.96	1.03
+90		Jrue Holiday	35	POR	401	Starter	Shot Creator	Wing Stopper	0.99	1.48	1.41	0.07
+91		RJ Barrett	25	TOR	526	Starter	Movement Shooter	Helper	0.97	0.48	0.73	-0.25
+92		Miles McBride	25	NYK	496	Key Rotation	Movement Shooter	Point of Attack	0.95	0.60	0.55	0.05
+93		Pascal Siakam	31	IND	720	Starter	Shot Creator	Helper	0.94	-0.38	0.80	-1.18
+94		De'Andre Hunter	28	CLE	551	Starter	Movement Shooter	Wing Stopper	0.94	0.26	0.64	-0.38
+95		Tristan da Silva	24	ORL	520	Key Rotation	Movement Shooter	Helper	0.94	0.44	0.07	0.37
+96		Jarrett Allen	27	CLE	392	Key Rotation	Athletic Finisher	Mobile Big	0.92	1.29	0.32	0.97
+97		Isaiah Stewart	24	DET	425	Key Rotation	Stretch Big	Mobile Big	0.92	1.00	-1.20	2.20
+98		Nic Claxton	26	BRK	636	Starter	Shot Creator	Mobile Big	0.90	-0.21	-0.30	0.09
+99		OG Anunoby	28	NYK	373	Starter	Movement Shooter	Wing Stopper	0.89	1.34	0.40	0.95
+100		Cam Spencer	25	MEM	449	Key Rotation	Secondary Ball Handler	Low Activity	0.88	0.66	0.68	-0.02
+101		Trey Murphy III	25	NOP	716	Starter	Movement Shooter	Helper	0.87	-0.52	0.50	-1.02
+102		Jamal Shead	23	TOR	417	Key Rotation	Primary Ball Handler	Point of Attack	0.86	0.84	0.20	0.64
+103		Jake LaRavia	24	LAL	513	Key Rotation	Movement Shooter	Helper	0.85	0.19	-0.40	0.59
+104		Vince Williams Jr.	25	MEM	387	Key Rotation	Primary Ball Handler	Wing Stopper	0.85	1.05	0.04	1.02
+105		Jaylon Tyson	23	CLE	486	Starter	Movement Shooter	Chaser	0.85	0.32	-0.11	0.43
+106		Tim Hardaway Jr.	33	DEN	518	Key Rotation	Off Screen Shooter	Chaser	0.85	0.14	1.17	-1.03
+107		Dillon Brooks	30	PHO	502	Starter	Shot Creator	Wing Stopper	0.83	0.18	0.64	-0.46
+108		Shaedon Sharpe	22	POR	506	Starter	Primary Ball Handler	Helper	0.82	0.12	0.98	-0.87
+109		Jaden McDaniels	25	MIN	636	Starter	Movement Shooter	Point of Attack	0.81	-0.41	-1.13	0.72
+110		Aaron Gordon	30	DEN	368	Starter	Shot Creator	Wing Stopper	0.81	1.04	1.60	-0.56
+111		Luke Kornet	30	SAS	349	Key Rotation	Athletic Finisher	Anchor Big	0.80	1.19	-0.35	1.54
+112		Anfernee Simons	26	BOS	504	Starter	Shot Creator	Chaser	0.80	0.06	1.07	-1.01
+113		Jordan Goodwin	27	PHO	384	Rotation	Movement Shooter	Chaser	0.79	0.83	0.37	0.46
+114		Andrew Wiggins	30	MIA	629	Starter	Shot Creator	Helper	0.79	-0.45	-0.75	0.30
+115		Nikola Vučević	35	CHI	619	Starter	Versatile Big	Mobile Big	0.78	-0.46	0.27	-0.73
+116		Andre Drummond	32	PHI	421	Rotation	Athletic Finisher	Mobile Big	0.77	0.44	-1.01	1.45
+117		Brandon Williams	26	DAL	450	Key Rotation	Primary Ball Handler	Point of Attack	0.76	0.25	-0.08	0.33
+118		Dean Wade	29	CLE	461	Key Rotation	Movement Shooter	Wing Stopper	0.74	0.11	-1.11	1.22
+119		Luguentz Dort	26	OKC	437	Starter	Movement Shooter	Point of Attack	0.73	0.20	-0.86	1.06
+120		Cameron Johnson	29	DEN	587	Starter	Movement Shooter	Helper	0.73	-0.47	0.10	-0.57
+121		Ryan Dunn	23	PHO	405	Key Rotation	Movement Shooter	Point of Attack	0.73	0.40	-0.70	1.10
+122		Lonzo Ball	28	CLE	401	Key Rotation	Primary Ball Handler	Chaser	0.72	0.40	-0.21	0.62
+123		Naji Marshall	28	DAL	632	Starter	Movement Shooter	Wing Stopper	0.72	-0.65	-1.11	0.46
+124		Cedric Coward	22	MEM	598	Starter	Movement Shooter	Wing Stopper	0.72	-0.53	-0.91	0.38
+125		Dru Smith	28	MIA	375	Rotation	Shot Creator	Point of Attack	0.71	0.55	-0.36	0.91
+126		Josh Minott	23	BOS	384	Rotation	Movement Shooter	Helper	0.71	0.50	-0.16	0.67
+127		Ja Morant	26	MEM	345	Starter	Shot Creator	Chaser	0.70	0.79	1.08	-0.28
+128		Derik Queen	21	NOP	534	Key Rotation	Shot Creator	Anchor Big	0.70	-0.37	-0.36	-0.01
+129		Alex Caruso	31	OKC	282	Rotation	Movement Shooter	Wing Stopper	0.69	1.45	0.07	1.38
+130		Sandro Mamukelashvili	26	TOR	398	Key Rotation	Stretch Big	Mobile Big	0.69	0.30	0.14	0.16
+131		Jay Huff	27	IND	392	Rotation	Movement Shooter	Mobile Big	0.68	0.30	-1.43	1.73
+132		Ryan Kalkbrenner	24	CHO	512	Starter	Athletic Finisher	Anchor Big	0.68	-0.33	-2.09	1.76
+133		Draymond Green	35	GSW	553	Starter	Movement Shooter	Helper	0.68	-0.49	-1.94	1.45
+134		Collin Sexton	27	CHO	530	Key Rotation	Primary Ball Handler	Point of Attack	0.67	-0.43	0.42	-0.85
+135		Moses Moody	23	GSW	510	Key Rotation	Off Screen Shooter	Point of Attack	0.67	-0.37	-0.79	0.42
+136		Keyonte George	22	UTA	681	Starter	Shot Creator	Point of Attack	0.67	-0.89	0.91	-1.81
+137		Tre Jones	26	CHI	486	Starter	Slasher	Point of Attack	0.66	-0.28	-0.40	0.12
+138		Kyle Kuzma	30	MIL	564	Key Rotation	Athletic Finisher	Wing Stopper	0.65	-0.61	-0.73	0.12
+139		Jaren Jackson Jr.	26	MEM	591	Star	Shot Creator	Helper	0.64	-0.74	-1.49	0.75
+140		P.J. Washington	27	DAL	602	Starter	Movement Shooter	Wing Stopper	0.64	-0.76	-1.60	0.84
+141		Quentin Grimes	25	PHI	628	Starter	Shot Creator	Chaser	0.64	-0.83	-0.39	-0.44
+142		Sam Hauser	28	BOS	465	Key Rotation	Off Screen Shooter	Helper	0.64	-0.26	-0.20	-0.06
+143		Zaccharie Risacher	20	ATL	503	Key Rotation	Movement Shooter	Helper	0.64	-0.43	-0.79	0.37
+144		Steven Adams	32	HOU	341	Key Rotation	Athletic Finisher	Anchor Big	0.64	0.55	0.27	0.28
+145		Pelle Larsson	24	MIA	496	Key Rotation	Movement Shooter	Chaser	0.63	-0.42	-0.64	0.22
+146		Ronald Holland II	20	DET	467	Key Rotation	Movement Shooter	Point of Attack	0.63	-0.31	-1.70	1.39
+147		Anthony Davis	32	DAL	238	Star	Shot Creator	Anchor Big	0.62	1.67	0.84	0.83
+148		Zion Williamson	25	NOP	309	Star	Shot Creator	Helper	0.61	0.68	1.01	-0.33
+149		Cooper Flagg	19	DAL	743	Starter	Shot Creator	Helper	0.61	-1.15	-1.56	0.40
+150		Jonas Valančiūnas	33	DEN	262	Rotation	Post Scorer	Anchor Big	0.61	1.23	1.10	0.13
+151		Marcus Smart	31	LAL	375	Key Rotation	Primary Ball Handler	Point of Attack	0.61	0.12	-0.52	0.64
+152		Jusuf Nurkić	31	UTA	491	Starter	Roll + Cut Big	Mobile Big	0.61	-0.47	-2.19	1.71
+153		Craig Porter Jr.	25	CLE	339	Rotation	Secondary Ball Handler	Point of Attack	0.60	0.37	-0.73	1.10
+154		Javonte Green	32	DET	423	Rotation	Movement Shooter	Helper	0.59	-0.24	-1.54	1.31
+155		Saddiq Bey	26	NOP	601	Starter	Shot Creator	Helper	0.59	-0.89	0.48	-1.37
+156		Toumani Camara	25	POR	750	Starter	Movement Shooter	Point of Attack	0.59	-1.21	-0.93	-0.27
+157		Alex Sarr	20	WAS	475	Starter	Athletic Finisher	Mobile Big	0.59	-0.47	-0.17	-0.30
+158		Quinten Post	25	GSW	354	Rotation	Movement Shooter	Mobile Big	0.59	0.22	-0.75	0.97
+159		Tobias Harris	33	DET	385	Starter	Versatile Big	Wing Stopper	0.59	-0.01	0.19	-0.20
+160		Jalen Smith	25	CHI	307	Rotation	Stretch Big	Mobile Big	0.58	0.55	0.64	-0.09
+161		Zach Edey	23	MEM	233	Key Rotation	Post Scorer	Anchor Big	0.58	1.55	-0.46	2.00
+162		Bruce Brown	29	DEN	488	Key Rotation	Athletic Finisher	Point of Attack	0.57	-0.59	-0.80	0.21
+163		Kon Knueppel	20	CHO	737	Starter	Movement Shooter	Chaser	0.57	-1.22	-0.17	-1.04
+164		Mike Conley	38	MIN	409	Key Rotation	Primary Ball Handler	Point of Attack	0.57	-0.21	-0.48	0.26
+165		Russell Westbrook	37	SAC	620	Key Rotation	Shot Creator	Helper	0.56	-1.02	-0.40	-0.63
+166		Simone Fontecchio	30	MIA	398	Rotation	Off Screen Shooter	Chaser	0.55	-0.27	0.13	-0.40
+167		Jaylen Wells	22	MEM	582	Starter	Movement Shooter	Point of Attack	0.54	-0.99	-0.73	-0.26
+168		Daniss Jenkins	24	DET	322	Rotation	Shot Creator	Point of Attack	0.54	0.23	0.34	-0.11
+169		Jakob Poeltl	30	TOR	423	Starter	Athletic Finisher	Mobile Big	0.52	-0.50	-1.32	0.83
+170		Josh Okogie	27	HOU	399	Rotation	Movement Shooter	Chaser	0.52	-0.37	-0.99	0.62
+171		Rui Hachimura	27	LAL	628	Starter	Versatile Big	Wing Stopper	0.52	-1.13	-0.63	-0.50
+172		Jaxson Hayes	25	LAL	295	Rotation	Athletic Finisher	Anchor Big	0.52	0.32	-0.79	1.12
+173		Aaron Wiggins	27	OKC	290	Key Rotation	Movement Shooter	Helper	0.52	0.43	0.50	-0.07
+174		Dylan Harper	19	SAS	234	Key Rotation	Slasher	Point of Attack	0.52	1.07	1.18	-0.10
+175		VJ Edgecombe	20	PHI	606	Starter	Primary Ball Handler	Chaser	0.52	-1.09	-0.99	-0.10
+176		Daniel Gafford	27	DAL	343	Key Rotation	Athletic Finisher	Mobile Big	0.50	-0.15	-2.07	1.92
+177		Day'Ron Sharpe	24	BRK	319	Rotation	Athletic Finisher	Mobile Big	0.49	-0.01	-1.21	1.20
+178		Gary Payton II	33	GSW	261	Rotation	Movement Shooter	Point of Attack	0.48	0.46	-0.17	0.63
+179		John Collins	28	LAC	595	Starter	Post Scorer	Helper	0.48	-1.18	-1.21	0.03
+180		Jordan Clarkson	33	NYK	408	Rotation	Movement Shooter	Chaser	0.48	-0.57	0.22	-0.78
+181		Robert Williams III	28	POR	200	Rotation	Athletic Finisher	Anchor Big	0.46	1.24	-0.37	1.61
+182		D'Angelo Russell	29	DAL	398	Key Rotation	Primary Ball Handler	Chaser	0.45	-0.66	0.40	-1.06
+183		Kevin Huerter	27	CHI	458	Key Rotation	Movement Shooter	Chaser	0.45	-0.88	-0.62	-0.25
+184		Jarred Vanderbilt	26	LAL	257	Rotation	Athletic Finisher	Helper	0.45	0.31	-1.07	1.38
+185		Christian Braun	24	DEN	325	Starter	Athletic Finisher	Point of Attack	0.45	-0.23	0.08	-0.32
+186		Oso Ighodaro	23	PHO	377	Rotation	Shot Creator	Mobile Big	0.45	-0.54	-2.49	1.96
+187		Paul Reed	26	DET	200	Garbage Time	Athletic Finisher	Mobile Big	0.44	1.04	-0.03	1.07
+188		Brice Sensabaugh	22	UTA	304	Rotation	Off Screen Shooter	Helper	0.44	-0.17	0.18	-0.35
+189		Jordan Walsh	21	BOS	338	Key Rotation	Movement Shooter	Wing Stopper	0.44	-0.37	-1.51	1.14
+190		Will Richard	23	GSW	374	Key Rotation	Movement Shooter	Chaser	0.44	-0.59	-0.68	0.09
+191		Landry Shamet	28	NYK	314	Key Rotation	Movement Shooter	Chaser	0.43	-0.26	-0.26	0.00
+192		John Konchar	29	MEM	253	Rotation	Movement Shooter	Helper	0.43	0.25	-1.45	1.69
+193		Keaton Wallace	26	ATL	322	Rotation	Shot Creator	Point of Attack	0.43	-0.33	-0.84	0.50
+194		Kyle Filipowski	22	UTA	401	Rotation	Movement Shooter	Helper	0.43	-0.74	-0.93	0.20
+195		Keegan Murray	25	SAC	270	Starter	Off Screen Shooter	Wing Stopper	0.42	0.03	-0.73	0.76
+196		Caleb Love	24	POR	256	Rotation	Movement Shooter	Chaser	0.42	0.13	0.77	-0.65
+197		Egor Dëmin	19	BRK	437	Key Rotation	Primary Ball Handler	Chaser	0.42	-0.92	-0.99	0.06
+198		T.J. McConnell	33	IND	203	Rotation	Slasher	Chaser	0.42	0.87	0.19	0.68
+199		Tyus Jones	29	ORL	299	Rotation	Movement Shooter	Point of Attack	0.41	-0.26	-0.75	0.49
+200		Nae'Qwan Tomlin	25	CLE	237	Rotation	Stretch Big	Helper	0.41	0.29	-0.34	0.63
+201		Brook Lopez	37	LAC	245	Rotation	Versatile Big	Mobile Big	0.41	0.23	-0.37	0.59
+202		Domantas Sabonis	29	SAC	365	Starter	Roll + Cut Big	Mobile Big	0.40	-0.69	-1.14	0.45
+203		Jock Landale	30	MEM	476	Key Rotation	Versatile Big	Mobile Big	0.40	-1.11	-0.92	-0.19
+204		Sam Merrill	29	CLE	311	Key Rotation	Movement Shooter	Chaser	0.40	-0.41	0.46	-0.87
+205		Liam McNeeley	20	CHO	216	Rotation	Movement Shooter	Chaser	0.39	0.42	-0.44	0.86
+206		Derrick Jones Jr.	28	LAC	324	Key Rotation	Movement Shooter	Point of Attack	0.38	-0.60	-1.24	0.64
+207		Mouhamed Gueye	23	ATL	410	Rotation	Movement Shooter	Helper	0.38	-0.98	-1.98	1.00
+208		Matas Buzelis	21	CHI	598	Starter	Secondary Ball Handler	Helper	0.38	-1.44	-1.72	0.28
+209		Caris LeVert	31	DET	329	Rotation	Secondary Ball Handler	Chaser	0.37	-0.65	-0.47	-0.18
+210		Mitchell Robinson	27	NYK	223	Rotation	Athletic Finisher	Mobile Big	0.37	0.20	-0.66	0.87
+211		Aaron Nesmith	26	IND	335	Starter	Off Screen Shooter	Chaser	0.37	-0.70	0.49	-1.19
+212		Isaiah Jackson	24	IND	419	Rotation	Athletic Finisher	Mobile Big	0.37	-1.03	-1.65	0.61
+213		Kentavious Caldwell-Pope	32	MEM	483	Key Rotation	Movement Shooter	Wing Stopper	0.37	-1.22	-1.56	0.34
+214		Chris Paul	40	LAC	228	Rotation	Primary Ball Handler	Chaser	0.36	0.06	-0.57	0.63
+215		AJ Green	26	MIL	680	Starter	Movement Shooter	Helper	0.36	-1.62	-1.13	-0.49
+216		Brandon Miller	23	CHO	150	Key Rotation	Secondary Ball Handler	Point of Attack	0.36	1.35	0.89	0.47
+217		Isaiah Collier	21	UTA	262	Key Rotation	Slasher	Point of Attack	0.36	-0.29	-1.01	0.71
+218		Kevin Love	37	UTA	172	Rotation	Movement Shooter	Mobile Big	0.36	0.85	0.21	0.64
+219		Jonathan Kuminga	23	GSW	394	Starter	Shot Creator	Point of Attack	0.35	-1.04	-0.92	-0.12
+220		Vít Krejčí	25	ATL	436	Key Rotation	Movement Shooter	Chaser	0.35	-1.16	-1.11	-0.04
+221		Cam Thomas	24	BRK	226	Starter	Shot Creator	Chaser	0.35	0.00	0.74	-0.74
+222		Trendon Watford	25	PHI	286	Rotation	Athletic Finisher	Helper	0.35	-0.52	-0.69	0.16
+223		Sion James	23	CHO	586	Starter	Movement Shooter	Chaser	0.35	-1.50	-2.08	0.59
+224		Al Horford	39	GSW	261	Key Rotation	Movement Shooter	Mobile Big	0.35	-0.30	-1.24	0.93
+225		Kris Dunn	31	LAC	574	Starter	Primary Ball Handler	Point of Attack	0.34	-1.51	-1.89	0.38
+226		Jonathan Isaac	28	ORL	203	Garbage Time	Movement Shooter	Helper	0.34	0.19	-0.70	0.89
+227		Dalton Knecht	24	LAL	284	Rotation	Movement Shooter	Chaser	0.34	-0.55	-0.54	0.00
+228		Klay Thompson	35	DAL	484	Key Rotation	Off Screen Shooter	Low Activity	0.34	-1.32	-0.44	-0.89
+229		Bogdan Bogdanović	33	LAC	231	Key Rotation	Secondary Ball Handler	Chaser	0.34	-0.10	-0.31	0.20
+230		Luka Garza	27	BOS	239	Rotation	Stretch Big	Mobile Big	0.33	-0.28	-0.10	-0.18
+231		Jeremy Sochan	22	SAS	248	Rotation	Stretch Big	Wing Stopper	0.33	-0.33	-0.62	0.28
+232		Walter Clayton Jr.	22	UTA	254	Rotation	Primary Ball Handler	Point of Attack	0.33	-0.40	-0.78	0.38
+233		Joel Embiid	31	PHI	170	Key Rotation	Shot Creator	Anchor Big	0.33	0.66	0.63	0.03
+234		LeBron James	41	LAL	161	Star	Low Minute	Helper	0.33	0.83	0.73	0.10
+235		Andrew Nembhard	26	IND	431	Starter	Primary Ball Handler	Point of Attack	0.32	-1.28	0.36	-1.64
+236		Darius Garland	26	CLE	223	Starter	Primary Ball Handler	Point of Attack	0.31	-0.27	0.55	-0.82
+237		Jordan Poole	26	NOP	212	Starter	Primary Ball Handler	Chaser	0.31	-0.15	0.41	-0.56
+238		Cam Christie	20	LAC	174	Rotation	Secondary Ball Handler	Point of Attack	0.31	0.37	-0.10	0.48
+239		Buddy Hield	33	GSW	397	Rotation	Off Screen Shooter	Point of Attack	0.30	-1.25	-0.71	-0.53
+240		Marvin Bagley III	26	WAS	276	Rotation	Athletic Finisher	Mobile Big	0.30	-0.72	-0.64	-0.08
+241		Walker Kessler	24	UTA	154	Starter	Athletic Finisher	Mobile Big	0.30	0.68	-0.50	1.18
+242		Tyrese Martin	26	BRK	445	Key Rotation	Primary Ball Handler	Chaser	0.30	-1.36	-0.55	-0.82
+243		Gradey Dick	22	TOR	358	Rotation	Off Screen Shooter	Low Activity	0.30	-1.11	-0.99	-0.12
+244		Tyrese Proctor	21	CLE	223	Rotation	Secondary Ball Handler	Low Activity	0.30	-0.31	0.34	-0.65
+245		Trae Young	27	ATL	139	Starter	Shot Creator	Chaser	0.29	0.88	1.35	-0.48
+246		Coby White	25	CHI	153	Starter	Primary Ball Handler	Helper	0.29	0.58	1.02	-0.44
+247		Pat Spencer	29	GSW	187	Rotation	Shot Creator	Chaser	0.29	-0.01	0.16	-0.17
+248		Justin Champagnie	24	WAS	214	Rotation	Stretch Big	Helper	0.29	-0.33	-0.44	0.11
+249		Jose Alvarado	27	NOP	456	Key Rotation	Primary Ball Handler	Chaser	0.29	-1.42	-0.60	-0.82
+250		Dennis Schröder	32	SAC	525	Starter	Shot Creator	Point of Attack	0.29	-1.59	-0.58	-1.01
+251		Ayo Dosunmu	26	CHI	529	Key Rotation	Secondary Ball Handler	Point of Attack	0.28	-1.63	-0.56	-1.06
+252		Tre Mann	24	CHO	370	Rotation	Primary Ball Handler	Low Activity	0.28	-1.24	-0.60	-0.64
+253		Maxime Raynaud	22	SAC	221	Rotation	Post Scorer	Mobile Big	0.28	-0.46	-1.11	0.65
+254		Kelly Oubre Jr.	30	PHI	418	Starter	Shot Creator	Wing Stopper	0.27	-1.43	-1.32	-0.12
+255		Cole Anthony	25	MIL	355	Rotation	Slasher	Low Activity	0.27	-1.22	-1.34	0.11
+256		Bryce McGowens	23	NOP	180	Rotation	Secondary Ball Handler	Chaser	0.27	-0.03	-0.48	0.44
+257		Noah Clowney	21	BRK	582	Starter	Movement Shooter	Helper	0.27	-1.71	-1.05	-0.66
+258		Kobe Brown	26	LAC	171	Rotation	Movement Shooter	Helper	0.27	0.09	-0.32	0.42
+259		Nicolas Batum	37	LAC	417	Rotation	Movement Shooter	Helper	0.27	-1.41	-2.35	0.94
+260		Kevon Looney	29	NOP	155	Rotation	Athletic Finisher	Mobile Big	0.26	0.23	-0.66	0.90
+261		Luke Kennard	29	ATL	415	Rotation	Off Screen Shooter	Low Activity	0.26	-1.44	-0.95	-0.49
+262		Karlo Matković	24	NOP	137	Rotation	Athletic Finisher	Mobile Big	0.26	0.61	-0.34	0.96
+263		Jett Howard	22	ORL	157	Garbage Time	Movement Shooter	Low Activity	0.26	0.17	0.56	-0.38
+264		Tidjane Salaun	20	CHO	124	Rotation	Movement Shooter	Helper	0.26	0.87	-0.28	1.15
+265		Bobby Portis	30	MIL	499	Key Rotation	Versatile Big	Helper	0.25	-1.66	-0.78	-0.88
+266		Precious Achiuwa	26	SAC	312	Rotation	Athletic Finisher	Mobile Big	0.25	-1.15	-1.67	0.52
+267		Moussa Cisse	23	DAL	172	Rotation	Athletic Finisher	Mobile Big	0.25	-0.17	-1.38	1.21
+268		Yves Missi	21	NOP	326	Rotation	Athletic Finisher	Mobile Big	0.24	-1.26	-1.54	0.27
+269		Paul George	35	PHI	133	Key Rotation	Shot Creator	Helper	0.24	0.47	0.35	0.12
+270		Clint Capela	31	HOU	190	Garbage Time	Athletic Finisher	Anchor Big	0.24	-0.48	-0.29	-0.19
+271		Pat Connaughton	33	CHO	116	Garbage Time	Low Minute	Helper	0.23	0.76	-0.16	0.92
+272		Nikola Jović	22	MIA	316	Rotation	Movement Shooter	Helper	0.23	-1.28	-1.51	0.24
+273		Tristan Vukcevic	22	WAS	183	Rotation	Stretch Big	Mobile Big	0.23	-0.45	-0.76	0.31
+274		KJ Simpson	23	CHO	108	Rotation	Secondary Ball Handler	Point of Attack	0.23	0.86	0.16	0.71
+275		Collin Murray-Boyles	20	TOR	307	Rotation	Athletic Finisher	Helper	0.23	-1.28	-1.18	-0.10
+276		Adem Bona	22	PHI	244	Rotation	Athletic Finisher	Mobile Big	0.22	-1.03	-2.65	1.62
+277		Jaylen Clark	24	MIN	282	Garbage Time	Movement Shooter	Wing Stopper	0.22	-1.19	-1.06	-0.12
+278		Jeremiah Fears	19	NOP	605	Key Rotation	Slasher	Chaser	0.22	-1.88	-0.89	-0.99
+279		Ben Saraf	19	BRK	159	Rotation	Primary Ball Handler	Chaser	0.22	-0.27	-0.65	0.37
+280		Ryan Nembhard	22	DAL	175	Rotation	Primary Ball Handler	Point of Attack	0.22	-0.48	-0.21	-0.27
+281		Kelly Olynyk	34	SAS	123	Garbage Time	Movement Shooter	Mobile Big	0.22	0.33	0.24	0.09
+282		Kyle Anderson	32	UTA	117	Rotation	Low Minute	Helper	0.22	0.56	-0.24	0.80
+283		Malik Monk	27	SAC	467	Key Rotation	Secondary Ball Handler	Chaser	0.21	-1.73	-0.97	-0.76
+284		Jevon Carter	30	CHI	156	Rotation	Movement Shooter	Chaser	0.21	-0.28	-0.27	-0.01
+285		Gabe Vincent	29	LAL	194	Rotation	Movement Shooter	Point of Attack	0.21	-0.71	-0.76	0.05
+286		Trayce Jackson-Davis	25	GSW	148	Rotation	Athletic Finisher	Mobile Big	0.21	-0.19	-0.45	0.26
+287		Taylor Hendricks	22	UTA	157	Rotation	Movement Shooter	Helper	0.21	-0.32	-0.83	0.52
+288		Olivier-Maxence Prosper	23	MEM	119	Garbage Time	Low Minute	Wing Stopper	0.21	0.33	-0.41	0.75
+289		Tyler Kolek	24	NYK	168	Garbage Time	Low Minute	Point of Attack	0.21	-0.51	-0.62	0.11
+290		Larry Nance Jr.	33	CLE	240	Rotation	Movement Shooter	Mobile Big	0.20	-1.15	-1.50	0.35
+291		Guerschon Yabusele	30	NYK	204	Garbage Time	Movement Shooter	Mobile Big	0.20	-0.85	-1.15	0.30
+292		Aaron Holiday	29	HOU	218	Rotation	Movement Shooter	Point of Attack	0.20	-0.97	0.00	-0.97
+293		Tyler Herro	26	MIA	157	Starter	Shot Creator	Chaser	0.20	-0.38	0.09	-0.47
+294		Isaiah Livers	27	PHO	158	Rotation	Movement Shooter	Helper	0.20	-0.46	-0.85	0.40
+295		Tari Eason	24	HOU	255	Key Rotation	Movement Shooter	Helper	0.20	-1.21	-0.71	-0.50
+296		Dominick Barlow	22	PHI	288	Starter	Athletic Finisher	Helper	0.20	-1.37	-1.81	0.44
+297		Hugo González	19	BOS	187	Rotation	Movement Shooter	Wing Stopper	0.20	-0.76	-1.47	0.70
+298		Micah Peavy	24	NOP	298	Rotation	Movement Shooter	Point of Attack	0.20	-1.38	-0.97	-0.42
+299		Kobe Sanders	23	LAC	278	Rotation	Movement Shooter	Chaser	0.20	-1.31	-1.20	-0.10
+300		Blake Wesley	22	POR	98	Rotation	Low Minute	Chaser	0.19	0.58	-0.05	0.63
+301		RayJ Dennis	24	IND	168	Rotation	Primary Ball Handler	Point of Attack	0.19	-0.70	-0.34	-0.36
+302		Nick Richards	28	PHO	207	Garbage Time	Low Minute	Mobile Big	0.18	-1.09	-1.50	0.41
+303		Kris Murray	25	POR	494	Key Rotation	Movement Shooter	Helper	0.18	-1.88	-1.99	0.11
+304		Julian Phillips	22	CHI	183	Garbage Time	Low Minute	Helper	0.18	-0.91	-1.30	0.39
+305		Bronny James	21	LAL	117	Garbage Time	Low Minute	Point of Attack	0.18	0.00	-0.22	0.22
+306		Bradley Beal	32	LAC	121	Rotation	Secondary Ball Handler	Wing Stopper	0.18	-0.15	-0.38	0.24
+307		Dwight Powell	34	DAL	184	Rotation	Athletic Finisher	Mobile Big	0.18	-0.90	-1.62	0.72
+308		Maxi Kleber	34	LAL	105	Rotation	Low Minute	Mobile Big	0.17	0.09	-0.41	0.51
+309		Dalen Terry	23	CHI	107	Garbage Time	Low Minute	Chaser	0.17	0.02	-0.58	0.60
+310		Quenton Jackson	27	IND	101	Rotation	Primary Ball Handler	Point of Attack	0.17	0.17	0.00	0.17
+311		Dereck Lively II	21	DAL	115	Rotation	Low Minute	Anchor Big	0.17	-0.11	-1.03	0.92
+312		Cody Williams	21	UTA	141	Rotation	Movement Shooter	Point of Attack	0.17	-0.53	-1.21	0.68
+313		Ace Bailey	19	UTA	443	Key Rotation	Off Screen Shooter	Helper	0.17	-1.84	-0.96	-0.88
+314		Carter Bryant	20	SAS	125	Garbage Time	Low Minute	Helper	0.17	-0.32	-0.50	0.18
+315		Noah Penda	21	ORL	108	Garbage Time	Low Minute	Helper	0.17	0.04	0.15	-0.11
+316		Tony Bradley	28	IND	247	Rotation	Athletic Finisher	Mobile Big	0.16	-1.44	-1.00	-0.44
+317		Jaden Hardy	23	DAL	183	Rotation	Movement Shooter	Chaser	0.16	-1.05	-0.72	-0.33
+318		Ousmane Dieng	22	OKC	154	Rotation	Movement Shooter	Helper	0.16	-0.84	-0.36	-0.48
+319		Rayan Rupert	21	POR	117	Garbage Time	Low Minute	Chaser	0.16	-0.28	-1.03	0.74
+320		Nick Smith Jr.	21	LAL	96	Rotation	Low Minute	Point of Attack	0.16	0.23	0.10	0.13
+321		Danny Wolf	21	BRK	95	Rotation	Low Minute	Helper	0.16	0.17	-0.44	0.60
+322		Javon Small	23	MEM	99	Rotation	Low Minute	Chaser	0.16	0.16	-0.48	0.65
+323		Thomas Bryant	28	CLE	112	Garbage Time	Low Minute	Mobile Big	0.15	-0.30	-0.47	0.17
+324		Kevin Porter Jr.	25	MIL	100	Key Rotation	Primary Ball Handler	Point of Attack	0.15	-0.02	-0.02	0.01
+325		Sidy Cissoko	21	POR	304	Rotation	Movement Shooter	Helper	0.15	-1.66	-1.75	0.09
+326		Duop Reath	29	POR	124	Garbage Time	Low Minute	Helper	0.15	-0.47	-0.72	0.25
+327		Rob Dillingham	21	MIN	196	Garbage Time	Shot Creator	Low Activity	0.15	-1.24	-1.08	-0.16
+328		Chaz Lanier	24	DET	130	Garbage Time	Movement Shooter	Low Activity	0.15	-0.59	-0.17	-0.42
+329		Jalen Wilson	25	BRK	240	Rotation	Movement Shooter	Helper	0.14	-1.50	-1.19	-0.31
+330		Max Christie	22	DAL	677	Starter	Movement Shooter	Point of Attack	0.14	-2.12	-2.08	-0.04
+331		Jalen Williams	24	OKC	96	Starter	Low Minute	Helper	0.14	-0.07	0.31	-0.37
+332		Keon Ellis	26	SAC	351	Rotation	Movement Shooter	Point of Attack	0.14	-1.83	-2.59	0.76
+333		Branden Carlson	26	OKC	112	Garbage Time	Low Minute	Anchor Big	0.14	-0.42	0.03	-0.45
+334		Will Riley	19	WAS	115	Garbage Time	Low Minute	Helper	0.14	-0.53	-0.75	0.22
+335		Yang Hansen	20	POR	81	Garbage Time	Low Minute	Helper	0.14	0.31	-0.11	0.42
+336		Mason Plumlee	35	CHO	66	Garbage Time	Low Minute	Anchor Big	0.14	0.93	-0.19	1.12
+337		Caleb Martin	30	DAL	187	Garbage Time	Low Minute	Helper	0.13	-1.37	-1.99	0.62
+338		Patrick Williams	24	CHI	414	Key Rotation	Movement Shooter	Helper	0.13	-1.98	-1.81	-0.17
+339		Bones Hyland	25	MIN	119	Garbage Time	Low Minute	Point of Attack	0.13	-0.72	-0.44	-0.28
+340		Baylor Scheierman	25	BOS	196	Rotation	Movement Shooter	Helper	0.13	-1.42	-1.48	0.06
+341		Bilal Coulibaly	21	WAS	326	Starter	Secondary Ball Handler	Wing Stopper	0.13	-1.83	-2.13	0.30
+342		Jared McCain	21	PHI	196	Rotation	Movement Shooter	Chaser	0.13	-1.43	-0.92	-0.51
+343		Asa Newell	20	ATL	115	Garbage Time	Low Minute	Mobile Big	0.13	-0.65	-0.47	-0.18
+344		Taelon Peter	23	IND	105	Garbage Time	Low Minute	Chaser	0.13	-0.42	-0.65	0.23
+345		Gary Harris	31	MIL	179	Rotation	Low Minute	Point of Attack	0.13	-1.28	-1.89	0.61
+346		Chris Boucher	33	BOS	91	Rotation	Low Minute	Helper	0.12	-0.38	-0.88	0.50
+347		Jordan McLaughlin	29	SAS	74	Garbage Time	Low Minute	Point of Attack	0.12	0.24	0.19	0.05
+348		Garrison Mathews	29	IND	91	Rotation	Low Minute	Chaser	0.12	-0.32	-0.64	0.32
+349		Lindy Waters III	28	SAS	76	Garbage Time	Low Minute	Chaser	0.12	0.02	-0.03	0.05
+350		Luke Travers	24	CLE	82	Garbage Time	Low Minute	Helper	0.12	-0.10	-0.26	0.16
+351		Drew Peterson	26	CHO	53	Rotation	Low Minute	Helper	0.12	1.07	0.05	1.02
+352		Elijah Harkless	25	UTA	66	Garbage Time	Low Minute	Point of Attack	0.12	0.35	-0.50	0.85
+353		Jase Richardson	20	ORL	84	Garbage Time	Low Minute	Chaser	0.12	-0.12	0.10	-0.22
+354		Obi Toppin	27	IND	82	Starter	Low Minute	Mobile Big	0.11	-0.37	-0.47	0.10
+355		Herbert Jones	27	NOP	484	Starter	Movement Shooter	Point of Attack	0.11	-2.11	-2.20	0.09
+356		Gui Santos	23	GSW	110	Garbage Time	Low Minute	Helper	0.11	-0.89	-0.64	-0.26
+357		Jaden Ivey	23	DET	100	Garbage Time	Low Minute	Chaser	0.11	-0.67	-0.43	-0.25
+358		Malaki Branham	22	WAS	65	Garbage Time	Low Minute	Helper	0.11	0.19	-0.30	0.48
+359		Jamaree Bouyea	26	PHO	77	Rotation	Low Minute	Chaser	0.11	-0.25	-0.26	0.01
+360		Jabari Walker	23	PHI	254	Rotation	Stretch Big	Helper	0.11	-1.79	-1.79	0.00
+361		Jordan Miller	26	LAC	54	Rotation	Low Minute	Chaser	0.11	0.76	0.18	0.57
+362		Devin Carter	23	SAC	65	Garbage Time	Low Minute	Point of Attack	0.11	0.15	-0.64	0.79
+363		David Jones Garcia	24	SAS	57	Garbage Time	Low Minute	Point of Attack	0.11	0.50	0.24	0.26
+364		Yanic Konan Niederhäuser	22	LAC	57	Garbage Time	Low Minute	Mobile Big	0.11	0.60	-0.07	0.67
+365		Drew Eubanks	28	SAC	340	Rotation	Athletic Finisher	Mobile Big	0.10	-1.98	-3.30	1.32
+366		Xavier Tillman	27	BOS	95	Rotation	Low Minute	Mobile Big	0.10	-0.76	-0.69	-0.06
+367		Terrence Shannon Jr.	25	MIN	177	Garbage Time	Movement Shooter	Helper	0.10	-1.53	-1.03	-0.50
+368		GG Jackson	21	MEM	54	Garbage Time	Low Minute	Helper	0.10	0.35	-0.43	0.77
+369		Antonio Reeves	25	CHO	46	Rotation	Low Minute	Chaser	0.10	1.01	0.01	1.00
+370		Monté Morris	30	IND	65	Rotation	Low Minute	Point of Attack	0.09	-0.23	-0.41	0.18
+371		Nigel Hayes	31	PHO	138	Garbage Time	Low Minute	Helper	0.09	-1.45	-1.34	-0.11
+372		Matisse Thybulle	28	POR	49	Rotation	Low Minute	Chaser	0.09	0.44	-0.20	0.65
+373		Drake Powell	20	BRK	287	Rotation	Secondary Ball Handler	Point of Attack	0.09	-1.94	-2.11	0.17
+374		Brooks Barnhizer	23	OKC	112	Garbage Time	Low Minute	Helper	0.09	-1.18	-0.74	-0.44
+375		Taurean Prince	31	MIL	169	Key Rotation	Movement Shooter	Helper	0.08	-1.68	-1.67	-0.01
+376		Cody Martin	30	IND	55	Rotation	Low Minute	Chaser	0.08	-0.27	-0.65	0.38
+377		Jeremiah Robinson-Earl	25	IND	300	Rotation	Movement Shooter	Helper	0.08	-2.02	-1.51	-0.51
+378		Ariel Hukporti	23	NYK	90	Garbage Time	Low Minute	Mobile Big	0.08	-1.02	-1.43	0.41
+379		Bennedict Mathurin	23	IND	354	Starter	Secondary Ball Handler	Chaser	0.08	-2.10	-0.94	-1.16
+380		Julian Strawther	23	DEN	71	Garbage Time	Low Minute	Low Activity	0.08	-0.69	-0.41	-0.29
+381		Andre Jackson Jr.	24	MIL	63	Garbage Time	Low Minute	Point of Attack	0.08	-0.34	-0.59	0.25
+382		Ja'Kobe Walter	21	TOR	302	Rotation	Movement Shooter	Point of Attack	0.08	-2.03	-2.01	-0.02
+383		Keshad Johnson	24	MIA	91	Rotation	Low Minute	Helper	0.08	-1.05	-0.93	-0.12
+384		Jericho Sims	27	MIL	211	Rotation	Athletic Finisher	Helper	0.07	-1.92	-2.31	0.39
+385		Jordan Hawkins	23	NOP	280	Rotation	Off Screen Shooter	Chaser	0.07	-2.06	-1.11	-0.95
+386		Rasheer Fleming	21	PHO	60	Garbage Time	Low Minute	Chaser	0.07	-0.64	-0.33	-0.31
+387		Chris Youngblood	23	OKC	80	Garbage Time	Low Minute	Low Activity	0.07	-0.98	-0.06	-0.93
+388		Bismack Biyombo	33	SAS	48	Garbage Time	Low Minute	Anchor Big	0.07	-0.08	-0.28	0.20
+389		Amir Coffey	28	MIL	138	Garbage Time	Low Minute	Helper	0.06	-1.76	-1.65	-0.12
+390		Zeke Nnaji	25	DEN	102	Garbage Time	Low Minute	Helper	0.06	-1.45	-1.21	-0.24
+391		Ochai Agbaji	25	TOR	216	Rotation	Movement Shooter	Chaser	0.06	-2.04	-1.84	-0.20
+392		E.J. Liddell	25	BRK	32	Garbage Time	Low Minute	Helper	0.06	0.49	-0.23	0.72
+393		Tyson Etienne	26	BRK	33	Garbage Time	Low Minute	Point of Attack	0.06	0.43	-0.22	0.65
+394		Trey Alexander	22	NOP	33	Too Few Games	Low Minute	Helper	0.06	0.50	-0.18	0.68
+395		Bobi Klintman	22	DET	53	Garbage Time	Low Minute	Helper	0.06	-0.51	-0.31	-0.19
+396		Johnny Furphy	21	IND	53	Rotation	Low Minute	Chaser	0.06	-0.52	-0.90	0.38
+397		AJ Johnson	21	WAS	43	Garbage Time	Low Minute	Chaser	0.06	-0.12	-0.53	0.41
+398		Nique Clifford	23	SAC	291	Rotation	Secondary Ball Handler	Helper	0.06	-2.13	-2.54	0.40
+399		Jamison Battle	24	TOR	107	Garbage Time	Low Minute	Helper	0.06	-1.60	-1.16	-0.44
+400		Spencer Jones	24	DEN	255	Rotation	Movement Shooter	Helper	0.06	-2.08	-1.63	-0.45
+401		Nolan Traore	19	BRK	35	Garbage Time	Low Minute	Point of Attack	0.06	0.39	-0.36	0.74
+402		Jahmyl Telfort	24	LAC	32	Garbage Time	Low Minute	Helper	0.06	0.60	-0.05	0.65
+403		Eric Gordon	37	PHI	57	Rotation	Low Minute	Chaser	0.06	-0.89	-0.75	-0.14
+404		DeMar DeRozan	36	SAC	718	Starter	Shot Creator	Helper	0.06	-2.33	-1.14	-1.19
+405		Kenrich Williams	31	OKC	51	Rotation	Low Minute	Helper	0.05	-0.79	-0.04	-0.75
+406		Jalen Pickett	26	DEN	56	Garbage Time	Low Minute	Point of Attack	0.05	-0.93	-0.49	-0.44
+407		Charles Bassey	25	MEM	31	Too Few Games	Low Minute	Helper	0.05	0.29	-0.44	0.73
+408		Mac McClung	27	IND	34	Rotation	Low Minute	Chaser	0.05	0.04	-0.22	0.25
+409		Wendell Moore Jr.	24	DET	43	Garbage Time	Low Minute	Wing Stopper	0.05	-0.65	-0.58	-0.07
+410		Caleb Houstan	23	ATL	43	Garbage Time	Low Minute	Helper	0.05	-0.58	-0.31	-0.28
+411		Jamal Cain	26	ORL	31	Garbage Time	Low Minute	Point of Attack	0.05	-0.06	0.07	-0.13
+412		Johni Broome	23	PHI	39	Garbage Time	Low Minute	Helper	0.05	-0.60	-0.47	-0.13
+413		PJ Hall	23	MEM	27	Garbage Time	Low Minute	Helper	0.05	0.35	-0.41	0.77
+414		Justin Edwards	22	PHI	322	Rotation	Movement Shooter	Point of Attack	0.05	-2.20	-1.61	-0.60
+415		Jamir Watkins	24	WAS	33	Garbage Time	Low Minute	Point of Attack	0.05	-0.12	-0.55	0.43
+416		Khaman Maluach	19	PHO	44	Garbage Time	Low Minute	Helper	0.05	-0.53	-0.50	-0.03
+417		Dylan Cardwell	24	SAC	33	Rotation	Low Minute	Helper	0.05	0.15	-0.59	0.74
+418		Lachlan Olbrich	22	CHI	30	Garbage Time	Low Minute	Mobile Big	0.05	0.02	-0.33	0.35
+419		Jalen Green	23	PHO	30	Too Few Games	Low Minute	Chaser	0.04	-0.06	0.13	-0.19
+420		Anthony Gill	33	WAS	26	Garbage Time	Low Minute	Helper	0.04	0.03	-0.51	0.54
+421		Leonard Miller	22	MIN	38	Garbage Time	Low Minute	Helper	0.04	-0.74	-0.42	-0.33
+422		Javonte Cooke	26	POR	24	Garbage Time	Low Minute	Chaser	0.04	0.30	-0.02	0.33
+423		Emanuel Miller	25	CHI	21	Garbage Time	Low Minute	Mobile Big	0.04	0.19	-0.17	0.36
+424		Joan Beringer	19	MIN	37	Garbage Time	Low Minute	Mobile Big	0.04	-0.82	-0.53	-0.29
+425		Mohamed Diawara	20	NYK	40	Garbage Time	Low Minute	Chaser	0.04	-0.70	-0.94	0.24
+426		DeAndre Jordan	37	NOP	23	Too Few Games	Low Minute	Anchor Big	0.04	0.51	-0.11	0.62
+427		Dario Šarić	31	SAC	28	Garbage Time	Low Minute	Helper	0.04	0.13	-0.57	0.70
+428		James Wiseman	24	IND	20	Too Few Games	Low Minute	Mobile Big	0.03	-0.29	-0.49	0.20
+429		Jae'Sean Tate	30	HOU	80	Garbage Time	Low Minute	Helper	0.03	-1.80	-0.87	-0.93
+430		Ziaire Williams	24	BRK	416	Key Rotation	Movement Shooter	Chaser	0.03	-2.37	-1.84	-0.53
+431		Orlando Robinson	25	ORL	22	Garbage Time	Low Minute	Mobile Big	0.03	-0.11	0.11	-0.23
+432		JD Davison	23	HOU	59	Garbage Time	Low Minute	Point of Attack	0.03	-1.55	-0.71	-0.83
+433		Mark Sears	23	MIL	26	Garbage Time	Low Minute	Point of Attack	0.03	-0.32	-0.40	0.09
+434		Hunter Tyson	25	DEN	28	Garbage Time	Low Minute	Helper	0.03	-0.55	-0.30	-0.25
+435		Hunter Sallis	22	PHI	25	Garbage Time	Low Minute	Chaser	0.03	-0.68	-0.57	-0.11
+436		Pacôme Dadiet	20	NYK	22	Garbage Time	Low Minute	Chaser	0.03	-0.57	-0.78	0.21
+437		Jonathan Mogbo	24	TOR	39	Garbage Time	Low Minute	Mobile Big	0.03	-1.04	-0.73	-0.31
+438		Isaac Jones	25	SAC/DET	18	Garbage Time	Low Minute	Mobile Big	0.03	0.16	-0.45	0.61
+439		Tolu Smith	25	DET	22	Too Few Games	Low Minute	Helper	0.03	-0.35	-0.21	-0.14
+440		Amari Williams	24	BOS	29	Garbage Time	Low Minute	Anchor Big	0.03	-0.60	-0.62	0.03
+441		Adou Thiero	21	LAL	17	Garbage Time	Low Minute	Chaser	0.03	0.69	0.43	0.26
+442		Seth Curry	35	GSW	18	Too Few Games	Low Minute	Chaser	0.03	0.29	0.25	0.03
+443		Joe Ingles	38	MIN	23	Garbage Time	Low Minute	Chaser	0.03	-0.71	-0.31	-0.40
+444		Sharife Cooper	24	WAS	10	Garbage Time	Low Minute	Point of Attack	0.02	0.01	-0.45	0.46
+445		Johnny Juzang	24	MIN	22	Garbage Time	Low Minute	Chaser	0.02	-0.71	-0.29	-0.42
+446		Corey Kispert	26	WAS	338	Key Rotation	Movement Shooter	Chaser	0.02	-2.38	-1.25	-1.14
+447		Ethan Thompson	26	IND	10	Too Few Games	Low Minute	Point of Attack	0.02	-0.05	-0.32	0.27
+448		Harrison Ingram	23	SAS	11	Garbage Time	Low Minute	Chaser	0.02	0.40	0.27	0.13
+449		Ron Harper Jr.	25	BOS	15	Garbage Time	Low Minute	Helper	0.02	-0.44	-0.37	-0.07
+450		Jacob Toppin	25	ATL	17	Garbage Time	Low Minute	Chaser	0.02	-0.41	-0.20	-0.21
+451		Daeqwon Plowden	27	SAC	14	Too Few Games	Low Minute	Point of Attack	0.02	0.15	-0.45	0.60
+452		Chris Livingston	22	CLE	15	Too Few Games	Low Minute	Chaser	0.02	-0.25	-0.21	-0.04
+453		N'Faly Dante	24	ATL	15	Garbage Time	Low Minute	Helper	0.02	-0.42	-0.18	-0.24
+454		Riley Minix	25	SAS	8	Garbage Time	Low Minute	Mobile Big	0.02	0.47	0.34	0.14
+455		Jahmir Young	25	MIA	17	Garbage Time	Low Minute	Point of Attack	0.02	-0.85	-0.53	-0.32
+456		Miles Kelly	23	DAL	11	Too Few Games	Low Minute	Chaser	0.02	-0.27	-0.37	0.10
+457		Kyle Lowry	39	PHI	14	Too Few Games	Low Minute	Helper	0.02	-0.48	-0.41	-0.07
+458		Jeff Green	39	HOU	33	Garbage Time	Low Minute	Helper	0.02	-1.51	-0.50	-1.01
+459		Thanasis Antetokounmpo	33	MIL	18	Garbage Time	Low Minute	Mobile Big	0.02	-0.28	-0.52	0.24
+460		Hunter Dickinson	25	NOP	5	Too Few Games	Low Minute	Helper	0.01	0.55	-0.08	0.63
+461		Christian Koloko	25	LAL	6	Too Few Games	Low Minute	Helper	0.01	0.70	0.52	0.18
+462		Pete Nance	25	MIL	10	Garbage Time	Low Minute	Mobile Big	0.01	-0.24	-0.38	0.14
+463		Colby Jones	23	DET	7	Too Few Games	Low Minute	Point of Attack	0.01	-0.32	-0.15	-0.17
+464		DaRon Holmes II	23	DEN	4	Too Few Games	Low Minute	Helper	0.01	-0.45	-0.22	-0.23
+465		Tosan Evbuomwan	24	NYK	5	Too Few Games	Low Minute	Helper	0.01	-0.48	-0.65	0.17
+466		Trey Jemison III	26	NYK	10	Garbage Time	Low Minute	Helper	0.01	-0.56	-0.74	0.18
+467		Myron Gardner	24	MIA	9	Garbage Time	Low Minute	Chaser	0.01	-0.82	-0.53	-0.29
+468		Noa Essengue	19	CHI	6	Too Few Games	Low Minute	Helper	0.01	0.23	-0.08	0.31
+469		Koby Brea	23	PHO	8	Too Few Games	Low Minute	Helper	0.01	-0.28	-0.06	-0.22
+470		Jahmai Mashack	23	MEM	6	Too Few Games	Low Minute	Helper	0.01	0.39	-0.30	0.69
+471		Chris Mañon	24	LAL	7	Too Few Games	Low Minute	Point of Attack	0.01	0.80	0.59	0.20
+472		Garrett Temple	39	TOR	10	Garbage Time	Low Minute	Chaser	0.01	-1.05	-0.57	-0.48
+473		Doug McDermott	34	SAC	8	Too Few Games	Low Minute	Chaser	0.01	0.28	-0.40	0.68
+474		Svi Mykhailiuk	28	UTA	522	Starter	Movement Shooter	Point of Attack	0.00	-2.45	-1.43	-1.03
+475		Terance Mann	29	BRK	508	Starter	Primary Ball Handler	Point of Attack	0.00	-2.45	-1.58	-0.87
+476		Drew Timme	25	LAL	1	Too Few Games	Low Minute	Helper	0.00	0.80	0.61	0.19
+477		Trentyn Flowers	20	CHI	1	Too Few Games	Low Minute	Point of Attack	0.00	0.31	-0.01	0.32
+478		Isaiah Crawford	24	HOU	3	Too Few Games	Low Minute	Point of Attack	0.00	-1.40	-0.49	-0.91
+479		Kasparas Jakučionis	19	MIA	1	Too Few Games	Low Minute	Point of Attack	0.00	-0.74	-0.47	-0.27
+480		Chucky Hepburn	22	TOR	5	Too Few Games	Low Minute	Point of Attack	0.00	-0.91	-0.44	-0.47
+481		Curtis Jones	24	DEN	3	Too Few Games	Low Minute	Point of Attack	0.00	-0.40	-0.17	-0.22
+482		Cam Whitmore	21	WAS	336	Rotation	Secondary Ball Handler	Helper	-0.01	-2.50	-1.17	-1.33
+483		Khris Middleton	34	WAS	388	Starter	Post Scorer	Wing Stopper	-0.02	-2.55	-1.53	-1.02
+484		Isaac Okoro	25	CHI	373	Key Rotation	Movement Shooter	Wing Stopper	-0.08	-2.83	-2.31	-0.53
+485		Ben Sheppard	24	IND	549	Key Rotation	Movement Shooter	Chaser	-0.12	-2.82	-2.19	-0.63
+486		Gary Trent Jr.	27	MIL	642	Starter	Movement Shooter	Chaser	-0.20	-2.98	-1.82	-1.16
+487		Jarace Walker	22	IND	598	Key Rotation	Movement Shooter	Helper	-0.22	-3.08	-2.19	-0.89
+488		CJ McCollum	34	WAS	593	Starter	Primary Ball Handler	Chaser	-0.23	-3.10	-0.18	-2.92
+489		Zach LaVine	30	SAC	661	Starter	Secondary Ball Handler	Chaser	-0.26	-3.11	-1.19	-1.92
+490		Kyshawn George	22	WAS	564	Starter	Primary Ball Handler	Helper	-0.37	-3.54	-2.39	-1.15
+491		Tre Johnson	19	WAS	364	Key Rotation	Secondary Ball Handler	Chaser	-0.42	-4.40	-2.62	-1.78
+492		Bub Carrington	20	WAS	501	Key Rotation	Primary Ball Handler	Point of Attack	-0.91	-5.52	-3.74	-1.79

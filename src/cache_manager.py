@@ -709,12 +709,27 @@ class CacheManager:
         if cache_name:
             # Determine which DB based on cache name
             player_caches = ['player_stats', 'lebron_metrics', 'contracts', 'player_analysis']
+            
+            # Check if it's a player cache
             if any(cache_name.startswith(p) for p in player_caches):
-                # Clear from players DB (simplified - clear table)
-                print(f"Clearing {cache_name} from players DB")
+                with self.players._get_connection() as conn:
+                    if self.players._table_exists(conn, cache_name):
+                        conn.execute(f'DROP TABLE IF EXISTS {cache_name}')
+                        conn.execute('DELETE FROM cache_metadata WHERE cache_name = ?', (cache_name,))
+                        conn.commit()
+                        print(f"Cleared {cache_name} from players DB")
+                    else:
+                        print(f"Cache {cache_name} not found in players DB")
             else:
-                # Clear from teams DB
-                print(f"Clearing {cache_name} from teams DB")
+                # Assume it's a team cache (standings, team_stats, etc.)
+                with self.teams._get_connection() as conn:
+                    if self.teams._table_exists(conn, cache_name):
+                        conn.execute(f'DROP TABLE IF EXISTS {cache_name}')
+                        conn.execute('DELETE FROM cache_metadata WHERE cache_name = ?', (cache_name,))
+                        conn.commit()
+                        print(f"Cleared {cache_name} from teams DB")
+                    else:
+                        print(f"Cache {cache_name} not found in teams DB")
         else:
             self.players.clear_all()
             self.teams.clear_all()
