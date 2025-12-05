@@ -17,6 +17,7 @@ ENV/
 *~
 .cursor/
 .cursorrules
+.github
 
 # OS
 .DS_Store

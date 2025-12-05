@@ -325,6 +325,43 @@ def load_and_merge_data(lebron_file='data/LEBRON.csv', contracts_file='data/bask
     if not df.empty:
         df = df.drop_duplicates(subset=['player_name'], keep='first')
     
+    # --- Include unmatched LEBRON players with estimated salaries ---
+    # Players not found in contracts are likely:
+    # - Rookies on rookie scale contracts
+    # - Two-way contract players
+    # - G-League assignees / Exhibit-10 players
+    # We include them with an estimated minimum salary so they appear in the analysis
+    
+    matched_names = set(df['player_name'].tolist()) if not df.empty else set()
+    unmatched_lebron = df_lebron[~df_lebron['player_name'].isin(matched_names)].copy()
+    
+    if len(unmatched_lebron) > 0:
+        # NBA minimum salary for 2024-25 is ~$1.1M, two-way contracts are ~$560K
+        # Use a conservative estimate of $1.0M for minimum salary players
+        ESTIMATED_MIN_SALARY = 1_000_000
+        
+        # Add contract columns with estimated values
+        unmatched_lebron['current_year_salary'] = ESTIMATED_MIN_SALARY
+        unmatched_lebron['year_0'] = ESTIMATED_MIN_SALARY
+        unmatched_lebron['year_1'] = 0
+        unmatched_lebron['year_2'] = 0
+        unmatched_lebron['year_4'] = ESTIMATED_MIN_SALARY
+        unmatched_lebron['contract_length'] = 1
+        unmatched_lebron['total_contract_value'] = ESTIMATED_MIN_SALARY
+        unmatched_lebron['average_annual_value'] = ESTIMATED_MIN_SALARY
+        unmatched_lebron['years_remaining'] = 0
+        unmatched_lebron['team'] = unmatched_lebron['Team(s)'] if 'Team(s)' in unmatched_lebron.columns else ''
+        unmatched_lebron['bbref_id'] = ''
+        unmatched_lebron['_match_score'] = 0  # Indicate no contract match
+        
+        # Add asterisk to player names to indicate estimated salary
+        # (2nd round picks, two-way contracts, minimums, etc.)
+        unmatched_lebron['player_name'] = unmatched_lebron['player_name'] + '*'
+        
+        # Append unmatched players to the main DataFrame
+        df = pd.concat([df, unmatched_lebron], ignore_index=True)
+        print(f"Added {len(unmatched_lebron)} unmatched players with estimated minimum salary (~${ESTIMATED_MIN_SALARY/1e6:.1f}M)")
+    
     # Handle missing salary data for the current year.
     # If 'current_year_salary' is missing, we fallback to 'year_4' (Guaranteed Amount).
     # This is crucial because some contract datasets might not explicitly list the current year column correctly.
@@ -497,6 +534,9 @@ def calculate_team_metrics(df_players, season='2024-25'):
         conn = sqlite3.connect('data/sieve_teams.db')
         df_payrolls = pd.read_sql_query("SELECT * FROM team_payrolls", conn)
         conn.close()
+        
+        # Normalize payroll abbreviations to match player data (BRK->BKN, CHO->CHA, PHO->PHX)
+        df_payrolls['Abbrev'] = df_payrolls['Abbrev'].replace(ABBR_NORMALIZATION)
         
         # Merge payrolls with team data
         df_teams = pd.merge(df_teams, df_payrolls[['Abbrev', 'Payroll_2025_26']], on='Abbrev', how='left')
@@ -1259,8 +1299,8 @@ def build_current_season_similarity(df, season='2024-25'):
         print(f"ERROR: Not enough features ({len(available_features)})")
         return None, None, None, None
     
-    # Handle NaN values
-    df_filtered = df_filtered.fillna(0)
+    # Handle NaN values (use infer_objects to avoid FutureWarning about downcasting)
+    df_filtered = df_filtered.fillna(0).infer_objects(copy=False)
     
     # Handle DEF_RATING (lower is better, so invert)
     if 'DEF_RATING' in df_filtered.columns:

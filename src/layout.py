@@ -70,7 +70,12 @@ def create_landing_tab(df=None, df_teams=None):
     # Calculate quick stats
     num_players = len(df) if df is not None and not df.empty else 0
     num_teams = len(df_teams) if df_teams is not None and not df_teams.empty else 0
-    avg_salary = df['current_year_salary'].mean() / 1_000_000 if df is not None and 'current_year_salary' in df.columns else 0
+    # Exclude players with asterisk (*) from avg salary - they have estimated salaries
+    if df is not None and 'current_year_salary' in df.columns and 'player_name' in df.columns:
+        df_with_contracts = df[~df['player_name'].str.endswith('*', na=False)]
+        avg_salary = df_with_contracts['current_year_salary'].mean() / 1_000_000 if len(df_with_contracts) > 0 else 0
+    else:
+        avg_salary = 0
     avg_lebron = df['LEBRON'].mean() if df is not None and 'LEBRON' in df.columns else 0
     total_payroll = df_teams['Total_Payroll'].sum() / 1_000_000_000 if df_teams is not None and 'Total_Payroll' in df_teams.columns else 0
     

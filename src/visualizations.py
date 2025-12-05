@@ -127,7 +127,7 @@ def create_efficiency_quadrant(df_teams):
                     source=row['Logo_URL'],
                     xref="x", yref="y",
                     x=row['Total_Payroll'], y=row['WINS'],
-                    sizex=20000000, sizey=5, # Smaller logos for cleaner look
+                    sizex=12000000, sizey=3,  # Smaller logos for better visibility of gaps
                     xanchor="center", yanchor="middle",
                     layer="above"
                 ))
