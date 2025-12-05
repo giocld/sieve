@@ -600,36 +600,33 @@ def create_age_ridge_plot(filtered):
 
 def create_player_beeswarm(filtered):
     """
-    Creates a Beeswarm plot showing all players by LEBRON impact with player headshots.
-    
-    Each player is shown as their NBA headshot with a colored border indicating value gap.
-    Players are arranged to minimize overlap.
+    Creates a Beeswarm plot showing all players by LEBRON impact with colored dots.
     
     Args:
         filtered (pd.DataFrame): Filtered DataFrame of players.
         
     Returns:
-        go.Figure: A Plotly figure with player headshot images.
+        go.Figure: A Plotly beeswarm figure.
     """
     fig = go.Figure()
     
     if len(filtered) == 0 or 'LEBRON' not in filtered.columns:
         fig.add_annotation(text="No data available", font=dict(size=14, color='#adb5bd'))
-        fig.update_layout(height=550, template='plotly_dark', paper_bgcolor='#0f1623')
+        fig.update_layout(height=500, template='plotly_dark', paper_bgcolor='#0f1623')
         return fig
     
     df = filtered.copy()
     df = df.sort_values('LEBRON', ascending=True).reset_index(drop=True)
     
     # Create beeswarm-like y-positions to avoid overlap
-    df['lebron_bin'] = pd.cut(df['LEBRON'], bins=25, labels=False)
+    df['lebron_bin'] = pd.cut(df['LEBRON'], bins=30, labels=False)
     
     y_positions = []
     for bin_id in df['lebron_bin'].unique():
         bin_mask = df['lebron_bin'] == bin_id
         bin_count = bin_mask.sum()
         if bin_count > 1:
-            offsets = np.linspace(-bin_count/2, bin_count/2, bin_count) * 0.4
+            offsets = np.linspace(-bin_count/2, bin_count/2, bin_count) * 0.35
         else:
             offsets = [0]
         
@@ -639,17 +636,18 @@ def create_player_beeswarm(filtered):
     y_positions.sort(key=lambda x: x[0])
     df['y_offset'] = [yp[1] for yp in y_positions]
     
-    # Get data ranges for image sizing
-    x_min, x_max = df['LEBRON'].min(), df['LEBRON'].max()
-    y_min, y_max = df['y_offset'].min(), df['y_offset'].max()
-    x_range = x_max - x_min
-    y_range = max(y_max - y_min, 1)
+    # Color by value gap
+    colors = []
+    for vg in df['value_gap'] if 'value_gap' in df.columns else [0]*len(df):
+        if vg > 10:
+            colors.append('#06d6a0')  # Green - very underpaid
+        elif vg > 0:
+            colors.append('#2D96C7')  # Blue - slight value
+        elif vg > -10:
+            colors.append('#ffd166')  # Yellow - slight overpay
+        else:
+            colors.append('#ef476f')  # Red - overpaid
     
-    # Image size in data units (smaller for more players)
-    img_size_x = x_range * 0.025
-    img_size_y = y_range * 0.08
-    
-    # Add invisible scatter for hover functionality
     value_gaps = df['value_gap'] if 'value_gap' in df.columns else [0]*len(df)
     salaries = df['current_year_salary'] if 'current_year_salary' in df.columns else [0]*len(df)
     
@@ -657,46 +655,17 @@ def create_player_beeswarm(filtered):
         x=df['LEBRON'],
         y=df['y_offset'],
         mode='markers',
-        marker=dict(size=28, opacity=0),  # Invisible but clickable
+        marker=dict(
+            size=10,
+            color=colors,
+            opacity=0.85,
+            line=dict(width=1, color='rgba(255,255,255,0.3)')
+        ),
         text=[f"<b>{n}</b><br>LEBRON: {l:.2f}<br>Value Gap: {g:+.1f}<br>${s/1e6:.1f}M" 
               for n, l, g, s in zip(df['player_name'], df['LEBRON'], value_gaps, salaries)],
         hovertemplate='%{text}<extra></extra>',
         showlegend=False
     ))
-    
-    # Add player headshot images
-    for _, row in df.iterrows():
-        player_id = row.get('PLAYER_ID', None)
-        if pd.isna(player_id):
-            continue
-            
-        # Determine border color based on value gap
-        vg = row['value_gap'] if 'value_gap' in df.columns else 0
-        if vg > 5:
-            border_color = '#06d6a0'  # Green - underpaid
-        elif vg > 0:
-            border_color = '#2D96C7'  # Blue - slight value
-        elif vg > -5:
-            border_color = '#ffd166'  # Yellow - slight overpay
-        else:
-            border_color = '#ef476f'  # Red - overpaid
-        
-        img_url = f"https://cdn.nba.com/headshots/nba/latest/1040x760/{int(player_id)}.png"
-        
-        fig.add_layout_image(
-            dict(
-                source=img_url,
-                x=row['LEBRON'],
-                y=row['y_offset'],
-                xref="x",
-                yref="y",
-                sizex=img_size_x,
-                sizey=img_size_y,
-                xanchor="center",
-                yanchor="middle",
-                layer="above"
-            )
-        )
     
     # Add reference line at 0
     fig.add_vline(x=0, line_dash="dash", line_color="#6c757d", line_width=1)
