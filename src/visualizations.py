@@ -636,18 +636,6 @@ def create_player_beeswarm(filtered):
     y_positions.sort(key=lambda x: x[0])
     df['y_offset'] = [yp[1] for yp in y_positions]
     
-    # Color by value gap
-    colors = []
-    for vg in df['value_gap'] if 'value_gap' in df.columns else [0]*len(df):
-        if vg > 10:
-            colors.append('#06d6a0')  # Green - very underpaid
-        elif vg > 0:
-            colors.append('#2D96C7')  # Blue - slight value
-        elif vg > -10:
-            colors.append('#ffd166')  # Yellow - slight overpay
-        else:
-            colors.append('#ef476f')  # Red - overpaid
-    
     value_gaps = df['value_gap'] if 'value_gap' in df.columns else [0]*len(df)
     salaries = df['current_year_salary'] if 'current_year_salary' in df.columns else [0]*len(df)
     
@@ -657,7 +645,10 @@ def create_player_beeswarm(filtered):
         mode='markers',
         marker=dict(
             size=10,
-            color=colors,
+            # Use same colorscale as salary vs impact chart
+            color=value_gaps,
+            colorscale=[[0, '#ef476f'], [0.5, '#ffd166'], [1, '#06d6a0']],
+            showscale=False,
             opacity=0.85,
             line=dict(width=1, color='rgba(255,255,255,0.3)')
         ),
