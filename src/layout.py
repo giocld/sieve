@@ -933,7 +933,14 @@ def create_lineup_tab(team_options):
             "Plus/Minus (+/-) = total point differential when these players share the floor. ",
             "Positive = outscored opponents | Negative = got outscored. ",
             "MIN = total minutes played together over the season."
-        ], color="info", className="mb-4 py-2", style={"fontSize": "12px", "backgroundColor": "rgba(45, 150, 199, 0.15)", "border": "1px solid #2D96C7", "color": "#e4e6eb"}),
+        ], color="info", className="mb-3 py-2", style={"fontSize": "12px", "backgroundColor": "rgba(45, 150, 199, 0.15)", "border": "1px solid #2D96C7", "color": "#e4e6eb"}),
+        
+        # Season Notice - Lineup data only available for 2024-25
+        dbc.Alert([
+            html.Strong("⚠️ Note: "),
+            "Lineup chemistry data is only available for the 2024-25 season. ",
+            "No duo/trio performance data exists yet for the 2025-26 season."
+        ], color="warning", className="mb-4 py-2", style={"fontSize": "12px", "backgroundColor": "rgba(255, 209, 102, 0.15)", "border": "1px solid #ffd166", "color": "#ffd166"}),
         
         # Tabbed view for Best/Worst
         dbc.Tabs([

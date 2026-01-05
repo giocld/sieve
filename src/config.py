@@ -9,15 +9,15 @@ from datetime import datetime
 def get_current_season():
     """
     Returns the current NBA season string (e.g., '2024-25').
-    
+
     Logic:
     - NBA season typically starts in October
     - If current month is Oct-Dec, season started this year
     - If current month is Jan-Sep, season started last year
-    
+
     Examples:
     - November 2024 -> '2024-25'
-    - February 2025 -> '2024-25'  
+    - February 2025 -> '2024-25'
     - October 2025 -> '2025-26'
     """
     now = datetime.now()
@@ -41,7 +41,7 @@ def get_season_display():
 def get_season_years():
     """
     Returns tuple of (start_year, end_year) for current season.
-    
+
     Example: For '2024-25' returns (2024, 2025)
     """
     season = get_current_season()
@@ -83,7 +83,7 @@ CONTRACTS_FILE = f'{DATA_DIR}/basketball_reference_contracts.csv'
 # Team abbreviation normalization
 ABBR_NORMALIZATION = {
     'PHO': 'PHX',
-    'CHO': 'CHA', 
+    'CHO': 'CHA',
     'BRK': 'BKN',
     'NOH': 'NOP',
     'TOT': 'UNK'  # "Total" for multi-team players

@@ -1,0 +1,244 @@
+/**
+ * Overview Page - Clean trading dashboard style
+ */
+
+import { Link } from 'react-router-dom';
+import { useOverview, useTeams } from '../hooks/useApi';
+import { PageHeader } from '../components';
+import { PageLoading, ErrorDisplay } from '../components/Loading';
+import type { OverviewPlayer } from '../lib/api';
+
+interface OverviewProps {
+  season: string;
+}
+
+export function Overview({ season }: OverviewProps) {
+  const { data: overview, isLoading, error } = useOverview(season);
+  const { data: teamsData } = useTeams(season);
+
+  if (isLoading) return <PageLoading />;
+  if (error) return <ErrorDisplay message={error.message} />;
+  if (!overview) return <ErrorDisplay message="No data available" />;
+
+  const topTeams = teamsData?.teams
+    .sort((a, b) => b.Efficiency_Index - a.Efficiency_Index)
+    .slice(0, 5) || [];
+
+  return (
+    <div className="w-full space-y-6">
+      <PageHeader
+        title="Overview"
+        subtitle="NBA Player Value & Efficiency Analysis Platform"
+      />
+
+      {/* Top Stats Bar */}
+      <div className="flex flex-wrap items-center gap-x-8 gap-y-2 py-3 border-b border-[#2a2a2a]">
+        <StatItem label="Players" value={overview.num_players} />
+        <StatItem label="Teams" value={overview.num_teams} />
+        <StatItem label="Avg Salary" value={`$${overview.avg_salary_millions.toFixed(1)}M`} color="text-blue" />
+        <StatItem 
+          label="Avg LEBRON" 
+          value={overview.avg_lebron >= 0 ? `+${overview.avg_lebron.toFixed(2)}` : overview.avg_lebron.toFixed(2)}
+          color={overview.avg_lebron >= 0 ? 'text-green' : 'text-red'}
+        />
+        <StatItem label="League Payroll" value={`$${overview.total_payroll_billions.toFixed(1)}B`} color="text-blue" />
+        <StatItem label="Most Efficient" value={overview.most_efficient_team || 'N/A'} color="text-green" />
+      </div>
+
+      {/* Navigation Cards - symmetric 4 column */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <NavCard to="/players" title="Player Analysis" desc="Explore player value, contracts, and performance metrics" />
+        <NavCard to="/teams" title="Team Efficiency" desc="Compare team spending vs performance across the league" />
+        <NavCard to="/lineups" title="Lineup Chemistry" desc="Discover best and worst performing lineup combinations" />
+        <NavCard to="/similarity" title="Similarity Engine" desc="Find historical player comparisons and replacements" />
+      </div>
+
+      {/* Player Lists - symmetric 3 column */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <PlayerList 
+          title="Best Value Players" 
+          badge="Underpaid" 
+          badgeClass="badge-green"
+          players={overview.top_value_players || []} 
+          type="value"
+        />
+        <PlayerList 
+          title="Top Performers" 
+          badge="LEBRON" 
+          badgeClass="badge-blue"
+          players={overview.top_performers || []} 
+          type="lebron"
+        />
+        <PlayerList 
+          title="Worst Value Players" 
+          badge="Overpaid" 
+          badgeClass="badge-red"
+          players={overview.worst_value_players || []} 
+          type="overpaid"
+        />
+      </div>
+
+      {/* Bottom Row - symmetric 2 column */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Team Leaderboard */}
+        <div className="panel">
+          <div className="panel-header">Team Efficiency Leaders</div>
+          <div className="panel-body p-0">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th className="w-10">#</th>
+                  <th>Team</th>
+                  <th className="text-center">Record</th>
+                  <th className="text-right">Index</th>
+                </tr>
+              </thead>
+              <tbody>
+                {topTeams.map((team, i) => (
+                  <tr key={team.Abbrev}>
+                    <td className="text-[#666]">{i + 1}</td>
+                    <td>
+                      <div className="flex items-center gap-2">
+                        {team.Logo_URL && <img src={team.Logo_URL} alt="" className="w-5 h-5 object-contain" />}
+                        <span className="font-sans text-[#e5e5e5]">{team.Abbrev}</span>
+                      </div>
+                    </td>
+                    <td className="text-center text-[#999]">{team.WINS}W-{team.LOSSES}L</td>
+                    <td className="text-right text-green">{team.Efficiency_Index?.toFixed(1)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <div className="px-4 py-3 border-t border-[#2a2a2a]">
+              <Link to="/teams" className="text-xs text-[#666] hover:text-[#3b82f6]">View all teams</Link>
+            </div>
+          </div>
+        </div>
+
+        {/* Metrics Explained */}
+        <div className="panel">
+          <div className="panel-header">Key Metrics</div>
+          <div className="panel-body space-y-4">
+            <MetricInfo 
+              name="LEBRON" 
+              range="-3 to +6"
+              desc="Luck-adjusted Estimate of Box-score and Real On-court Network. Measures overall player impact per game."
+            />
+            <MetricInfo 
+              name="Value Gap" 
+              range="-100 to +100"
+              desc="Difference between normalized impact and salary. Positive = underpaid, negative = overpaid."
+            />
+            <MetricInfo 
+              name="Efficiency Index" 
+              range="0 to 5+"
+              desc="Team wins relative to payroll spending. Higher values = better value for money."
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Stat item for top bar
+function StatItem({ label, value, color = 'text-[#e5e5e5]' }: { label: string; value: string | number; color?: string }) {
+  return (
+    <div className="stat-inline">
+      <span className="label">{label}</span>
+      <span className={`value ${color}`}>{value}</span>
+    </div>
+  );
+}
+
+// Nav card
+function NavCard({ to, title, desc }: { to: string; title: string; desc: string }) {
+  return (
+    <Link to={to} className="panel p-4 hover:border-[#333] transition-colors">
+      <h3 className="font-medium text-[#e5e5e5] mb-1">{title}</h3>
+      <p className="text-xs text-[#666] leading-relaxed">{desc}</p>
+    </Link>
+  );
+}
+
+// Player list panel
+function PlayerList({ 
+  title, 
+  badge, 
+  badgeClass, 
+  players, 
+  type 
+}: { 
+  title: string; 
+  badge: string; 
+  badgeClass: string;
+  players: OverviewPlayer[]; 
+  type: 'value' | 'lebron' | 'overpaid';
+}) {
+  return (
+    <div className="panel flex flex-col">
+      <div className="panel-header flex items-center justify-between">
+        <span>{title}</span>
+        <span className={`badge ${badgeClass}`}>{badge}</span>
+      </div>
+      <div className="panel-body p-0 flex-1">
+        <table className="data-table">
+          <thead>
+            <tr>
+              <th className="w-8">#</th>
+              <th>Player</th>
+              <th className="text-right">{type === 'lebron' ? 'Score' : 'Value'}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {players.map((p, i) => {
+              const val = type === 'lebron' 
+                ? `+${p.lebron.toFixed(2)}`
+                : (p.value_gap >= 0 ? '+' : '') + p.value_gap.toFixed(1);
+              const valColor = type === 'overpaid' ? 'text-red' : type === 'lebron' ? 'text-blue' : 'text-green';
+              
+              return (
+                <tr key={p.name}>
+                  <td className="text-[#666]">{i + 1}</td>
+                  <td>
+                    <div className="flex items-center gap-2">
+                      {p.player_id && (
+                        <img
+                          src={`https://cdn.nba.com/headshots/nba/latest/260x190/${p.player_id}.png`}
+                          alt=""
+                          className="w-8 h-8 rounded-full object-cover bg-[#1a1a1a] shrink-0"
+                          onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                        />
+                      )}
+                      <div className="min-w-0">
+                        <div className="font-sans text-[#e5e5e5] truncate">{p.name}</div>
+                        <div className="text-[10px] text-[#666]">{p.team} - ${p.salary.toFixed(1)}M</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td className={`text-right ${valColor}`}>{val}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+        <div className="px-4 py-3 border-t border-[#2a2a2a] mt-auto">
+          <Link to="/players" className="text-xs text-[#666] hover:text-[#3b82f6]">View all players</Link>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Metric info
+function MetricInfo({ name, range, desc }: { name: string; range: string; desc: string }) {
+  return (
+    <div className="border-b border-[#2a2a2a] pb-4 last:border-b-0 last:pb-0">
+      <div className="flex items-center justify-between mb-1">
+        <span className="font-medium text-[#3b82f6]">{name}</span>
+        <span className="font-mono text-xs text-[#666]">{range}</span>
+      </div>
+      <p className="text-xs text-[#999] leading-relaxed">{desc}</p>
+    </div>
+  );
+}

@@ -448,6 +448,12 @@ def calculate_player_value_metrics(df, season=None):
             
             # Calculate the Gap
             df['value_gap'] = df['impact_norm']*1.4 - df['salary_norm']*0.9 - 10
+            
+            # Reduce value_gap  for league minimum players (asterisk in name)
+            # These players always look like great value due to low cost, so we discount it
+            if 'player_name' in df.columns:
+                league_min_mask = df['player_name'].str.endswith('*', na=False)
+                df.loc[league_min_mask, 'value_gap'] = df.loc[league_min_mask, 'value_gap'] * 0.9
         else:
             df['value_gap'] = 0
     else:
@@ -554,11 +560,42 @@ def calculate_team_metrics(df_players, season='2024-25'):
         df_teams = pd.merge(df_teams, payroll_by_team, on='Abbrev', how='left')
         df_teams['Total_Payroll'] = df_teams['Total_Payroll'].fillna(0)
     
-    # 4. Merge with Standings (Wins/Losses)
+    # 4. merge with standings (wins/losses and conference)
     if not df_standings.empty:
-        df_teams = pd.merge(df_teams, df_standings[['Abbrev', 'WINS', 'LOSSES']], on='Abbrev', how='left')
+        # merge standings data (wins, losses, conference)
+        standings_cols = ['Abbrev', 'WINS', 'LOSSES']
+        if 'Conference' in df_standings.columns:
+            standings_cols.append('Conference')
+        df_teams = pd.merge(df_teams, df_standings[standings_cols], on='Abbrev', how='left')
+        
+        # calculate conference rankings
+        if 'Conference' in df_teams.columns and 'WINS' in df_teams.columns:
+            df_teams['ConferenceRank'] = df_teams.groupby('Conference')['WINS'].rank(
+                ascending=False, method='min'
+            ).astype(int)
     
-    # Filter out invalid teams or teams with missing data
+    # 4b. merge advanced stats (ppg, ratings, ast, reb, etc.)
+    df_advanced = fetch_nba_advanced_stats(season=season)
+    if not df_advanced.empty:
+        # map team abbreviations to full names for merging
+        abbr_to_name = {v: k for k, v in TEAM_ABBR_MAP.items()}
+        abbr_to_name.update({
+            'PHX': 'Phoenix Suns', 'BKN': 'Brooklyn Nets',
+            'CHA': 'Charlotte Hornets', 'NOP': 'New Orleans Pelicans', 'UTA': 'Utah Jazz'
+        })
+        
+        # create abbrev column in advanced stats
+        df_advanced['Abbrev'] = df_advanced['TEAM_NAME'].map({v: k for k, v in abbr_to_name.items()})
+        
+        # select stats to merge: ppg, ratings, assists, rebounds, fg%, net rating, ts%, pace
+        stat_cols = ['Abbrev', 'PTS', 'OFF_RATING', 'DEF_RATING', 'NET_RATING', 'AST', 'REB', 'FG_PCT', 'TS_PCT', 'PACE']
+        available_cols = [col for col in stat_cols if col in df_advanced.columns]
+        
+        if available_cols:
+            df_teams = pd.merge(df_teams, df_advanced[available_cols], on='Abbrev', how='left')
+            print(f"[Team Metrics] Merged {len(available_cols)-1} advanced stats from NBA API")
+    
+    # filter out invalid teams or teams with missing data
     df_teams = df_teams[
         (df_teams['Total_Payroll'] > 0) & 
         (df_teams['Abbrev'] != 'UNK') & 
@@ -1807,7 +1844,7 @@ def fetch_lineup_data(team_abbr=None, group_quantity=2, min_minutes=50,
                 return pd.DataFrame()
 
 
-def get_best_lineups(team_abbr=None, group_quantity=2, min_minutes=50, top_n=15, sort_by='PLUS_MINUS'):
+def get_best_lineups(team_abbr=None, group_quantity=2, min_minutes=50, top_n=15, sort_by='PLUS_MINUS', season='2024-25'):
     """
     Gets the best performing lineups (duos/trios) sorted by a given metric.
     
@@ -1817,11 +1854,12 @@ def get_best_lineups(team_abbr=None, group_quantity=2, min_minutes=50, top_n=15,
         min_minutes (int): Minimum TOTAL minutes played together.
         top_n (int): Number of top lineups to return.
         sort_by (str): Metric to sort by ('PLUS_MINUS', 'W_PCT', 'PTS').
+        season (str): NBA season (default '2024-25').
         
     Returns:
         pd.DataFrame: Top N lineups with key metrics.
     """
-    df = fetch_lineup_data(team_abbr=team_abbr, group_quantity=group_quantity, min_minutes=min_minutes)
+    df = fetch_lineup_data(team_abbr=team_abbr, group_quantity=group_quantity, min_minutes=min_minutes, season=season)
     
     if df.empty:
         return pd.DataFrame()
@@ -1848,7 +1886,7 @@ def get_best_lineups(team_abbr=None, group_quantity=2, min_minutes=50, top_n=15,
     return df_filtered.head(top_n)
 
 
-def get_worst_lineups(team_abbr=None, group_quantity=2, min_minutes=50, top_n=15, sort_by='PLUS_MINUS'):
+def get_worst_lineups(team_abbr=None, group_quantity=2, min_minutes=50, top_n=15, sort_by='PLUS_MINUS', season='2024-25'):
     """
     Gets the worst performing lineups (duos/trios) sorted by a given metric.
     
@@ -1858,11 +1896,12 @@ def get_worst_lineups(team_abbr=None, group_quantity=2, min_minutes=50, top_n=15
         min_minutes (int): Minimum TOTAL minutes played together.
         top_n (int): Number of worst lineups to return.
         sort_by (str): Metric to sort by ('PLUS_MINUS', 'W_PCT', 'PTS').
+        season (str): NBA season (default '2024-25').
         
     Returns:
         pd.DataFrame: Bottom N lineups with key metrics.
     """
-    df = fetch_lineup_data(team_abbr=team_abbr, group_quantity=group_quantity, min_minutes=min_minutes)
+    df = fetch_lineup_data(team_abbr=team_abbr, group_quantity=group_quantity, min_minutes=min_minutes, season=season)
     
     if df.empty:
         return pd.DataFrame()
