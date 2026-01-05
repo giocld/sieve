@@ -29,33 +29,42 @@ interface PlayersProps {
 
 export function Players({ season }: PlayersProps) {
   const [minLebron, setMinLebron] = useState(-5);
+  const [maxLebron, setMaxLebron] = useState(10);
   const [minSalary, setMinSalary] = useState(0);
   const [maxSalary, setMaxSalary] = useState(60);
   const [searchQuery, setSearchQuery] = useState('');
+
+  // all players for search (no filters)
+  const { data: allPlayersData } = usePlayers({ season });
 
   // filtered data for charts and value tables
   const { data: playersData, isLoading, error } = usePlayers({
     season,
     min_lebron: minLebron,
+    max_lebron: maxLebron,
     min_salary: minSalary,
     max_salary: maxSalary,
   });
 
-  // all players for search (no filters)
-  const { data: allPlayersData } = usePlayers({ season });
 
-  const { data: scatterChart, isLoading: scatterLoading } = useSalaryImpactChart(season, minLebron, minSalary, maxSalary);
-  const { data: underpaidChart, isLoading: underpaidLoading } = useUnderpaidChart(season, minLebron, minSalary, maxSalary);
-  const { data: overpaidChart, isLoading: overpaidLoading } = useOverpaidChart(season, minLebron, minSalary, maxSalary);
-  const { data: beeswarmChart, isLoading: beeswarmLoading } = useBeeswarmChart(season, minLebron, minSalary, maxSalary);
+  const { data: scatterChart, isLoading: scatterLoading } = useSalaryImpactChart(season, minLebron, maxLebron, minSalary, maxSalary);
+  const { data: underpaidChart, isLoading: underpaidLoading } = useUnderpaidChart(season, minLebron, maxLebron, minSalary, maxSalary);
+  const { data: overpaidChart, isLoading: overpaidLoading } = useOverpaidChart(season, minLebron, maxLebron, minSalary, maxSalary);
+  const { data: beeswarmChart, isLoading: beeswarmLoading } = useBeeswarmChart(season, minLebron, maxLebron, minSalary, maxSalary);
 
-  // search filters all players, not just the filtered subset
+  // search filters all players by name only, ignoring other filters
   const displayedPlayers = useMemo(() => {
-    const source = searchQuery.trim() ? allPlayersData?.players : playersData?.players;
-    if (!source) return [];
-    if (!searchQuery.trim()) return source;
-    const q = searchQuery.toLowerCase();
-    return source.filter((p) => p.player_name?.toLowerCase().includes(q));
+    if (searchQuery.trim()) {
+      // when searching, use all players and filter by name only
+      if (!allPlayersData?.players) return [];
+      const q = searchQuery.trim().toLowerCase();
+      return allPlayersData.players.filter((p) => {
+        const name = (p.player_name || '').toLowerCase();
+        return name.includes(q);
+      });
+    }
+    // when not searching, use filtered players
+    return playersData?.players || [];
   }, [playersData?.players, allPlayersData?.players, searchQuery]);
 
   const { underpaid, overpaid } = useMemo(() => {
@@ -101,8 +110,9 @@ export function Players({ season }: PlayersProps) {
       {/* Filters */}
       <Panel>
         <PanelBody>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <Slider label="Min LEBRON" value={minLebron} min={-5} max={5} step={0.5} onChange={setMinLebron} formatValue={(v) => (v >= 0 ? `+${v.toFixed(1)}` : v.toFixed(1))} />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <Slider label="Min LEBRON" value={minLebron} min={-5} max={maxLebron - 0.5} step={0.5} onChange={setMinLebron} formatValue={(v) => (v >= 0 ? `+${v.toFixed(1)}` : v.toFixed(1))} />
+            <Slider label="Max LEBRON" value={maxLebron} min={minLebron + 0.5} max={10} step={0.5} onChange={setMaxLebron} formatValue={(v) => (v >= 0 ? `+${v.toFixed(1)}` : v.toFixed(1))} />
             <Slider label="Min Salary" value={minSalary} min={0} max={maxSalary - 1} step={1} onChange={setMinSalary} formatValue={(v) => `$${v}M`} />
             <Slider label="Max Salary" value={maxSalary} min={minSalary + 1} max={60} step={1} onChange={setMaxSalary} formatValue={(v) => `$${v}M`} />
           </div>
@@ -133,7 +143,7 @@ export function Players({ season }: PlayersProps) {
         data={displayedPlayers}
         columns={columns}
         maxHeight="500px"
-        rowKey="PLAYER_ID"
+        rowKey={(row) => row.PLAYER_ID ? String(row.PLAYER_ID) : row.player_name || 'unknown'}
         headerRight={
           <div className="w-64">
             <Input

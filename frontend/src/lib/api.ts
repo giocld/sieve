@@ -58,6 +58,7 @@ export interface SeasonResponse {
 export interface PlayerFilters {
   season?: string;
   min_lebron?: number;
+  max_lebron?: number;
   min_salary?: number;
   max_salary?: number;
   search?: string;
@@ -122,6 +123,7 @@ export async function getPlayers(filters: PlayerFilters = {}): Promise<{ players
   const params = new URLSearchParams();
   if (filters.season) params.set('season', filters.season);
   if (filters.min_lebron !== undefined) params.set('min_lebron', String(filters.min_lebron));
+  if (filters.max_lebron !== undefined) params.set('max_lebron', String(filters.max_lebron));
   if (filters.min_salary !== undefined) params.set('min_salary', String(filters.min_salary));
   if (filters.max_salary !== undefined) params.set('max_salary', String(filters.max_salary));
   if (filters.search) params.set('search', filters.search);
@@ -145,10 +147,11 @@ export async function getTeamGridChart(season: string): Promise<string> {
   return response.text();
 }
 
-export async function getSalaryImpactChart(season: string, minLebron: number, minSalary: number, maxSalary: number): Promise<string> {
+export async function getSalaryImpactChart(season: string, minLebron: number, maxLebron: number, minSalary: number, maxSalary: number): Promise<string> {
   const params = new URLSearchParams({
     season,
     min_lebron: String(minLebron),
+    max_lebron: String(maxLebron),
     min_salary: String(minSalary),
     max_salary: String(maxSalary),
   });
@@ -156,10 +159,11 @@ export async function getSalaryImpactChart(season: string, minLebron: number, mi
   return response.text();
 }
 
-export async function getUnderpaidChart(season: string, minLebron: number, minSalary: number, maxSalary: number): Promise<string> {
+export async function getUnderpaidChart(season: string, minLebron: number, maxLebron: number, minSalary: number, maxSalary: number): Promise<string> {
   const params = new URLSearchParams({
     season,
     min_lebron: String(minLebron),
+    max_lebron: String(maxLebron),
     min_salary: String(minSalary),
     max_salary: String(maxSalary),
   });
@@ -167,10 +171,11 @@ export async function getUnderpaidChart(season: string, minLebron: number, minSa
   return response.text();
 }
 
-export async function getOverpaidChart(season: string, minLebron: number, minSalary: number, maxSalary: number): Promise<string> {
+export async function getOverpaidChart(season: string, minLebron: number, maxLebron: number, minSalary: number, maxSalary: number): Promise<string> {
   const params = new URLSearchParams({
     season,
     min_lebron: String(minLebron),
+    max_lebron: String(maxLebron),
     min_salary: String(minSalary),
     max_salary: String(maxSalary),
   });
@@ -178,10 +183,11 @@ export async function getOverpaidChart(season: string, minLebron: number, minSal
   return response.text();
 }
 
-export async function getBeeswarmChart(season: string, minLebron: number, minSalary: number, maxSalary: number): Promise<string> {
+export async function getBeeswarmChart(season: string, minLebron: number, maxLebron: number, minSalary: number, maxSalary: number): Promise<string> {
   const params = new URLSearchParams({
     season,
     min_lebron: String(minLebron),
+    max_lebron: String(maxLebron),
     min_salary: String(minSalary),
     max_salary: String(maxSalary),
   });

@@ -14,20 +14,20 @@ export const queryKeys = {
   overview: (season: string) => ['overview', season] as const,
   players: (filters: api.PlayerFilters) => ['players', filters] as const,
   teams: (season: string) => ['teams', season] as const,
-  
+
   // Charts
   quadrantChart: (season: string) => ['chart', 'quadrant', season] as const,
   teamGridChart: (season: string) => ['chart', 'team-grid', season] as const,
-  salaryImpactChart: (season: string, filters: { minLebron: number; minSalary: number; maxSalary: number }) => 
+  salaryImpactChart: (season: string, filters: { minLebron: number; maxLebron: number; minSalary: number; maxSalary: number }) =>
     ['chart', 'salary-impact', season, filters] as const,
-  underpaidChart: (season: string, filters: { minLebron: number; minSalary: number; maxSalary: number }) => 
+  underpaidChart: (season: string, filters: { minLebron: number; maxLebron: number; minSalary: number; maxSalary: number }) =>
     ['chart', 'underpaid', season, filters] as const,
-  overpaidChart: (season: string, filters: { minLebron: number; minSalary: number; maxSalary: number }) => 
+  overpaidChart: (season: string, filters: { minLebron: number; maxLebron: number; minSalary: number; maxSalary: number }) =>
     ['chart', 'overpaid', season, filters] as const,
-  beeswarmChart: (season: string, filters: { minLebron: number; minSalary: number; maxSalary: number }) => 
+  beeswarmChart: (season: string, filters: { minLebron: number; maxLebron: number; minSalary: number; maxSalary: number }) =>
     ['chart', 'beeswarm', season, filters] as const,
   teamRadarChart: (team1: string, team2: string) => ['chart', 'team-radar', team1, team2] as const,
-  
+
   // Lineups
   lineupTeams: ['lineup-teams'] as const,
   bestLineups: (filters: api.LineupFilters) => ['lineups', 'best', filters] as const,
@@ -35,13 +35,13 @@ export const queryKeys = {
   bestLineupsChart: (filters: api.LineupFilters) => ['chart', 'lineups', 'best', filters] as const,
   worstLineupsChart: (filters: api.LineupFilters) => ['chart', 'lineups', 'worst', filters] as const,
   lineupsScatterChart: (filters: api.LineupFilters) => ['chart', 'lineups', 'scatter', filters] as const,
-  
+
   // Similarity
   similarityPlayers: ['similarity', 'players'] as const,
   playerSeasons: (player: string) => ['similarity', 'seasons', player] as const,
-  similarPlayers: (player: string, season: string, excludeSelf: boolean) => 
+  similarPlayers: (player: string, season: string, excludeSelf: boolean) =>
     ['similarity', 'find', player, season, excludeSelf] as const,
-  
+
   // Diamond Finder
   diamondFinderPlayers: (season: string) => ['diamond-finder', 'players', season] as const,
   diamondReplacements: (player: string, season: string) => ['diamond-finder', 'find', player, season] as const,
@@ -100,34 +100,34 @@ export function useTeamGridChart(season: string) {
   });
 }
 
-export function useSalaryImpactChart(season: string, minLebron: number, minSalary: number, maxSalary: number) {
+export function useSalaryImpactChart(season: string, minLebron: number, maxLebron: number, minSalary: number, maxSalary: number) {
   return useQuery({
-    queryKey: queryKeys.salaryImpactChart(season, { minLebron, minSalary, maxSalary }),
-    queryFn: () => api.getSalaryImpactChart(season, minLebron, minSalary, maxSalary),
+    queryKey: queryKeys.salaryImpactChart(season, { minLebron, maxLebron, minSalary, maxSalary }),
+    queryFn: () => api.getSalaryImpactChart(season, minLebron, maxLebron, minSalary, maxSalary),
     enabled: !!season,
   });
 }
 
-export function useUnderpaidChart(season: string, minLebron: number, minSalary: number, maxSalary: number) {
+export function useUnderpaidChart(season: string, minLebron: number, maxLebron: number, minSalary: number, maxSalary: number) {
   return useQuery({
-    queryKey: queryKeys.underpaidChart(season, { minLebron, minSalary, maxSalary }),
-    queryFn: () => api.getUnderpaidChart(season, minLebron, minSalary, maxSalary),
+    queryKey: queryKeys.underpaidChart(season, { minLebron, maxLebron, minSalary, maxSalary }),
+    queryFn: () => api.getUnderpaidChart(season, minLebron, maxLebron, minSalary, maxSalary),
     enabled: !!season,
   });
 }
 
-export function useOverpaidChart(season: string, minLebron: number, minSalary: number, maxSalary: number) {
+export function useOverpaidChart(season: string, minLebron: number, maxLebron: number, minSalary: number, maxSalary: number) {
   return useQuery({
-    queryKey: queryKeys.overpaidChart(season, { minLebron, minSalary, maxSalary }),
-    queryFn: () => api.getOverpaidChart(season, minLebron, minSalary, maxSalary),
+    queryKey: queryKeys.overpaidChart(season, { minLebron, maxLebron, minSalary, maxSalary }),
+    queryFn: () => api.getOverpaidChart(season, minLebron, maxLebron, minSalary, maxSalary),
     enabled: !!season,
   });
 }
 
-export function useBeeswarmChart(season: string, minLebron: number, minSalary: number, maxSalary: number) {
+export function useBeeswarmChart(season: string, minLebron: number, maxLebron: number, minSalary: number, maxSalary: number) {
   return useQuery({
-    queryKey: queryKeys.beeswarmChart(season, { minLebron, minSalary, maxSalary }),
-    queryFn: () => api.getBeeswarmChart(season, minLebron, minSalary, maxSalary),
+    queryKey: queryKeys.beeswarmChart(season, { minLebron, maxLebron, minSalary, maxSalary }),
+    queryFn: () => api.getBeeswarmChart(season, minLebron, maxLebron, minSalary, maxSalary),
     enabled: !!season,
   });
 }

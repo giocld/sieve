@@ -256,6 +256,7 @@ def get_seasons():
 def get_players(
     season: str = Query(default=CURRENT_SEASON, description="NBA season (e.g., '2024-25')"),
     min_lebron: Optional[float] = Query(default=None, description="Minimum LEBRON score"),
+    max_lebron: Optional[float] = Query(default=None, description="Maximum LEBRON score"),
     min_salary: Optional[float] = Query(default=None, description="Minimum salary in millions"),
     max_salary: Optional[float] = Query(default=None, description="Maximum salary in millions"),
     search: Optional[str] = Query(default=None, description="Player name search")
@@ -269,6 +270,9 @@ def get_players(
     # Apply filters
     if min_lebron is not None:
         df = df[df['LEBRON'] >= min_lebron]
+
+    if max_lebron is not None:
+        df = df[df['LEBRON'] <= max_lebron]
 
     if min_salary is not None:
         df = df[df['current_year_salary'] >= min_salary * 1_000_000]
@@ -427,6 +431,7 @@ def get_team_grid_chart(season: str = Query(default=CURRENT_SEASON)):
 def get_salary_impact_chart(
     season: str = Query(default=CURRENT_SEASON),
     min_lebron: float = Query(default=-5.0),
+    max_lebron: float = Query(default=10.0),
     min_salary: float = Query(default=0),
     max_salary: float = Query(default=60)
 ):
@@ -439,6 +444,7 @@ def get_salary_impact_chart(
     # Filter
     filtered_df = df[
         (df['LEBRON'] >= min_lebron) &
+        (df['LEBRON'] <= max_lebron) &
         (df['current_year_salary'] >= min_salary * 1_000_000) &
         (df['current_year_salary'] <= max_salary * 1_000_000)
     ].copy()
@@ -465,6 +471,7 @@ def get_salary_impact_chart(
 def get_underpaid_chart(
     season: str = Query(default=CURRENT_SEASON),
     min_lebron: float = Query(default=-5.0),
+    max_lebron: float = Query(default=10.0),
     min_salary: float = Query(default=0),
     max_salary: float = Query(default=60)
 ):
@@ -476,6 +483,7 @@ def get_underpaid_chart(
 
     filtered_df = df[
         (df['LEBRON'] >= min_lebron) &
+        (df['LEBRON'] <= max_lebron) &
         (df['current_year_salary'] >= min_salary * 1_000_000) &
         (df['current_year_salary'] <= max_salary * 1_000_000)
     ].copy()
@@ -488,6 +496,7 @@ def get_underpaid_chart(
 def get_overpaid_chart(
     season: str = Query(default=CURRENT_SEASON),
     min_lebron: float = Query(default=-5.0),
+    max_lebron: float = Query(default=10.0),
     min_salary: float = Query(default=0),
     max_salary: float = Query(default=60)
 ):
@@ -499,6 +508,7 @@ def get_overpaid_chart(
 
     filtered_df = df[
         (df['LEBRON'] >= min_lebron) &
+        (df['LEBRON'] <= max_lebron) &
         (df['current_year_salary'] >= min_salary * 1_000_000) &
         (df['current_year_salary'] <= max_salary * 1_000_000)
     ].copy()
@@ -511,6 +521,7 @@ def get_overpaid_chart(
 def get_beeswarm_chart(
     season: str = Query(default=CURRENT_SEASON),
     min_lebron: float = Query(default=-5.0),
+    max_lebron: float = Query(default=10.0),
     min_salary: float = Query(default=0),
     max_salary: float = Query(default=60)
 ):
@@ -522,6 +533,7 @@ def get_beeswarm_chart(
 
     filtered_df = df[
         (df['LEBRON'] >= min_lebron) &
+        (df['LEBRON'] <= max_lebron) &
         (df['current_year_salary'] >= min_salary * 1_000_000) &
         (df['current_year_salary'] <= max_salary * 1_000_000)
     ].copy()

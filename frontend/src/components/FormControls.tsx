@@ -49,7 +49,7 @@ export function Input({ label, error, leftIcon, rightIcon, className = '', ...pr
         {leftIcon && <div className="absolute left-3 top-1/2 -translate-y-1/2 text-[#666]">{leftIcon}</div>}
         <input
           {...props}
-          className={`w-full bg-[#141414] border border-[#2a2a2a] rounded py-2 ${leftIcon ? 'pl-10' : 'px-3'} ${rightIcon ? 'pr-10' : 'px-3'} text-sm text-[#e5e5e5] placeholder:text-[#444] focus:outline-none focus:border-[#3b82f6] disabled:opacity-50 ${error ? 'border-[#ef4444]' : ''} ${className}`}
+          className={`w-full bg-[#141414] border border-[#2a2a2a] rounded py-2 ${leftIcon ? 'pl-11 pr-3' : rightIcon ? 'pl-3 pr-10' : 'px-3'} text-sm text-[#e5e5e5] placeholder:text-[#444] focus:outline-none focus:border-[#3b82f6] disabled:opacity-50 ${error ? 'border-[#ef4444]' : ''} ${className}`}
         />
         {rightIcon && <div className="absolute right-3 top-1/2 -translate-y-1/2 text-[#666]">{rightIcon}</div>}
       </div>
