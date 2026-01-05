@@ -125,7 +125,7 @@ export async function getPlayers(filters: PlayerFilters = {}): Promise<{ players
   if (filters.min_salary !== undefined) params.set('min_salary', String(filters.min_salary));
   if (filters.max_salary !== undefined) params.set('max_salary', String(filters.max_salary));
   if (filters.search) params.set('search', filters.search);
-  
+
   return fetchJson(`${API_BASE}/players?${params}`);
 }
 
@@ -205,7 +205,7 @@ export async function getBestLineups(filters: LineupFilters): Promise<{ lineups:
   if (filters.size) params.set('size', String(filters.size));
   if (filters.min_minutes) params.set('min_minutes', String(filters.min_minutes));
   if (filters.limit) params.set('limit', String(filters.limit));
-  
+
   return fetchJson(`${API_BASE}/lineups/best?${params}`);
 }
 
@@ -215,7 +215,7 @@ export async function getWorstLineups(filters: LineupFilters): Promise<{ lineups
   if (filters.size) params.set('size', String(filters.size));
   if (filters.min_minutes) params.set('min_minutes', String(filters.min_minutes));
   if (filters.limit) params.set('limit', String(filters.limit));
-  
+
   return fetchJson(`${API_BASE}/lineups/worst?${params}`);
 }
 
@@ -224,7 +224,7 @@ export async function getBestLineupsChart(filters: LineupFilters): Promise<strin
   if (filters.team) params.set('team', filters.team);
   if (filters.size) params.set('size', String(filters.size));
   if (filters.min_minutes) params.set('min_minutes', String(filters.min_minutes));
-  
+
   const response = await fetch(`${API_BASE}/charts/lineups/best?${params}`);
   return response.text();
 }
@@ -234,7 +234,7 @@ export async function getWorstLineupsChart(filters: LineupFilters): Promise<stri
   if (filters.team) params.set('team', filters.team);
   if (filters.size) params.set('size', String(filters.size));
   if (filters.min_minutes) params.set('min_minutes', String(filters.min_minutes));
-  
+
   const response = await fetch(`${API_BASE}/charts/lineups/worst?${params}`);
   return response.text();
 }
@@ -244,7 +244,7 @@ export async function getLineupsScatterChart(filters: LineupFilters): Promise<st
   if (filters.team) params.set('team', filters.team);
   if (filters.size) params.set('size', String(filters.size));
   if (filters.min_minutes) params.set('min_minutes', String(filters.min_minutes));
-  
+
   const response = await fetch(`${API_BASE}/charts/lineups/scatter?${params}`);
   return response.text();
 }

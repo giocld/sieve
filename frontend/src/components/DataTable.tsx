@@ -26,13 +26,14 @@ interface DataTableProps<T> {
   onRowClick?: (row: T) => void;
   rowKey?: keyof T | ((row: T) => string);
   defaultSort?: { key: string; direction: 'asc' | 'desc' };
+  headerRight?: React.ReactNode;
 }
 
 type SortDirection = 'asc' | 'desc' | null;
 
 function formatValue(value: unknown, format?: string): string {
   if (value === null || value === undefined) return '-';
-  
+
   switch (format) {
     case 'currency':
       return `$${(Number(value) / 1_000_000).toFixed(1)}M`;
@@ -68,15 +69,16 @@ export function DataTable<T extends Record<string, unknown>>({
   onRowClick,
   rowKey,
   defaultSort,
+  headerRight,
 }: DataTableProps<T>) {
   const [sortKey, setSortKey] = useState<string | null>(defaultSort?.key ?? null);
   const [sortDirection, setSortDirection] = useState<SortDirection>(defaultSort?.direction ?? null);
 
   const handleSort = (col: Column<T>) => {
     if (col.sortable === false) return;
-    
+
     const key = col.sortKey || String(col.key);
-    
+
     if (sortKey === key) {
       if (sortDirection === 'asc') {
         setSortDirection('desc');
@@ -92,22 +94,22 @@ export function DataTable<T extends Record<string, unknown>>({
 
   const sortedData = useMemo(() => {
     if (!sortKey || !sortDirection) return data;
-    
+
     return [...data].sort((a, b) => {
       const aVal = getNestedValue(a, sortKey);
       const bVal = getNestedValue(b, sortKey);
-      
+
       if (aVal === null || aVal === undefined) return 1;
       if (bVal === null || bVal === undefined) return -1;
-      
+
       let cmp = 0;
-      
+
       if (typeof aVal === 'number' && typeof bVal === 'number') {
         cmp = aVal - bVal;
       } else {
         cmp = String(aVal).localeCompare(String(bVal), undefined, { numeric: true, sensitivity: 'base' });
       }
-      
+
       return sortDirection === 'desc' ? -cmp : cmp;
     });
   }, [data, sortKey, sortDirection]);
@@ -121,11 +123,11 @@ export function DataTable<T extends Record<string, unknown>>({
   const getSortIcon = (col: Column<T>) => {
     if (col.sortable === false) return null;
     const key = col.sortKey || String(col.key);
-    
+
     if (sortKey !== key) {
       return <span className="text-[#444] ml-1 opacity-0 group-hover:opacity-100 transition-opacity">&#x21C5;</span>;
     }
-    
+
     return (
       <span className="text-[#3b82f6] ml-1">
         {sortDirection === 'asc' ? '\u2191' : '\u2193'}
@@ -135,10 +137,13 @@ export function DataTable<T extends Record<string, unknown>>({
 
   return (
     <div className={`panel overflow-hidden ${className}`}>
-      {(title || subtitle) && (
-        <div className="panel-header">
-          {title && <span>{title}</span>}
-          {subtitle && <span className="ml-2 text-[#666] font-normal">{subtitle}</span>}
+      {(title || subtitle || headerRight) && (
+        <div className="panel-header flex items-center justify-between">
+          <div>
+            {title && <span>{title}</span>}
+            {subtitle && <span className="ml-2 text-[#666] font-normal">{subtitle}</span>}
+          </div>
+          {headerRight}
         </div>
       )}
 
