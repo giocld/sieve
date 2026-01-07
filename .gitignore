@@ -9,16 +9,20 @@ venv/
 env/
 ENV/
 
+#run_dev.sh
 # IDE
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
+.cursor/
+.cursorrules
+.github
 
 # OS
 .DS_Store
 Thumbs.db
 
 # Data caches (optional - uncomment if you want to ignore cache files)
-# data/*_cache.csv
+data/cache/*

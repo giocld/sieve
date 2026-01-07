@@ -9,15 +9,15 @@ from datetime import datetime
 def get_current_season():
     """
     Returns the current NBA season string (e.g., '2024-25').
-    
+
     Logic:
     - NBA season typically starts in October
     - If current month is Oct-Dec, season started this year
     - If current month is Jan-Sep, season started last year
-    
+
     Examples:
     - November 2024 -> '2024-25'
-    - February 2025 -> '2024-25'  
+    - February 2025 -> '2024-25'
     - October 2025 -> '2025-26'
     """
     now = datetime.now()
@@ -41,7 +41,7 @@ def get_season_display():
 def get_season_years():
     """
     Returns tuple of (start_year, end_year) for current season.
-    
+
     Example: For '2024-25' returns (2024, 2025)
     """
     season = get_current_season()
@@ -65,14 +65,25 @@ NBA_API_RETRY_DELAY = 2  # seconds
 
 # File paths
 DATA_DIR = 'data'
-LEBRON_FILE = f'{DATA_DIR}/LEBRON.csv'
-CONTRACTS_FILE = f'{DATA_DIR}/basketball_reference_contracts.csv'
+
+# Primary data storage (Split SQLite databases)
+PLAYERS_DB = f'{DATA_DIR}/sieve_players.db'  # Player stats, contracts, analysis
+TEAMS_DB = f'{DATA_DIR}/sieve_teams.db'      # Team stats, standings, lineups
+
+# Legacy unified database (deprecated)
 CACHE_DB = f'{DATA_DIR}/sieve_cache.db'
+
+# External raw input files (CSVs kept for manual updates)
+LEBRON_FILE = f'{DATA_DIR}/LEBRON.csv'  # External: BBRef LEBRON metrics
+BBREF_RAW_FILE = f'{DATA_DIR}/bbref_contracts_raw.csv'  # External: Raw BBRef contracts
+
+# Legacy CSV path (deprecated - use DB via cache_manager)
+CONTRACTS_FILE = f'{DATA_DIR}/basketball_reference_contracts.csv'
 
 # Team abbreviation normalization
 ABBR_NORMALIZATION = {
     'PHO': 'PHX',
-    'CHO': 'CHA', 
+    'CHO': 'CHA',
     'BRK': 'BKN',
     'NOH': 'NOP',
     'TOT': 'UNK'  # "Total" for multi-team players

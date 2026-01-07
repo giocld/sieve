@@ -1,0 +1,35 @@
+# Render Blueprint for Sieve NBA Analytics
+# https://render.com/docs/blueprint-spec
+
+services:
+  # FastAPI Backend
+  - type: web
+    name: sieve-api
+    env: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn src.api:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+    autoDeploy: true
+
+  # React Frontend (Static Site)
+  - type: web
+    name: sieve-frontend
+    env: static
+    buildCommand: cd frontend && npm install && npm run build
+    staticPublishPath: frontend/dist
+    pullRequestPreviewsEnabled: true
+    headers:
+      - path: /*
+        name: Cache-Control
+        value: public, max-age=31536000
+    routes:
+      - type: rewrite
+        source: /api/*
+        destination: https://sieve-api.onrender.com/api/*
+      - type: rewrite
+        source: /*
+        destination: /index.html
