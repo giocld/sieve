@@ -138,25 +138,26 @@ def create_efficiency_quadrant(df_teams):
     df_teams['Eff_Rank_Str'] = df_teams['Eff_Rank'].apply(ordinal)
     
     fig_quadrant.add_trace(go.Scatter(
-        x=df_teams['Total_Payroll'],
-        y=df_teams['WINS'],
+        x=df_teams['Total_Payroll'].tolist(),
+        y=df_teams['WINS'].tolist(),
         mode='markers',
-        text=df_teams['Abbrev'],
-        customdata=np.stack((df_teams['Eff_Rank_Str'], df_teams['Efficiency_Index']), axis=-1),
+        text=df_teams['Abbrev'].tolist(),
+        customdata=list(zip(df_teams['Eff_Rank_Str'].tolist(), df_teams['Efficiency_Index'].tolist())),
         hovertemplate='<b>%{text}</b><br>Wins: %{y}<br>Payroll: $%{x:,.0f}<br>Eff Index: %{customdata[1]:.2f}<br>Rank: %{customdata[0]}<extra></extra>',
-        marker=dict(opacity=0) # Fully transparent markers
+        marker=dict(opacity=0)
     ))
 
-    # 3. Add Team Logos as Images
+    # 3. Add Team Logos as Images (using proxy URL to bypass CORS)
     logo_images = []
-    if 'Logo_URL' in df_teams.columns:
+    if 'TeamID' in df_teams.columns:
         for _, row in df_teams.iterrows():
-            if pd.notna(row['Logo_URL']):
+            if pd.notna(row['TeamID']):
+                proxy_url = f"http://localhost:8000/api/logo/{int(row['TeamID'])}"
                 logo_images.append(dict(
-                    source=row['Logo_URL'],
+                    source=proxy_url,
                     xref="x", yref="y",
                     x=row['Total_Payroll'], y=row['WINS'],
-                    sizex=8000000, sizey=2,  # Smaller logos for better visibility of gaps
+                    sizex=8000000, sizey=2,
                     xanchor="center", yanchor="middle",
                     layer="above"
                 ))
@@ -246,15 +247,15 @@ def create_team_grid(df_teams):
 
     # Add colored tiles (Heatmap-like effect using Scatter markers)
     fig_grid.add_trace(go.Scatter(
-        x=df_grid['grid_x'],
-        y=df_grid['grid_y'],
+        x=df_grid['grid_x'].tolist(),
+        y=df_grid['grid_y'].tolist(),
         mode='markers',
         marker=dict(
             symbol='square',
-            size=65,  # Large squares to form tiles
-            color=df_grid['Efficiency_Index'],
+            size=65,
+            color=df_grid['Efficiency_Index'].tolist(),
             colorscale='RdYlGn',
-            cmin=-3, cmax=3,  # Fixed scale for consistency with Quadrant chart
+            cmin=-3, cmax=3,
             colorbar=dict(
                 title='Efficiency',
                 tickmode='linear',
@@ -270,18 +271,19 @@ def create_team_grid(df_teams):
             line=dict(width=2, color='#1a2332'),
             opacity=0.9
         ),
-        text=df_grid['Abbrev'],
-        customdata=np.stack((df_grid['Efficiency_Index'], df_grid['Total_Payroll'], df_grid['WINS']), axis=-1),
+        text=df_grid['Abbrev'].tolist(),
+        customdata=list(zip(df_grid['Efficiency_Index'].tolist(), df_grid['Total_Payroll'].tolist(), df_grid['WINS'].tolist())),
         hovertemplate='<b>%{text}</b><br>Eff Index: %{customdata[0]:.2f}<br>Payroll: $%{customdata[1]:,.0f}<br>Wins: %{customdata[2]}<extra></extra>'
     ))
 
-    # Add Team Logos on top of the tiles
+    # Add Team Logos on top of the tiles (using proxy URL to bypass CORS)
     grid_images = []
-    if 'Logo_URL' in df_grid.columns:
+    if 'TeamID' in df_grid.columns:
         for _, row in df_grid.iterrows():
-            if pd.notna(row['Logo_URL']):
+            if pd.notna(row['TeamID']):
+                proxy_url = f"http://localhost:8000/api/logo/{int(row['TeamID'])}"
                 grid_images.append(dict(
-                    source=row['Logo_URL'],
+                    source=proxy_url,
                     xref="x", yref="y",
                     x=row['grid_x'], y=row['grid_y'],
                     sizex=0.5, sizey=0.5,

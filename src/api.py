@@ -240,6 +240,27 @@ def health_check():
     return {"status": "ok", "version": "1.0.0"}
 
 
+@app.get("/api/logo/{team_id}")
+def get_team_logo(team_id: int):
+    """Proxy endpoint to serve NBA team logos (bypasses CORS restrictions)."""
+    import requests
+    
+    url = f"https://cdn.nba.com/logos/nba/{team_id}/global/L/logo.svg"
+    try:
+        resp = requests.get(url, timeout=5)
+        if resp.status_code == 200:
+            return Response(
+                content=resp.content,
+                media_type="image/svg+xml",
+                headers={"Cache-Control": "public, max-age=86400"}
+            )
+    except Exception:
+        pass
+    
+    placeholder = '<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><circle cx="50" cy="50" r="40" fill="#333"/></svg>'
+    return Response(content=placeholder, media_type="image/svg+xml")
+
+
 @app.get("/api/seasons")
 def get_seasons():
     """Get list of available seasons."""
