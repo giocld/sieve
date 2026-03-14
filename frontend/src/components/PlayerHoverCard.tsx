@@ -42,30 +42,18 @@ interface PlayerHoverCardProps {
 
 export function PlayerHoverCard({ player, children, manualPosition, className = '' }: PlayerHoverCardProps) {
     const [isHovered, setIsHovered] = useState(false);
-    const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
 
     const showInline = !manualPosition && isHovered;
     const showPortal = !!manualPosition;
 
-    // Handle auto-closing if no manual position and mouse leaves
-    const handleMouseEnter = (e: React.MouseEvent) => {
+    const handleMouseEnter = () => {
         if (manualPosition) return;
         setIsHovered(true);
-        updatePosition(e);
-    };
-
-    const handleMouseMove = (e: React.MouseEvent) => {
-        if (manualPosition) return;
-        updatePosition(e);
     };
 
     const handleMouseLeave = () => {
         if (manualPosition) return;
         setIsHovered(false);
-    };
-
-    const updatePosition = (e: React.MouseEvent) => {
-        setMousePos({ x: e.clientX, y: e.clientY });
     };
 
     const renderCardInner = () => (
@@ -152,7 +140,6 @@ export function PlayerHoverCard({ player, children, manualPosition, className = 
             <div
                 className={`relative inline-block ${className}`}
                 onMouseEnter={handleMouseEnter}
-                onMouseMove={handleMouseMove}
                 onMouseLeave={handleMouseLeave}
             >
                 {children}
