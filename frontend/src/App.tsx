@@ -7,7 +7,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import { Layout } from './components/Layout';
-import { Overview, Players, Teams, Lineups, Similarity } from './pages';
+import { Overview, Players, Teams, Similarity } from './pages';
 import { useSeasons } from './hooks/useApi';
 import { PageLoading, ErrorDisplay } from './components/Loading';
 
@@ -19,7 +19,7 @@ import { PageLoading, ErrorDisplay } from './components/Loading';
 const THIRTY_MINUTES = 1000 * 60 * 30;
 const TWO_HOURS = 1000 * 60 * 60 * 2;
 const CACHE_KEY = 'sieve-query-cache';
-const CACHE_VERSION = 'v2'; // Bump this to invalidate old cached data
+const CACHE_VERSION = 'v3'; // Bump this to invalidate old cached data
 
 // Create React Query client with aggressive caching
 const queryClient = new QueryClient({
@@ -140,7 +140,6 @@ function AppContent() {
         <Route path="/" element={<Overview season={season} />} />
         <Route path="/players" element={<Players season={season} />} />
         <Route path="/teams" element={<Teams season={season} />} />
-        <Route path="/lineups" element={<Lineups />} />
         <Route path="/similarity" element={<Similarity season={season} />} />
       </Routes>
     </Layout>

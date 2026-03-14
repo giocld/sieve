@@ -3,14 +3,14 @@
  */
 
 import { useState, useMemo } from 'react';
-import { 
-  useSimilarityPlayers, 
-  usePlayerSeasons, 
+import {
+  useSimilarityPlayers,
+  usePlayerSeasons,
   useSimilarPlayers,
   useDiamondFinderPlayers,
   useDiamondReplacements
 } from '../hooks/useApi';
-import { PageHeader, Panel, PanelHeader, PanelBody, MetricCard } from '../components';
+import { PageHeader, Panel, PanelHeader, PanelBody, MetricCard, PlayerHoverCard } from '../components';
 import { Select, Button } from '../components/FormControls';
 import { PageLoading, ErrorDisplay } from '../components/Loading';
 
@@ -85,7 +85,7 @@ function SimilarityTab() {
       </Panel>
 
       {error && <ErrorDisplay message={error.message} />}
-      
+
       {similarLoading && selectedPlayer && selectedSeason && (
         <div className="flex justify-center py-8">
           <div className="w-6 h-6 border-2 border-[#3b82f6] border-t-transparent rounded-full animate-spin" />
@@ -119,7 +119,7 @@ function SimilarityTab() {
           </Panel>
 
           <div className="section-label">Most Similar Players</div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {similarData.similar.map((player, i) => (
               <SimilarPlayerCard key={`${player.Player}-${player.Season}`} rank={i + 1} player={player} />
@@ -145,27 +145,35 @@ interface SimilarPlayerCardProps {
 }
 
 function SimilarPlayerCard({ rank, player }: SimilarPlayerCardProps) {
+  const hoverData = {
+    player_name: player.Player,
+    player_id: player.id,
+    lebron: player.Stats?.LEBRON, // Assuming LEBRON might be in stats
+  };
+
   return (
     <Panel>
       <PanelBody>
-        <div className="flex items-start gap-3 mb-4">
-          <div className="relative">
-            {player.id ? (
-              <img
-                src={`https://cdn.nba.com/headshots/nba/latest/260x190/${player.id}.png`}
-                alt=""
-                className="w-10 h-10 rounded-full object-cover bg-[#1a1a1a] shrink-0"
-                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-              />
-            ) : null}
-            <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-[#1a1a1a] flex items-center justify-center text-[10px] font-mono text-[#666] border border-[#2a2a2a]">{rank}</div>
+        <PlayerHoverCard player={hoverData}>
+          <div className="flex items-start gap-3 mb-4 cursor-default">
+            <div className="relative">
+              {player.id ? (
+                <img
+                  src={`https://cdn.nba.com/headshots/nba/latest/260x190/${player.id}.png`}
+                  alt=""
+                  className="w-10 h-10 rounded-full object-cover bg-[#1a1a1a] shrink-0"
+                  onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                />
+              ) : null}
+              <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-[#1a1a1a] flex items-center justify-center text-[10px] font-mono text-[#666] border border-[#2a2a2a]">{rank}</div>
+            </div>
+            <div className="flex-1 min-w-0">
+              <h4 className="font-medium text-[#e5e5e5] group-hover:text-[#3b82f6] transition-colors">{player.Player}</h4>
+              <p className="text-xs text-[#666]">{player.Season}</p>
+              {player.MatchScore && <p className="text-xs text-blue mt-1">{player.MatchScore.toFixed(0)}% match</p>}
+            </div>
           </div>
-          <div className="flex-1 min-w-0">
-            <h4 className="font-medium text-[#e5e5e5]">{player.Player}</h4>
-            <p className="text-xs text-[#666]">{player.Season}</p>
-            {player.MatchScore && <p className="text-xs text-blue mt-1">{player.MatchScore.toFixed(0)}% match</p>}
-          </div>
-        </div>
+        </PlayerHoverCard>
         <div className="grid grid-cols-3 gap-2 pt-3 border-t border-[#2a2a2a]">
           {Object.entries(player.Stats).slice(0, 3).map(([key, value]) => (
             <div key={key} className="text-center">
@@ -290,36 +298,47 @@ function ReplacementCard({ rank, replacement, targetSalary }: ReplacementCardPro
   const savingsPercent = (savings / targetSalary) * 100;
   const lebron = replacement.LEBRON ?? 0;
 
+  const hoverData = {
+    player_name: replacement.player_name,
+    player_id: replacement.PLAYER_ID,
+    salary: replacement.salary,
+    lebron: replacement.LEBRON,
+    archetype: replacement.archetype,
+    role: replacement.defense_role
+  };
+
   return (
     <Panel>
       <PanelBody>
-        <div className="flex items-center gap-4 mb-4">
-          <div className="relative">
-            {replacement.PLAYER_ID ? (
-              <img
-                src={`https://cdn.nba.com/headshots/nba/latest/260x190/${replacement.PLAYER_ID}.png`}
-                alt=""
-                className="w-10 h-10 rounded-full object-cover bg-[#1a1a1a] shrink-0"
-                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-              />
-            ) : (
-              <div className="w-10 h-10 rounded-full bg-[#3b82f6]/20 flex items-center justify-center">
-                <span className="text-blue font-mono text-sm">{rank}</span>
+        <PlayerHoverCard player={hoverData}>
+          <div className="flex items-center gap-4 mb-4 cursor-default">
+            <div className="relative">
+              {replacement.PLAYER_ID ? (
+                <img
+                  src={`https://cdn.nba.com/headshots/nba/latest/260x190/${replacement.PLAYER_ID}.png`}
+                  alt=""
+                  className="w-10 h-10 rounded-full object-cover bg-[#1a1a1a] shrink-0"
+                  onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                />
+              ) : (
+                <div className="w-10 h-10 rounded-full bg-[#3b82f6]/20 flex items-center justify-center">
+                  <span className="text-blue font-mono text-sm">{rank}</span>
+                </div>
+              )}
+              {replacement.PLAYER_ID && (
+                <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-[#3b82f6] flex items-center justify-center text-[10px] font-mono text-white font-bold">{rank}</div>
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <h4 className="font-medium text-[#e5e5e5] group-hover:text-[#3b82f6] transition-colors">{replacement.player_name}</h4>
+              <p className="text-xs text-blue">{replacement.match_score?.toFixed(0)}% similar</p>
+              <div className="flex gap-1 mt-1 flex-wrap">
+                {replacement.archetype && <span className="badge badge-blue" style={{ fontSize: '9px', padding: '1px 6px' }}>{replacement.archetype}</span>}
+                {replacement.defense_role && <span className="badge" style={{ background: 'rgba(153,153,153,0.15)', color: '#999', fontSize: '9px', padding: '1px 6px' }}>{replacement.defense_role}</span>}
               </div>
-            )}
-            {replacement.PLAYER_ID && (
-              <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-[#3b82f6] flex items-center justify-center text-[10px] font-mono text-white font-bold">{rank}</div>
-            )}
-          </div>
-          <div className="flex-1 min-w-0">
-            <h4 className="font-medium text-[#e5e5e5]">{replacement.player_name}</h4>
-            <p className="text-xs text-blue">{replacement.match_score?.toFixed(0)}% similar</p>
-            <div className="flex gap-1 mt-1 flex-wrap">
-              {replacement.archetype && <span className="badge badge-blue" style={{ fontSize: '9px', padding: '1px 6px' }}>{replacement.archetype}</span>}
-              {replacement.defense_role && <span className="badge" style={{ background: 'rgba(153,153,153,0.15)', color: '#999', fontSize: '9px', padding: '1px 6px' }}>{replacement.defense_role}</span>}
             </div>
           </div>
-        </div>
+        </PlayerHoverCard>
         <div className="grid grid-cols-3 gap-3">
           <MetricCard label="Salary" value={`$${(replacement.salary / 1_000_000).toFixed(1)}M`} color="blue" size="sm" />
           <MetricCard label="LEBRON" value={lebron >= 0 ? `+${lebron.toFixed(2)}` : lebron.toFixed(2)} color={lebron >= 0 ? 'green' : 'red'} size="sm" />

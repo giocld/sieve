@@ -17,7 +17,6 @@ const navItems = [
   { path: '/', label: 'Overview', icon: HomeIcon },
   { path: '/players', label: 'Players', icon: UsersIcon },
   { path: '/teams', label: 'Teams', icon: BuildingIcon },
-  { path: '/lineups', label: 'Lineups', icon: GroupIcon },
   { path: '/similarity', label: 'Similarity', icon: SearchIcon },
 ];
 
@@ -31,14 +30,8 @@ export function Layout({ children, season, onSeasonChange, seasons }: LayoutProp
       <nav className="sticky top-0 z-50 bg-[#0d0d0d] border-b border-[#2a2a2a]">
         <div className="container-centered">
           <div className="flex items-center justify-between h-12">
-            {/* Logo */}
-            <Link to="/" className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded bg-[#3b82f6] flex items-center justify-center">
-                <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V20l-4-2v-3.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-                </svg>
-              </div>
-              <span className="font-semibold text-[#e5e5e5] hidden sm:block">Sieve</span>
+            <Link to="/" className="flex items-center">
+              <span className="font-semibold text-[#e5e5e5]">Sieve</span>
             </Link>
 
             {/* Desktop Nav */}
@@ -157,14 +150,6 @@ function BuildingIcon({ className }: { className?: string }) {
   return (
     <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-    </svg>
-  );
-}
-
-function GroupIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
     </svg>
   );
 }

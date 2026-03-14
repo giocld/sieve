@@ -33,6 +33,28 @@ export interface OverviewPlayer {
   lebron: number;
   salary: number;
   player_id?: number;
+  o_lebron?: number;
+  d_lebron?: number;
+  role?: string;
+  archetype?: string;
+  ppg?: number;
+  rpg?: number;
+  apg?: number;
+  spg?: number;
+  bpg?: number;
+  fg_pct?: number;
+  three_pct?: number;
+  ft_pct?: number;
+  ts_pct?: number;
+  ppg_pct?: number;
+  rpg_pct?: number;
+  apg_pct?: number;
+  spg_pct?: number;
+  bpg_pct?: number;
+  fg_pct_pct?: number;
+  three_pct_pct?: number;
+  ft_pct_pct?: number;
+  ts_pct_pct?: number;
 }
 
 export interface OverviewStats {
@@ -62,20 +84,6 @@ export interface PlayerFilters {
   min_salary?: number;
   max_salary?: number;
   search?: string;
-}
-
-export interface LineupFilters {
-  team?: string | null;
-  size?: number;
-  min_minutes?: number;
-  limit?: number;
-}
-
-export interface Lineup {
-  GROUP_NAME: string;
-  PLUS_MINUS: number;
-  MIN: number;
-  [key: string]: unknown;
 }
 
 export interface DiamondFinderPlayer {
@@ -197,61 +205,6 @@ export async function getBeeswarmChart(season: string, minLebron: number, maxLeb
 
 export async function getTeamRadarChart(team1: string, team2: string): Promise<string> {
   const response = await fetch(`${API_BASE}/charts/team-radar?team1=${team1}&team2=${team2}`);
-  return response.text();
-}
-
-// Lineups
-export async function getLineupTeams(): Promise<{ teams: Array<{ label: string; value: string }> }> {
-  return fetchJson(`${API_BASE}/lineups/teams`);
-}
-
-export async function getBestLineups(filters: LineupFilters): Promise<{ lineups: Lineup[]; count: number }> {
-  const params = new URLSearchParams();
-  if (filters.team) params.set('team', filters.team);
-  if (filters.size) params.set('size', String(filters.size));
-  if (filters.min_minutes) params.set('min_minutes', String(filters.min_minutes));
-  if (filters.limit) params.set('limit', String(filters.limit));
-
-  return fetchJson(`${API_BASE}/lineups/best?${params}`);
-}
-
-export async function getWorstLineups(filters: LineupFilters): Promise<{ lineups: Lineup[]; count: number }> {
-  const params = new URLSearchParams();
-  if (filters.team) params.set('team', filters.team);
-  if (filters.size) params.set('size', String(filters.size));
-  if (filters.min_minutes) params.set('min_minutes', String(filters.min_minutes));
-  if (filters.limit) params.set('limit', String(filters.limit));
-
-  return fetchJson(`${API_BASE}/lineups/worst?${params}`);
-}
-
-export async function getBestLineupsChart(filters: LineupFilters): Promise<string> {
-  const params = new URLSearchParams();
-  if (filters.team) params.set('team', filters.team);
-  if (filters.size) params.set('size', String(filters.size));
-  if (filters.min_minutes) params.set('min_minutes', String(filters.min_minutes));
-
-  const response = await fetch(`${API_BASE}/charts/lineups/best?${params}`);
-  return response.text();
-}
-
-export async function getWorstLineupsChart(filters: LineupFilters): Promise<string> {
-  const params = new URLSearchParams();
-  if (filters.team) params.set('team', filters.team);
-  if (filters.size) params.set('size', String(filters.size));
-  if (filters.min_minutes) params.set('min_minutes', String(filters.min_minutes));
-
-  const response = await fetch(`${API_BASE}/charts/lineups/worst?${params}`);
-  return response.text();
-}
-
-export async function getLineupsScatterChart(filters: LineupFilters): Promise<string> {
-  const params = new URLSearchParams();
-  if (filters.team) params.set('team', filters.team);
-  if (filters.size) params.set('size', String(filters.size));
-  if (filters.min_minutes) params.set('min_minutes', String(filters.min_minutes));
-
-  const response = await fetch(`${API_BASE}/charts/lineups/scatter?${params}`);
   return response.text();
 }
 
