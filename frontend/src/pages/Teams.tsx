@@ -100,8 +100,9 @@ export function Teams({ season }: TeamsProps) {
       <PageHeader title="Team Efficiency" subtitle="Compare team spending vs performance" />
 
       <ChartGrid cols={2}>
-        <ChartPanel title="Efficiency Quadrant" chartJson={quadrantChart} isLoading={quadrantLoading} height={500} />
-        <ChartPanel title="Team Grid" chartJson={gridChart} isLoading={gridLoading} height={500} />
+        <ChartPanel title="Efficiency Quadrant" chartJson={quadrantChart} isLoading={quadrantLoading} height={500} enablePlayerHover={false} />
+        <ChartPanel title="Team Grid" chartJson={gridChart} isLoading={gridLoading} height={500} enablePlayerHover={false} />
+
       </ChartGrid>
 
       {/* Comparison */}
@@ -115,7 +116,7 @@ export function Teams({ season }: TeamsProps) {
               {team1 && team2 && teamsData?.teams && <ComparisonStats teams={teamsData.teams} team1={team1} team2={team2} />}
             </div>
             <div className="md:col-span-2">
-              <ChartPanel chartJson={radarChart} isLoading={radarLoading} height={400} showHeader={false} />
+              <ChartPanel chartJson={radarChart} isLoading={radarLoading} height={400} showHeader={false} enablePlayerHover={false} />
             </div>
           </div>
         </PanelBody>

@@ -177,6 +177,50 @@ class PlayerCacheManager(BaseCacheManager):
             return None
 
     # =========================================================================
+    # PLAYER PER GAME STATS
+    # =========================================================================
+
+    def save_player_pergame_stats(self, df, season='2024-25'):
+        """Save player per-game stats to cache."""
+        if df.empty:
+            return
+
+        df = df.copy()
+        df['_season'] = season
+
+        with self._get_connection() as conn:
+            if self._table_exists(conn, 'player_pergame'):
+                conn.execute('DELETE FROM player_pergame WHERE _season = ?', (season,))
+
+            df.to_sql('player_pergame', conn, if_exists='append', index=False)
+            self._update_metadata(conn, 'player_pergame', season, len(df))
+            conn.commit()
+
+        print(f"[Players DB] Cached {len(df)} per-game stat records (season: {season})")
+
+    def load_player_pergame_stats(self, season='2024-25'):
+        """Load player per-game stats from cache."""
+        try:
+            with self._get_connection() as conn:
+                if not self._table_exists(conn, 'player_pergame'):
+                    return None
+
+                df = pd.read_sql(
+                    'SELECT * FROM player_pergame WHERE _season = ?',
+                    conn, params=[season]
+                )
+
+                if df.empty:
+                    return None
+
+                df = df.drop(columns=['_season'], errors='ignore')
+                return df
+
+        except Exception as e:
+            print(f"Error loading per-game stats: {e}")
+            return None
+
+    # =========================================================================
     # LEBRON METRICS
     # =========================================================================
 
@@ -357,6 +401,35 @@ class PlayerCacheManager(BaseCacheManager):
     # UTILITY
     # =========================================================================
 
+    def save_similarity_model(self, model_data):
+        """Save the similarity model and related data to cache."""
+        if not model_data:
+            return
+
+        # Use pickle to save the model, scaler, and other Python objects
+        import pickle
+        model_file = os.path.join(os.path.dirname(self.db_path), 'similarity_model.pkl')
+        
+        with open(model_file, 'wb') as f:
+            pickle.dump(model_data, f)
+            
+        print(f"[Players DB] Cached similarity model to {model_file}")
+
+    def load_similarity_model(self):
+        """Load the similarity model from cache."""
+        import pickle
+        model_file = os.path.join(os.path.dirname(self.db_path), 'similarity_model.pkl')
+
+        if not os.path.exists(model_file):
+            return None
+            
+        try:
+            with open(model_file, 'rb') as f:
+                return pickle.load(f)
+        except Exception as e:
+            print(f"Error loading similarity model: {e}")
+            return None
+
     def clear_all(self):
         """Clear all player data."""
         with self._get_connection() as conn:
@@ -364,7 +437,14 @@ class PlayerCacheManager(BaseCacheManager):
                 conn.execute(f'DROP TABLE IF EXISTS {table}')
             conn.execute('DELETE FROM cache_metadata')
             conn.commit()
+        
+        # Also remove model file
+        model_file = os.path.join(os.path.dirname(self.db_path), 'similarity_model.pkl')
+        if os.path.exists(model_file):
+            os.remove(model_file)
+            
         print(f"[Players DB] Cleared all data")
+
 
 
 class TeamCacheManager(BaseCacheManager):
@@ -542,82 +622,13 @@ class TeamCacheManager(BaseCacheManager):
             return None
 
     # =========================================================================
-    # LINEUPS
-    # =========================================================================
-
-    def save_lineups(self, df, group_size, team_abbr=None, season='2024-25'):
-        """Save lineup data to cache."""
-        if df.empty:
-            return
-
-        df = df.copy()
-        df['_group_size'] = group_size
-        df['_team_filter'] = team_abbr or 'ALL'
-        df['_season'] = season
-
-        cache_name = f'lineups_{group_size}man_{team_abbr or "ALL"}'
-
-        with self._get_connection() as conn:
-            if self._table_exists(conn, 'lineups'):
-                conn.execute('''
-                    DELETE FROM lineups
-                    WHERE _group_size = ? AND _team_filter = ? AND _season = ?
-                ''', (group_size, team_abbr or 'ALL', season))
-
-            df.to_sql('lineups', conn, if_exists='append', index=False)
-            self._update_metadata(conn, cache_name, season, len(df), {
-                'group_size': group_size,
-                'team_abbr': team_abbr
-            })
-            conn.commit()
-
-        print(f"[Teams DB] Cached {len(df)} lineups to {cache_name}")
-
-    def load_lineups(self, group_size, team_abbr=None, season='2024-25', min_minutes=0):
-        """Load lineup data from cache."""
-        cache_name = f'lineups_{group_size}man_{team_abbr or "ALL"}'
-
-        try:
-            with self._get_connection() as conn:
-                if not self._table_exists(conn, 'lineups'):
-                    return None
-
-                query = '''
-                    SELECT * FROM lineups
-                    WHERE _group_size = ? AND _team_filter = ? AND _season = ?
-                '''
-                params = [group_size, team_abbr or 'ALL', season]
-
-                df = pd.read_sql(query, conn, params=params)
-
-                if df.empty:
-                    return None
-
-                # Calculate total minutes if needed
-                if 'SUM_TIME_PLAYED' in df.columns:
-                    df['TOTAL_MIN'] = df['SUM_TIME_PLAYED'] / 3000
-                    if min_minutes > 0:
-                        df = df[df['TOTAL_MIN'] >= min_minutes]
-
-                # Drop internal columns
-                internal_cols = ['_group_size', '_team_filter', '_season']
-                df = df.drop(columns=[c for c in internal_cols if c in df.columns], errors='ignore')
-
-                print(f"[Teams DB] Loaded {len(df)} lineups from cache: {cache_name}")
-                return df
-
-        except Exception as e:
-            print(f"Cache read error: {e}")
-            return None
-
-    # =========================================================================
     # UTILITY
     # =========================================================================
 
     def clear_all(self):
         """Clear all team data."""
         with self._get_connection() as conn:
-            for table in ['team_stats', 'standings', 'team_efficiency', 'lineups']:
+            for table in ['team_stats', 'standings', 'team_efficiency']:
                 conn.execute(f'DROP TABLE IF EXISTS {table}')
             conn.execute('DELETE FROM cache_metadata')
             conn.commit()
@@ -650,6 +661,12 @@ class CacheManager:
 
     def load_player_stats(self, seasons=None, min_games=0):
         return self.players.load_player_stats(seasons, min_games)
+
+    def save_player_pergame_stats(self, df, season='2024-25'):
+        return self.players.save_player_pergame_stats(df, season)
+
+    def load_player_pergame_stats(self, season='2024-25'):
+        return self.players.load_player_pergame_stats(season)
 
     def save_lebron_metrics(self, df, season='2024-25'):
         return self.players.save_lebron_metrics(df, season)
@@ -694,21 +711,24 @@ class CacheManager:
     def load_team_efficiency(self, season='2024-25'):
         return self.teams.load_team_efficiency(season)
 
-    def save_lineups(self, df, group_size, team_abbr=None, season='2024-25'):
-        return self.teams.save_lineups(df, group_size, team_abbr, season)
-
-    def load_lineups(self, group_size, team_abbr=None, season='2024-25', min_minutes=0):
-        return self.teams.load_lineups(group_size, team_abbr, season, min_minutes)
-
     # =========================================================================
     # UNIFIED OPERATIONS
     # =========================================================================
+
+
+    def save_similarity_model(self, model_data):
+        """Save the similarity model and related data to cache."""
+        return self.players.save_similarity_model(model_data)
+
+    def load_similarity_model(self):
+        """Load the similarity model from cache."""
+        return self.players.load_similarity_model()
 
     def clear_cache(self, cache_name=None):
         """Clear cached data from appropriate database."""
         if cache_name:
             # Determine which DB based on cache name
-            player_caches = ['player_stats', 'lebron_metrics', 'contracts', 'player_analysis']
+            player_caches = ['player_stats', 'lebron_metrics', 'contracts', 'player_analysis', 'similarity_model']
 
             # Check if it's a player cache
             if any(cache_name.startswith(p) for p in player_caches):

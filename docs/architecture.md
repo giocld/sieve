@@ -8,8 +8,8 @@ Sieve is a Dash web application that analyzes NBA player value by combining impa
 
 | Component | Technology |
 |-----------|------------|
-| Frontend | Dash 2.x + Plotly 5.x + Bootstrap 5 |
-| Backend | Python 3.11 |
+| Frontend | React 18 + TypeScript + TailwindCSS + Plotly.js |
+| Backend | FastAPI + Python 3.11 |
 | Database | SQLite 3 (2 separate databases) |
 | Data Sources | BBall Index, Basketball Reference, NBA API |
 | ML | scikit-learn (KNN, StandardScaler) |
@@ -47,7 +47,7 @@ sieve/
 │                         EXTERNAL DATA SOURCES                       │
 ├─────────────────┬─────────────────────┬─────────────────────────────┤
 │   BBall Index   │  Basketball Ref     │         NBA API             │
-│   (LEBRON CSV)  │  (Contracts HTML)   │  (Stats/Lineups/Standings)  │
+│   (LEBRON CSV)  │  (Contracts HTML)   │    (Stats/Standings)        │
 └────────┬────────┴──────────┬──────────┴──────────────┬──────────────┘
          │                   │                         │
          │    scraper.py     │      scraper.py         │   nba_api
@@ -60,7 +60,7 @@ sieve/
 │  │   sieve_players.db   │    │    sieve_teams.db    │               │
 │  │  - lebron_metrics    │    │  - standings         │               │
 │  │  - contracts         │    │  - team_efficiency   │               │
-│  │  - player_analysis   │    │  - lineups           │               │
+│  │  - player_analysis   │    │                      │               │
 │  │  - player_stats      │    │                      │               │
 │  └──────────────────────┘    └──────────────────────┘               │
 └────────────────────────────────┬────────────────────────────────────┘
@@ -86,7 +86,6 @@ sieve/
 │  Player Analysis Callbacks (filters -> charts)                      │
 │  Diamond Finder Callbacks (player select -> replacements)           │
 │  Team Analysis Callbacks (team select -> radar)                     │
-│  Lineup Callbacks (team/size -> best/worst lineups)                 │
 │  Similarity Callbacks (player/season -> historical comps)           │
 └────────────────────────────────┬────────────────────────────────────┘
                                  │
@@ -98,8 +97,7 @@ sieve/
 │  create_main_layout()       │ │  create_salary_impact()     │
 │  create_player_tab()        │ │  create_underpaid_bar()     │
 │  create_team_tab()          │ │  create_beeswarm()          │
-│  create_lineup_tab()        │ │  create_team_radar()        │
-│  create_similarity_tab()    │ │  create_lineup_chart()      │
+│  create_similarity_tab()    │ │  create_team_radar()        │
 │  create_landing_tab()       │ │  create_replacement_card()  │
 └─────────────────────────────┘ └─────────────────────────────┘
 ```

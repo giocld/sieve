@@ -78,24 +78,60 @@ export function Players({ season }: PlayersProps) {
       key: 'player_name',
       header: 'Player',
       render: (_: unknown, row: typeof displayedPlayers[0]) => (
-        <PlayerCell name={row.player_name} playerId={row.PLAYER_ID} team={row.team as string} />
+        <PlayerCell 
+          name={row.player_name} 
+          playerId={row.PLAYER_ID} 
+          team={row.team as string} 
+          playerData={{
+            player_name: row.player_name,
+            player_id: row.PLAYER_ID,
+            team: row.team,
+            lebron: row.LEBRON,
+            o_lebron: row['O-LEBRON'],
+            d_lebron: row['D-LEBRON'],
+            salary: row.current_year_salary,
+            value_gap: row.value_gap,
+            archetype: row.archetype,
+            role: row['Rotation Role'],
+            ppg: row.PTS,
+            rpg: row.REB,
+            apg: row.AST,
+            spg: row.STL,
+            bpg: row.BLK,
+            fg_pct: row.FG_PCT,
+            three_pct: row.FG3_PCT,
+            ft_pct: row.FT_PCT,
+            ts_pct: row.TS_PCT,
+            ppg_pct: row.PTS_PCT,
+            rpg_pct: row.REB_PCT,
+            apg_pct: row.AST_PCT,
+            spg_pct: row.STL_PCT,
+            bpg_pct: row.BLK_PCT,
+            fg_pct_pct: row.FG_PCT_PCT,
+            three_pct_pct: row.FG3_PCT_PCT,
+            ft_pct_pct: row.FT_PCT_PCT,
+            ts_pct_pct: row.TS_PCT_PCT,
+          }}
+        />
       ),
     },
     {
       key: 'LEBRON',
       header: 'LEBRON',
-      align: 'right' as const,
+      align: 'center' as const,
+      width: '80px',
       render: (value: unknown) => (
         <span className={Number(value) >= 0 ? 'text-green' : 'text-red'}>
           {Number(value) >= 0 ? '+' : ''}{Number(value).toFixed(2)}
         </span>
       ),
     },
-    { key: 'current_year_salary', header: 'Salary', align: 'right' as const, format: 'currency' as const },
+    { key: 'current_year_salary', header: 'Salary', align: 'right' as const, width: '90px', format: 'currency' as const },
     {
       key: 'value_gap',
       header: 'Value Gap',
-      align: 'right' as const,
+      align: 'center' as const,
+      width: '100px',
       render: (value: unknown) => <ValueCell value={Number(value)} />,
     },
   ], []);

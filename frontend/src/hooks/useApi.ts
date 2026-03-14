@@ -28,14 +28,6 @@ export const queryKeys = {
     ['chart', 'beeswarm', season, filters] as const,
   teamRadarChart: (team1: string, team2: string) => ['chart', 'team-radar', team1, team2] as const,
 
-  // Lineups
-  lineupTeams: ['lineup-teams'] as const,
-  bestLineups: (filters: api.LineupFilters) => ['lineups', 'best', filters] as const,
-  worstLineups: (filters: api.LineupFilters) => ['lineups', 'worst', filters] as const,
-  bestLineupsChart: (filters: api.LineupFilters) => ['chart', 'lineups', 'best', filters] as const,
-  worstLineupsChart: (filters: api.LineupFilters) => ['chart', 'lineups', 'worst', filters] as const,
-  lineupsScatterChart: (filters: api.LineupFilters) => ['chart', 'lineups', 'scatter', filters] as const,
-
   // Similarity
   similarityPlayers: ['similarity', 'players'] as const,
   playerSeasons: (player: string) => ['similarity', 'seasons', player] as const,
@@ -137,49 +129,6 @@ export function useTeamRadarChart(team1: string, team2: string) {
     queryKey: queryKeys.teamRadarChart(team1, team2),
     queryFn: () => api.getTeamRadarChart(team1, team2),
     enabled: !!team1 && !!team2,
-  });
-}
-
-// Lineup Hooks
-export function useLineupTeams() {
-  return useQuery({
-    queryKey: queryKeys.lineupTeams,
-    queryFn: api.getLineupTeams,
-  });
-}
-
-export function useBestLineups(filters: api.LineupFilters) {
-  return useQuery({
-    queryKey: queryKeys.bestLineups(filters),
-    queryFn: () => api.getBestLineups(filters),
-  });
-}
-
-export function useWorstLineups(filters: api.LineupFilters) {
-  return useQuery({
-    queryKey: queryKeys.worstLineups(filters),
-    queryFn: () => api.getWorstLineups(filters),
-  });
-}
-
-export function useBestLineupsChart(filters: api.LineupFilters) {
-  return useQuery({
-    queryKey: queryKeys.bestLineupsChart(filters),
-    queryFn: () => api.getBestLineupsChart(filters),
-  });
-}
-
-export function useWorstLineupsChart(filters: api.LineupFilters) {
-  return useQuery({
-    queryKey: queryKeys.worstLineupsChart(filters),
-    queryFn: () => api.getWorstLineupsChart(filters),
-  });
-}
-
-export function useLineupsScatterChart(filters: api.LineupFilters) {
-  return useQuery({
-    queryKey: queryKeys.lineupsScatterChart(filters),
-    queryFn: () => api.getLineupsScatterChart(filters),
   });
 }
 

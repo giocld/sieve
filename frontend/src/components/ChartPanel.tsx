@@ -1,10 +1,7 @@
-/**
- * ChartPanel - Clean trading dashboard style
- */
-
-import { useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import Plot from 'react-plotly.js';
 import type { Config } from 'plotly.js';
+import { PlayerHoverCard } from './PlayerHoverCard';
 
 interface ChartPanelProps {
   title?: string;
@@ -15,6 +12,7 @@ interface ChartPanelProps {
   height?: number | string;
   className?: string;
   showHeader?: boolean;
+  enablePlayerHover?: boolean;
 }
 
 const defaultConfig: Partial<Config> = {
@@ -33,16 +31,28 @@ export function ChartPanel({
   height = 400,
   className = '',
   showHeader = true,
+  enablePlayerHover = true,
 }: ChartPanelProps) {
+  const [hoverData, setHoverData] = useState<{ player: any; x: number; y: number } | null>(null);
+
   const chartData = useMemo(() => {
     if (!chartJson) return null;
-    
+
     try {
       const parsed = JSON.parse(chartJson);
+
+      const data = enablePlayerHover
+        ? (parsed.data || []).map((trace: any) => ({
+            ...trace,
+            hoverinfo: 'none',
+          }))
+        : (parsed.data || []);
+
       const mergedLayout = {
         ...parsed.layout,
         paper_bgcolor: 'transparent',
         plot_bgcolor: parsed.layout?.plot_bgcolor || '#141414',
+        hovermode: 'closest',
         font: {
           ...parsed.layout?.font,
           color: parsed.layout?.font?.color || '#999',
@@ -62,13 +72,35 @@ export function ChartPanel({
         height: parsed.layout?.height || (typeof height === 'number' ? height : undefined),
         autosize: true,
       };
-      
-      return { data: parsed.data || [], layout: mergedLayout };
+
+      return { data, layout: mergedLayout };
     } catch (e) {
       console.error('Failed to parse chart JSON:', e);
       return null;
     }
-  }, [chartJson, height]);
+  }, [chartJson, height, enablePlayerHover]);
+
+  const handleHover = useCallback((event: Readonly<Plotly.PlotMouseEvent>) => {
+    if (!enablePlayerHover) return;
+
+    const point = event.points[0];
+    const customdata = point.customdata as any;
+
+    if (customdata && (customdata.player_name || customdata.player_id)) {
+      const { clientX, clientY } = event.event as unknown as React.MouseEvent;
+      setHoverData({
+        player: customdata,
+        x: clientX,
+        y: clientY,
+      });
+    }
+  }, [enablePlayerHover]);
+
+  const handleUnhover = useCallback(() => {
+    if (enablePlayerHover) {
+      setHoverData(null);
+    }
+  }, [enablePlayerHover]);
 
   return (
     <div className={`panel overflow-hidden ${className}`}>
@@ -78,7 +110,7 @@ export function ChartPanel({
           {subtitle && <span className="ml-2 text-[#666] font-normal">{subtitle}</span>}
         </div>
       )}
-      
+
       <div className="relative" style={{ height: typeof height === 'string' ? height : `${height}px` }}>
         {isLoading && (
           <div className="absolute inset-0 flex items-center justify-center bg-[#141414]">
@@ -88,7 +120,7 @@ export function ChartPanel({
             </div>
           </div>
         )}
-        
+
         {error && !isLoading && (
           <div className="absolute inset-0 flex items-center justify-center bg-[#141414]">
             <div className="text-center px-4">
@@ -97,7 +129,7 @@ export function ChartPanel({
             </div>
           </div>
         )}
-        
+
         {chartData && !isLoading && !error && (
           <Plot
             data={chartData.data}
@@ -106,15 +138,24 @@ export function ChartPanel({
             className="w-full h-full"
             useResizeHandler
             style={{ width: '100%', height: '100%' }}
+            onHover={handleHover}
+            onUnhover={handleUnhover}
           />
         )}
-        
+
         {!chartData && !isLoading && !error && (
           <div className="absolute inset-0 flex items-center justify-center bg-[#141414]">
             <span className="text-xs text-[#666]">No data</span>
           </div>
         )}
       </div>
+
+      {hoverData && (
+        <PlayerHoverCard
+          player={hoverData.player}
+          manualPosition={{ x: hoverData.x, y: hoverData.y }}
+        />
+      )}
     </div>
   );
 }
@@ -134,6 +175,6 @@ export function ChartGrid({ children, cols = 2, className = '' }: ChartGridProps
     2: 'grid-cols-1 lg:grid-cols-2',
     3: 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3',
   };
-  
+
   return <div className={`grid ${gridCols[cols]} gap-4 ${className}`}>{children}</div>;
 }

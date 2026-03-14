@@ -3,6 +3,7 @@
  */
 
 import { useState, useMemo } from 'react';
+import { PlayerHoverCard } from './PlayerHoverCard';
 
 interface Column<T> {
   key: keyof T | string;
@@ -216,30 +217,40 @@ export function DataTable<T extends Record<string, unknown>>({
 }
 
 /**
- * PlayerCell - with headshot
+ * PlayerCell - with headshot and hover card
  */
 interface PlayerCellProps {
   name: string;
   playerId?: number;
   team?: string;
+  playerData?: any;
 }
 
-export function PlayerCell({ name, playerId, team }: PlayerCellProps) {
+export function PlayerCell({ name, playerId, team, playerData }: PlayerCellProps) {
+  // Construct data for hover card if not provided fully
+  const data = playerData || {
+    player_name: name,
+    player_id: playerId,
+    team: team
+  };
+
   return (
-    <div className="flex items-center gap-2">
-      {playerId && (
-        <img
-          src={`https://cdn.nba.com/headshots/nba/latest/260x190/${playerId}.png`}
-          alt=""
-          className="w-8 h-8 rounded-full object-cover bg-[#1a1a1a] shrink-0"
-          onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-        />
-      )}
-      <div className="min-w-0">
-        <div className="text-[#e5e5e5] font-sans truncate">{name}</div>
-        {team && <div className="text-[10px] text-[#666]">{team}</div>}
+    <PlayerHoverCard player={data}>
+      <div className="flex items-center gap-2 group cursor-default">
+        {playerId && (
+          <img
+            src={`https://cdn.nba.com/headshots/nba/latest/260x190/${playerId}.png`}
+            alt=""
+            className="w-8 h-8 rounded-full object-cover bg-[#1a1a1a] shrink-0"
+            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+          />
+        )}
+        <div className="min-w-0">
+          <div className="text-[#e5e5e5] font-sans truncate group-hover:text-[#3b82f6] transition-colors">{name}</div>
+          {team && <div className="text-[10px] text-[#666]">{team}</div>}
+        </div>
       </div>
-    </div>
+    </PlayerHoverCard>
   );
 }
 

@@ -37,6 +37,47 @@ ABBR_TO_FULL_NAME = {
     'POR': 'Portland Trail Blazers', 'SAC': 'Sacramento Kings', 'SAS': 'San Antonio Spurs',
     'TOR': 'Toronto Raptors', 'UTA': 'Utah Jazz', 'WAS': 'Washington Wizards'
 }
+def build_player_customdata(df):
+    """
+    Build customdata list for Plotly charts to power frontend hover cards.
+    """
+    customdata = []
+    for _, row in df.iterrows():
+        data = {
+            'player_name': row.get('player_name', ''),
+            'player_id': int(row['PLAYER_ID']) if pd.notna(row.get('PLAYER_ID')) else None,
+            'team': row.get('team', row.get('Team(s)', '')),
+            'lebron': float(row.get('LEBRON', 0)) if pd.notna(row.get('LEBRON')) else None,
+            'o_lebron': float(row.get('O-LEBRON', 0)) if pd.notna(row.get('O-LEBRON')) else None,
+            'd_lebron': float(row.get('D-LEBRON', 0)) if pd.notna(row.get('D-LEBRON')) else None,
+            'lebron_war': float(row.get('LEBRON WAR', 0)) if pd.notna(row.get('LEBRON WAR')) else None,
+            'salary': float(row.get('current_year_salary', 0)) if pd.notna(row.get('current_year_salary')) else None,
+            'value_gap': float(row.get('value_gap', 0)) if pd.notna(row.get('value_gap')) else None,
+            'archetype': row.get('archetype', row.get('Offensive Archetype', '')),
+            'role': row.get('Rotation Role', ''),
+            'ppg': row.get('PTS', row.get('ppg')),
+            'rpg': row.get('REB', row.get('rpg')),
+            'apg': row.get('AST', row.get('apg')),
+            'spg': row.get('STL'),
+            'bpg': row.get('BLK'),
+            'fg_pct': row.get('FG_PCT'),
+            'three_pct': row.get('FG3_PCT'),
+            'ft_pct': row.get('FT_PCT'),
+            'ts_pct': row.get('TS_PCT'),
+            'ppg_pct': row.get('PTS_PCT'),
+            'rpg_pct': row.get('REB_PCT'),
+            'apg_pct': row.get('AST_PCT'),
+            'spg_pct': row.get('STL_PCT'),
+            'bpg_pct': row.get('BLK_PCT'),
+            'fg_pct_pct': row.get('FG_PCT_PCT'),
+            'three_pct_pct': row.get('FG3_PCT_PCT'),
+            'ft_pct_pct': row.get('FT_PCT_PCT'),
+            'ts_pct_pct': row.get('TS_PCT_PCT'),
+        }
+        customdata.append(data)
+    return customdata
+
+
 def create_efficiency_quadrant(df_teams):
     """
     Creates the Efficiency Quadrant Chart (Wins vs. Payroll).
@@ -138,25 +179,26 @@ def create_efficiency_quadrant(df_teams):
     df_teams['Eff_Rank_Str'] = df_teams['Eff_Rank'].apply(ordinal)
     
     fig_quadrant.add_trace(go.Scatter(
-        x=df_teams['Total_Payroll'],
-        y=df_teams['WINS'],
+        x=df_teams['Total_Payroll'].tolist(),
+        y=df_teams['WINS'].tolist(),
         mode='markers',
-        text=df_teams['Abbrev'],
-        customdata=np.stack((df_teams['Eff_Rank_Str'], df_teams['Efficiency_Index']), axis=-1),
+        text=df_teams['Abbrev'].tolist(),
+        customdata=list(zip(df_teams['Eff_Rank_Str'].tolist(), df_teams['Efficiency_Index'].tolist())),
         hovertemplate='<b>%{text}</b><br>Wins: %{y}<br>Payroll: $%{x:,.0f}<br>Eff Index: %{customdata[1]:.2f}<br>Rank: %{customdata[0]}<extra></extra>',
-        marker=dict(opacity=0) # Fully transparent markers
+        marker=dict(opacity=0)
     ))
 
-    # 3. Add Team Logos as Images
+    # 3. Add Team Logos as Images (using proxy URL to bypass CORS)
     logo_images = []
-    if 'Logo_URL' in df_teams.columns:
+    if 'TeamID' in df_teams.columns:
         for _, row in df_teams.iterrows():
-            if pd.notna(row['Logo_URL']):
+            if pd.notna(row['TeamID']):
+                proxy_url = f"http://localhost:8000/api/logo/{int(row['TeamID'])}"
                 logo_images.append(dict(
-                    source=row['Logo_URL'],
+                    source=proxy_url,
                     xref="x", yref="y",
                     x=row['Total_Payroll'], y=row['WINS'],
-                    sizex=8000000, sizey=2,  # Smaller logos for better visibility of gaps
+                    sizex=8000000, sizey=2,
                     xanchor="center", yanchor="middle",
                     layer="above"
                 ))
@@ -246,15 +288,15 @@ def create_team_grid(df_teams):
 
     # Add colored tiles (Heatmap-like effect using Scatter markers)
     fig_grid.add_trace(go.Scatter(
-        x=df_grid['grid_x'],
-        y=df_grid['grid_y'],
+        x=df_grid['grid_x'].tolist(),
+        y=df_grid['grid_y'].tolist(),
         mode='markers',
         marker=dict(
             symbol='square',
-            size=65,  # Large squares to form tiles
-            color=df_grid['Efficiency_Index'],
+            size=65,
+            color=df_grid['Efficiency_Index'].tolist(),
             colorscale='RdYlGn',
-            cmin=-3, cmax=3,  # Fixed scale for consistency with Quadrant chart
+            cmin=-3, cmax=3,
             colorbar=dict(
                 title='Efficiency',
                 tickmode='linear',
@@ -270,18 +312,19 @@ def create_team_grid(df_teams):
             line=dict(width=2, color='#1a2332'),
             opacity=0.9
         ),
-        text=df_grid['Abbrev'],
-        customdata=np.stack((df_grid['Efficiency_Index'], df_grid['Total_Payroll'], df_grid['WINS']), axis=-1),
+        text=df_grid['Abbrev'].tolist(),
+        customdata=list(zip(df_grid['Efficiency_Index'].tolist(), df_grid['Total_Payroll'].tolist(), df_grid['WINS'].tolist())),
         hovertemplate='<b>%{text}</b><br>Eff Index: %{customdata[0]:.2f}<br>Payroll: $%{customdata[1]:,.0f}<br>Wins: %{customdata[2]}<extra></extra>'
     ))
 
-    # Add Team Logos on top of the tiles
+    # Add Team Logos on top of the tiles (using proxy URL to bypass CORS)
     grid_images = []
-    if 'Logo_URL' in df_grid.columns:
+    if 'TeamID' in df_grid.columns:
         for _, row in df_grid.iterrows():
-            if pd.notna(row['Logo_URL']):
+            if pd.notna(row['TeamID']):
+                proxy_url = f"http://localhost:8000/api/logo/{int(row['TeamID'])}"
                 grid_images.append(dict(
-                    source=row['Logo_URL'],
+                    source=proxy_url,
                     xref="x", yref="y",
                     x=row['grid_x'], y=row['grid_y'],
                     sizex=0.5, sizey=0.5,
@@ -326,20 +369,24 @@ def create_salary_impact_scatter(filtered):
         go.Figure: A Plotly scatter plot.
     """
     fig = go.Figure()
+    customdata = build_player_customdata(filtered)
+
     fig.add_trace(go.Scatter(
         x=filtered['LEBRON'],
         y=filtered['current_year_salary'] if 'current_year_salary' in filtered.columns else filtered['total_contract_value'],
         mode='markers',
         marker=dict(
             # Size markers by WAR (Wins Above Replacement) to show total contribution
-            size=filtered['LEBRON WAR'].clip(lower=1) * 3.5 if 'LEBRON WAR' in filtered.columns else 6,
+            # Reduced size multiplier and opacity for better visibility
+            size=filtered['LEBRON WAR'].clip(lower=1) * 2.5 if 'LEBRON WAR' in filtered.columns else 5,
             # Color markers by Value Gap to highlight efficiency
             color=filtered['value_gap'] if 'value_gap' in filtered.columns else 0,
             colorscale=[[0, '#ef476f'], [0.5, '#ffd166'], [1, '#06d6a0']],
             showscale=False,  # Hide colorbar to match other chart width
             line=dict(width=1.5, color='rgba(255,255,255,0.4)'),
-            opacity=0.95
+            opacity=0.75
         ),
+        customdata=customdata,
         text=[f"<b>{n}</b><br>Gap: {g:.1f}" for n, g in
               zip(filtered['player_name'], filtered['value_gap'] if 'value_gap' in filtered.columns else [0]*len(filtered))],
         hovertemplate='%{text}<extra></extra>'
@@ -428,6 +475,8 @@ def create_underpaid_bar(filtered):
             #                 layer="above"
             #             ))
 
+            customdata = build_player_customdata(top_under)
+
             fig = go.Figure(go.Bar(
                 x=top_under['value_gap'],
                 y=top_under['player_name'],
@@ -437,9 +486,15 @@ def create_underpaid_bar(filtered):
                     opacity=0.9,
                     line=dict(color='#04a077', width=1)
                 ),
+                customdata=customdata,
                 text=[f"{v:.1f}" for v in top_under['value_gap']],
                 textposition='outside',
-                textfont=dict(size=11, color='white')
+                textfont=dict(size=11, color='white'),
+                hovertext=[
+                    f"<b>{row.player_name}</b><br>Value Gap: +{row.value_gap:.1f}<br>Contract: ${row.current_year_salary:,.0f}"
+                    for row in top_under.itertuples()
+                ],
+                hoverinfo='text'
             ))
             fig.update_layout(
                 # title='<b style="font-size:16px">Top 20 Underpaid Players</b>',
@@ -485,19 +540,22 @@ def create_age_impact_scatter(filtered):
     """
     fig = go.Figure()
     if len(filtered) > 0 and 'Age' in filtered.columns:
+        customdata = build_player_customdata(filtered)
+
         fig.add_trace(go.Scatter(
             x=filtered['Age'],
             y=filtered['value_gap'],
             mode='markers',
             marker=dict(
                 # Size by Salary to show if expensive players are performing
-                size=filtered['current_year_salary'].fillna(0) / 2_000_000 if 'current_year_salary' in filtered.columns else 10,
+                size=filtered['current_year_salary'].fillna(0) / 3_000_000 if 'current_year_salary' in filtered.columns else 8,
                 color=filtered['value_gap'] if 'value_gap' in filtered.columns else 0,
                 colorscale=[[0, '#ef476f'], [0.5, '#ffd166'], [1, '#06d6a0']],
                 line=dict(width=1.5, color='rgba(255,255,255,0.4)'),
-                opacity=0.85,
+                opacity=0.75,
                 sizemin=4
             ),
+            customdata=customdata,
             text=[f"<b>{n}</b><br>Age: {a}<br>Impact: {i:.2f}<br>Gap: {g:.1f}"
                   for n, a, i, g in zip(
                       filtered['player_name'],
@@ -669,19 +727,22 @@ def create_player_beeswarm(filtered):
     value_gaps = df['value_gap'] if 'value_gap' in df.columns else [0]*len(df)
     salaries = df['current_year_salary'] if 'current_year_salary' in df.columns else [0]*len(df)
 
+    customdata = build_player_customdata(df)
+
     fig.add_trace(go.Scatter(
         x=df['LEBRON'],
         y=df['y_offset'],
         mode='markers',
         marker=dict(
-            size=10,
+            size=7,
             # Use same colorscale as salary vs impact chart
             color=value_gaps,
             colorscale=[[0, '#ef476f'], [0.5, '#ffd166'], [1, '#06d6a0']],
             showscale=False,
-            opacity=0.85,
+            opacity=0.75,
             line=dict(width=1, color='rgba(255,255,255,0.3)')
         ),
+        customdata=customdata,
         text=[f"<b>{n}</b><br>LEBRON: {l:.2f}<br>Value Gap: {g:+.1f}<br>${s/1e6:.1f}M"
               for n, l, g, s in zip(df['player_name'], df['LEBRON'], value_gaps, salaries)],
         hovertemplate='%{text}<extra></extra>',
@@ -751,6 +812,8 @@ def create_overpaid_bar(filtered):
             #                 layer="above"
             #             ))
 
+            customdata = build_player_customdata(top_over)
+
             fig = go.Figure(go.Bar(
                 x=top_over['value_gap'],
                 y=top_over['player_name'],
@@ -760,9 +823,15 @@ def create_overpaid_bar(filtered):
                     opacity=0.9,
                     line=dict(color='#c92a4e', width=1)
                 ),
+                customdata=customdata,
                 text=[f"{v:.1f}" for v in top_over['value_gap']],
                 textposition='outside',
-                textfont=dict(size=11, color='white')
+                textfont=dict(size=11, color='white'),
+                hovertext=[
+                    f"<b>{row.player_name}</b><br>Value Gap: {row.value_gap:.1f}<br>Contract: ${row.current_year_salary:,.0f}"
+                    for row in top_over.itertuples()
+                ],
+                hoverinfo='text'
             ))
             fig.update_layout(
                 # title='<b style="font-size:16px">Top 20 Overpaid Players</b>',
@@ -1332,304 +1401,6 @@ def create_player_radar_mini(stats, position='Wing', player_name='Player'):
     )
 
     return fig
-
-
-# ============================================================================
-# LINEUP CHEMISTRY VISUALIZATIONS
-# ============================================================================
-
-def create_lineup_bar_chart(df, title='Top Lineups', color='#06d6a0', metric='PLUS_MINUS'):
-    """
-    Creates a horizontal bar chart showing lineup performance.
-
-    Args:
-        df (pd.DataFrame): Lineup data with GROUP_NAME and metric columns.
-        title (str): Chart title.
-        color (str): Bar color.
-        metric (str): Metric to display ('PLUS_MINUS', 'W_PCT', 'PTS', etc.)
-
-    Returns:
-        go.Figure: Plotly bar chart.
-    """
-    if df.empty or 'GROUP_NAME' not in df.columns:
-        fig = go.Figure().add_annotation(text="No lineup data available")
-        fig.update_layout(height=400, template='plotly_dark', paper_bgcolor='#0d1117')
-        return fig
-
-    # Use PLUS_MINUS if the requested metric isn't available
-    if metric not in df.columns:
-        metric = 'PLUS_MINUS' if 'PLUS_MINUS' in df.columns else df.columns[0]
-
-    # Take top 10 and reverse for horizontal bar chart
-    display_df = df.head(10).iloc[::-1].copy()
-
-    # Format player names (shorten if needed)
-    def format_lineup_name(name):
-        """Formats lineup names to be more readable."""
-        if not isinstance(name, str):
-            return str(name)
-        # Split by ' - ' and take last names
-        players = name.split(' - ')
-        formatted = []
-        for player in players:
-            parts = player.strip().split(' ')
-            if len(parts) >= 2:
-                # First initial + last name
-                formatted.append(f"{parts[0][0]}. {parts[-1]}")
-            else:
-                formatted.append(player.strip())
-        return ' + '.join(formatted)
-
-    display_df['Display_Name'] = display_df['GROUP_NAME'].apply(format_lineup_name)
-
-    # Determine color based on values (green for positive, red for negative)
-    colors = [color if v >= 0 else '#ef476f' for v in display_df[metric]]
-
-    fig = go.Figure(go.Bar(
-        x=display_df[metric],
-        y=display_df['Display_Name'],
-        orientation='h',
-        marker=dict(
-            color=colors,
-            opacity=0.9,
-            line=dict(color='rgba(255,255,255,0.3)', width=1)
-        ),
-        text=[f"{v:+.1f}" for v in display_df[metric]],
-        textposition='outside',
-        textfont=dict(size=11, color='#e4e6eb'),
-        customdata=np.stack([
-            display_df['MIN'].values if 'MIN' in display_df.columns else [0]*len(display_df),
-            display_df['GP'].values if 'GP' in display_df.columns else [0]*len(display_df),
-            display_df['TEAM_ABBREVIATION'].values if 'TEAM_ABBREVIATION' in display_df.columns else ['']*len(display_df)
-        ], axis=-1),
-        hovertemplate='<b>%{y}</b><br>Net Rating: %{x:+.1f}<br>Minutes: %{customdata[0]:.0f}<br>Games: %{customdata[1]}<br>Team: %{customdata[2]}<extra></extra>'
-    ))
-
-    fig.update_layout(
-        height=500,  # Increased for better visibility
-        template='plotly_dark',
-        margin=dict(l=220, r=70, t=10, b=40),  # More margin for lineup names
-        paper_bgcolor='#0d1117',  # Match frontend
-        plot_bgcolor='#161b22',   # Match frontend
-        showlegend=False,
-        xaxis=dict(
-            title=f'<b>{metric.replace("_", " ")}</b>',
-            gridcolor='#21262d',
-            zeroline=True,
-            zerolinecolor='rgba(255,255,255,0.3)',
-            zerolinewidth=2
-        ),
-        yaxis=dict(
-            tickfont=dict(size=11),
-            gridcolor='#21262d'
-        ),
-        hoverlabel=dict(
-            bgcolor="#1c2128",
-            bordercolor="#58a6ff",
-            font=dict(color="#e6edf3")
-        )
-    )
-
-    return fig
-
-
-def create_lineup_scatter(df_best, df_worst, title='Lineup Chemistry Map'):
-    """
-    Creates a scatter plot showing Plus/Minus vs Minutes for lineups.
-
-    Args:
-        df_best (pd.DataFrame): Best performing lineups.
-        df_worst (pd.DataFrame): Worst performing lineups.
-        title (str): Chart title.
-
-    Returns:
-        go.Figure: Plotly scatter plot.
-    """
-    fig = go.Figure()
-
-    # Helper to format names
-    def format_lineup_name(name):
-        if not isinstance(name, str):
-            return str(name)
-        players = name.split(' - ')
-        formatted = []
-        for player in players:
-            parts = player.strip().split(' ')
-            if len(parts) >= 2:
-                formatted.append(f"{parts[0][0]}. {parts[-1]}")
-            else:
-                formatted.append(player.strip())
-        return ' + '.join(formatted)
-
-    # Add best lineups (green)
-    if not df_best.empty and 'PLUS_MINUS' in df_best.columns:
-        df_best = df_best.copy()
-        df_best['Display_Name'] = df_best['GROUP_NAME'].apply(format_lineup_name)
-
-        fig.add_trace(go.Scatter(
-            x=df_best['MIN'] if 'MIN' in df_best.columns else range(len(df_best)),
-            y=df_best['PLUS_MINUS'],
-            mode='markers+text',
-            marker=dict(
-                size=12,
-                color='#06d6a0',
-                opacity=0.8,
-                line=dict(width=2, color='rgba(255,255,255,0.5)')
-            ),
-            text=df_best['Display_Name'],
-            textposition='top center',
-            textfont=dict(size=8, color='#06d6a0'),
-            name='Best Lineups',
-            hovertemplate='<b>%{text}</b><br>+/-: %{y:+.1f}<br>Minutes: %{x:.0f}<extra></extra>'
-        ))
-
-    # Add worst lineups (red)
-    if not df_worst.empty and 'PLUS_MINUS' in df_worst.columns:
-        df_worst = df_worst.copy()
-        df_worst['Display_Name'] = df_worst['GROUP_NAME'].apply(format_lineup_name)
-
-        fig.add_trace(go.Scatter(
-            x=df_worst['MIN'] if 'MIN' in df_worst.columns else range(len(df_worst)),
-            y=df_worst['PLUS_MINUS'],
-            mode='markers+text',
-            marker=dict(
-                size=12,
-                color='#ef476f',
-                opacity=0.8,
-                line=dict(width=2, color='rgba(255,255,255,0.5)')
-            ),
-            text=df_worst['Display_Name'],
-            textposition='bottom center',
-            textfont=dict(size=8, color='#ef476f'),
-            name='Worst Lineups',
-            hovertemplate='<b>%{text}</b><br>+/-: %{y:+.1f}<br>Minutes: %{x:.0f}<extra></extra>'
-        ))
-
-    # Add zero line
-    fig.add_hline(y=0, line_dash="dash", line_color="rgba(255,255,255,0.4)", line_width=1)
-
-    fig.update_layout(
-        height=500,
-        template='plotly_dark',
-        margin=dict(l=60, r=20, t=20, b=60),
-        paper_bgcolor='#0d1117',
-        plot_bgcolor='#161b22',
-        xaxis=dict(
-            title='<b>Total Minutes Together</b>',
-            gridcolor='#2c3e50'
-        ),
-        yaxis=dict(
-            title='<b>Plus/Minus</b> (higher = better)',
-            gridcolor='#2c3e50'
-        ),
-        legend=dict(
-            orientation="h",
-            yanchor="bottom",
-            y=-0.2,
-            xanchor="center",
-            x=0.5,
-            bgcolor='rgba(26, 35, 50, 0.8)',
-            bordercolor='#3a4555',
-            borderwidth=1
-        ),
-        hoverlabel=dict(
-            bgcolor="#1a2332",
-            bordercolor="#ff6b35",
-            font=dict(color="#e4e6eb")
-        )
-    )
-
-    return fig
-
-
-def create_lineup_table(df, table_type='best'):
-    """
-    Creates a styled data table for lineup data.
-
-    Args:
-        df (pd.DataFrame): Lineup data.
-        table_type (str): 'best' or 'worst' to determine styling.
-
-    Returns:
-        dash_table.DataTable: Styled table component.
-    """
-    if df.empty:
-        return html.P("No lineup data available", className="text-muted text-center")
-
-    # Format lineup names
-    def format_lineup_name(name):
-        if not isinstance(name, str):
-            return str(name)
-        players = name.split(' - ')
-        formatted = []
-        for player in players:
-            parts = player.strip().split(' ')
-            if len(parts) >= 2:
-                formatted.append(f"{parts[0][0]}. {parts[-1]}")
-            else:
-                formatted.append(player.strip())
-        return ' + '.join(formatted)
-
-    display_df = df.head(10).copy()
-    display_df['Lineup'] = display_df['GROUP_NAME'].apply(format_lineup_name)
-
-    text_color = '#06d6a0' if table_type == 'best' else '#ef476f'
-
-    # Build columns dynamically based on what's available
-    columns = [{'name': 'Lineup', 'id': 'Lineup', 'type': 'text'}]
-
-    if 'TEAM_ABBREVIATION' in display_df.columns:
-        columns.append({'name': 'Team', 'id': 'TEAM_ABBREVIATION', 'type': 'text'})
-    if 'MIN' in display_df.columns:
-        columns.append({'name': 'MIN', 'id': 'MIN', 'type': 'numeric', 'format': {'specifier': '.0f'}})
-    if 'GP' in display_df.columns:
-        columns.append({'name': 'GP', 'id': 'GP', 'type': 'numeric'})
-    if 'PLUS_MINUS' in display_df.columns:
-        columns.append({'name': '+/-', 'id': 'PLUS_MINUS', 'type': 'numeric', 'format': {'specifier': '+.1f'}})
-    if 'W_PCT' in display_df.columns:
-        columns.append({'name': 'W%', 'id': 'W_PCT', 'type': 'numeric', 'format': {'specifier': '.3f'}})
-    if 'PTS' in display_df.columns:
-        columns.append({'name': 'PTS', 'id': 'PTS', 'type': 'numeric', 'format': {'specifier': '.1f'}})
-
-    return dash_table.DataTable(
-        data=display_df.to_dict('records'),
-        columns=columns,
-        style_table={'overflowX': 'auto'},
-        style_cell={
-            'backgroundColor': '#1a2332',
-            'color': '#e4e6eb',
-            'textAlign': 'left',
-            'padding': '8px 12px',
-            'fontSize': '12px',
-            'border': 'none',
-            'borderBottom': '1px solid #2c3e50'
-        },
-        style_header={
-            'backgroundColor': '#151b26',
-            'fontWeight': 'bold',
-            'textAlign': 'left',
-            'color': '#e4e6eb',
-            'borderBottom': '2px solid #ff6b35',
-            'fontSize': '12px',
-            'padding': '8px 12px'
-        },
-        style_data_conditional=[
-            {
-                'if': {'column_id': 'PLUS_MINUS'},
-                'color': text_color,
-                'fontWeight': 'bold'
-            },
-            {
-                'if': {'column_id': 'Lineup'},
-                'fontWeight': '600',
-                'maxWidth': '200px',
-                'overflow': 'hidden',
-                'textOverflow': 'ellipsis'
-            }
-        ],
-        page_action='none',
-        sort_action='native'
-    )
 
 
 # =============================================================================

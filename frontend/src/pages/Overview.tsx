@@ -4,7 +4,7 @@
 
 import { Link } from 'react-router-dom';
 import { useOverview, useTeams } from '../hooks/useApi';
-import { PageHeader } from '../components';
+import { PageHeader, PlayerCell } from '../components';
 import { PageLoading, ErrorDisplay } from '../components/Loading';
 import type { OverviewPlayer } from '../lib/api';
 
@@ -36,8 +36,8 @@ export function Overview({ season }: OverviewProps) {
         <StatItem label="Players" value={overview.num_players} />
         <StatItem label="Teams" value={overview.num_teams} />
         <StatItem label="Avg Salary" value={`$${overview.avg_salary_millions.toFixed(1)}M`} color="text-blue" />
-        <StatItem 
-          label="Avg LEBRON" 
+        <StatItem
+          label="Avg LEBRON"
           value={overview.avg_lebron >= 0 ? `+${overview.avg_lebron.toFixed(2)}` : overview.avg_lebron.toFixed(2)}
           color={overview.avg_lebron >= 0 ? 'text-green' : 'text-red'}
         />
@@ -45,35 +45,34 @@ export function Overview({ season }: OverviewProps) {
         <StatItem label="Most Efficient" value={overview.most_efficient_team || 'N/A'} color="text-green" />
       </div>
 
-      {/* Navigation Cards - symmetric 4 column */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* Navigation Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <NavCard to="/players" title="Player Analysis" desc="Explore player value, contracts, and performance metrics" />
         <NavCard to="/teams" title="Team Efficiency" desc="Compare team spending vs performance across the league" />
-        <NavCard to="/lineups" title="Lineup Chemistry" desc="Discover best and worst performing lineup combinations" />
         <NavCard to="/similarity" title="Similarity Engine" desc="Find historical player comparisons and replacements" />
       </div>
 
       {/* Player Lists - symmetric 3 column */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <PlayerList 
-          title="Best Value Players" 
-          badge="Underpaid" 
+        <PlayerList
+          title="Best Value Players"
+          badge="Underpaid"
           badgeClass="badge-green"
-          players={overview.top_value_players || []} 
+          players={overview.top_value_players || []}
           type="value"
         />
-        <PlayerList 
-          title="Top Performers" 
-          badge="LEBRON" 
+        <PlayerList
+          title="Top Performers"
+          badge="LEBRON"
           badgeClass="badge-blue"
-          players={overview.top_performers || []} 
+          players={overview.top_performers || []}
           type="lebron"
         />
-        <PlayerList 
-          title="Worst Value Players" 
-          badge="Overpaid" 
+        <PlayerList
+          title="Worst Value Players"
+          badge="Overpaid"
           badgeClass="badge-red"
-          players={overview.worst_value_players || []} 
+          players={overview.worst_value_players || []}
           type="overpaid"
         />
       </div>
@@ -119,18 +118,18 @@ export function Overview({ season }: OverviewProps) {
         <div className="panel">
           <div className="panel-header">Key Metrics</div>
           <div className="panel-body space-y-4">
-            <MetricInfo 
-              name="LEBRON" 
+            <MetricInfo
+              name="LEBRON"
               range="-3 to +6"
               desc="Luck-adjusted Estimate of Box-score and Real On-court Network. Measures overall player impact per game."
             />
-            <MetricInfo 
-              name="Value Gap" 
+            <MetricInfo
+              name="Value Gap"
               range="-100 to +100"
               desc="Difference between normalized impact and salary. Positive = underpaid, negative = overpaid."
             />
-            <MetricInfo 
-              name="Efficiency Index" 
+            <MetricInfo
+              name="Efficiency Index"
               range="0 to 5+"
               desc="Team wins relative to payroll spending. Higher values = better value for money."
             />
@@ -162,17 +161,17 @@ function NavCard({ to, title, desc }: { to: string; title: string; desc: string 
 }
 
 // Player list panel
-function PlayerList({ 
-  title, 
-  badge, 
-  badgeClass, 
-  players, 
-  type 
-}: { 
-  title: string; 
-  badge: string; 
+function PlayerList({
+  title,
+  badge,
+  badgeClass,
+  players,
+  type
+}: {
+  title: string;
+  badge: string;
   badgeClass: string;
-  players: OverviewPlayer[]; 
+  players: OverviewPlayer[];
   type: 'value' | 'lebron' | 'overpaid';
 }) {
   return (
@@ -192,28 +191,51 @@ function PlayerList({
           </thead>
           <tbody>
             {players.map((p, i) => {
-              const val = type === 'lebron' 
+              const val = type === 'lebron'
                 ? `+${p.lebron.toFixed(2)}`
                 : (p.value_gap >= 0 ? '+' : '') + p.value_gap.toFixed(1);
               const valColor = type === 'overpaid' ? 'text-red' : type === 'lebron' ? 'text-blue' : 'text-green';
-              
+
               return (
                 <tr key={p.name}>
                   <td className="text-[#666]">{i + 1}</td>
                   <td>
                     <div className="flex items-center gap-2">
-                      {p.player_id && (
-                        <img
-                          src={`https://cdn.nba.com/headshots/nba/latest/260x190/${p.player_id}.png`}
-                          alt=""
-                          className="w-8 h-8 rounded-full object-cover bg-[#1a1a1a] shrink-0"
-                          onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                        />
-                      )}
-                      <div className="min-w-0">
-                        <div className="font-sans text-[#e5e5e5] truncate">{p.name}</div>
-                        <div className="text-[10px] text-[#666]">{p.team} - ${p.salary.toFixed(1)}M</div>
-                      </div>
+                      <PlayerCell
+                        name={p.name}
+                        playerId={p.player_id}
+                        team={`${p.team} - $${p.salary.toFixed(1)}M`}
+                        playerData={{
+                          player_name: p.name,
+                          player_id: p.player_id,
+                          team: p.team,
+                          salary: p.salary * 1_000_000,
+                          lebron: p.lebron,
+                          value_gap: p.value_gap,
+                          o_lebron: p.o_lebron,
+                          d_lebron: p.d_lebron,
+                          role: p.role,
+                          archetype: p.archetype,
+                          ppg: p.ppg,
+                          rpg: p.rpg,
+                          apg: p.apg,
+                          spg: p.spg,
+                          bpg: p.bpg,
+                          fg_pct: p.fg_pct,
+                          three_pct: p.three_pct,
+                          ft_pct: p.ft_pct,
+                          ts_pct: p.ts_pct,
+                          ppg_pct: p.ppg_pct,
+                          rpg_pct: p.rpg_pct,
+                          apg_pct: p.apg_pct,
+                          spg_pct: p.spg_pct,
+                          bpg_pct: p.bpg_pct,
+                          fg_pct_pct: p.fg_pct_pct,
+                          three_pct_pct: p.three_pct_pct,
+                          ft_pct_pct: p.ft_pct_pct,
+                          ts_pct_pct: p.ts_pct_pct,
+                        }}
+                      />
                     </div>
                   </td>
                   <td className={`text-right ${valColor}`}>{val}</td>

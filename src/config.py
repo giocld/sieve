@@ -78,7 +78,7 @@ LEBRON_FILE = f'{DATA_DIR}/LEBRON.csv'  # External: BBRef LEBRON metrics
 BBREF_RAW_FILE = f'{DATA_DIR}/bbref_contracts_raw.csv'  # External: Raw BBRef contracts
 
 # Legacy CSV path (deprecated - use DB via cache_manager)
-CONTRACTS_FILE = f'{DATA_DIR}/basketball_reference_contracts.csv'
+CONTRACTS_FILE = f'{DATA_DIR}/bbref_contracts_raw.csv'
 
 # Team abbreviation normalization
 ABBR_NORMALIZATION = {

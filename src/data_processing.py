@@ -13,7 +13,7 @@ import time
 from sklearn.neighbors import NearestNeighbors
 from sklearn.preprocessing import StandardScaler
 from nba_api.stats.static import teams
-from nba_api.stats.endpoints import leaguedashteamstats, leaguedashplayerstats, leaguedashptstats, leaguedashlineups
+from nba_api.stats.endpoints import leaguedashteamstats, leaguedashplayerstats, leaguedashptstats
 
 # Import unified cache manager and config
 from src.cache_manager import cache
@@ -399,6 +399,71 @@ def load_and_merge_data(lebron_file='data/LEBRON.csv', contracts_file='data/bask
     except Exception as e:
         print(f"Warning: Could not load player IDs from history: {e}")
     
+    # --- Fetch and Merge Per-Game Stats ---
+    df_stats = fetch_player_pergame_stats(season=target_season)
+    if not df_stats.empty:
+        print(f"Merging per-game stats ({len(df_stats)} records)...")
+        # Use fuzzy merge to link stats to our players
+        # Keep relevant columns
+        cols_to_keep = ['PLAYER_ID', 'PLAYER_NAME', 'PTS', 'REB', 'AST', 'STL', 'BLK', 'FG_PCT', 'FG3_PCT', 'FT_PCT', 'TS_PCT']
+        cols_to_keep = [c for c in cols_to_keep if c in df_stats.columns]
+        df_stats_subset = df_stats[cols_to_keep].copy()
+        
+        # Merge
+        df_merged = fuzzy_merge_dataframes(
+            df,
+            df_stats_subset,
+            left_on='player_name',
+            right_on='PLAYER_NAME',
+            threshold=85
+        )
+        
+        if not df_merged.empty:
+            df = df_merged
+            
+            # --- Cleanup Duplicate Columns ---
+            # Drop uppercase PLAYER_NAME from stats API (we use 'player_name')
+            if 'PLAYER_NAME' in df.columns:
+                df = df.drop(columns=['PLAYER_NAME'])
+                
+            # Resolve PLAYER_ID collisions
+            # pd.merge creates _x (left/history) and _y (right/stats) suffixes if duplicates exist
+            if 'PLAYER_ID_x' in df.columns and 'PLAYER_ID_y' in df.columns:
+                # Prefer stats ID (_y) as it's definitely current, fallback to history (_x)
+                df['PLAYER_ID'] = df['PLAYER_ID_y'].fillna(df['PLAYER_ID_x'])
+                df = df.drop(columns=['PLAYER_ID_x', 'PLAYER_ID_y'])
+            
+            # Handle other potentially duplicated columns if any?
+            # Usually fuzzy matching keeps keys, but let's be safe.
+            
+            # Resolve PLAYER_ID collision from earlier contract merge if needed
+            if 'PLAYER_ID_contract' in df.columns:
+                df['PLAYER_ID'] = df['PLAYER_ID_contract'].fillna(df['PLAYER_ID'] if 'PLAYER_ID' in df.columns else np.nan)
+                df = df.drop(columns=['PLAYER_ID_contract'])
+        else:
+            print("Warning: Merged stats DataFrame is empty (no matches found).")
+    else:
+        print(f"Warning: Fetched stats DataFrame is empty for season {target_season}.")
+
+    # --- Calculate Percentiles by Position ---
+    # Determine position column
+    pos_col = 'Position' if 'Position' in df.columns else ('Pos' if 'Pos' in df.columns else None)
+    
+    if pos_col and not df.empty:
+        # Standardize position (clean up 'PG-SG' to 'PG' or similar if needed, but grouping by raw is ok for now)
+        # Maybe nice to simplify? e.g. 'PG' vs 'Point Guard'.
+        # LEBRON data usually uses 'PG', 'SG', 'SF', 'PF', 'C'.
+        
+        metrics = ['PTS', 'REB', 'AST', 'STL', 'BLK', 'FG_PCT', 'FG3_PCT', 'FT_PCT', 'TS_PCT']
+        valid_metrics = [m for m in metrics if m in df.columns]
+        
+        if valid_metrics:
+            print(f"Calculating percentiles for {len(valid_metrics)} metrics by position ({pos_col})...")
+            for m in valid_metrics:
+                # Calculate percentile rank (0 to 1) - higher is better
+                # Use transform to preserve DataFrame shape
+                df[f'{m}_PCT'] = df.groupby(pos_col)[m].rank(pct=True, ascending=True)
+
     return df
 
 
@@ -718,6 +783,57 @@ def fetch_nba_advanced_stats(force_refresh=False, season='2024-25'):
         return df
     except Exception as e:
         print(f"Error fetching NBA API data: {e}")
+        return pd.DataFrame()
+
+
+def fetch_player_pergame_stats(force_refresh=False, season='2024-25'):
+    """
+    Fetches Player Per Game Stats (Base) from NBA API and caches them.
+    Includes PTS, REB, AST, STL, BLK, FG%, 3P%, FT%.
+    Also calculates TS% (True Shooting Percentage).
+    
+    Args:
+        force_refresh (bool): If True, bypass cache.
+        season (str): NBA season string.
+        
+    Returns:
+        pd.DataFrame: DataFrame with player per-game stats.
+    """
+    # Check cache first
+    if not force_refresh:
+        df = cache.load_player_pergame_stats(season=season)
+        if df is not None and not df.empty:
+            print(f"Loaded player per-game stats from cache")
+            return df
+            
+    try:
+        print(f"Fetching player per-game stats from NBA API for season {season}...")
+        # Fetch Base stats (PTS, REB, AST, etc.)
+        # Note: Parameters must match nba_api endpoint requirements
+        stats = leaguedashplayerstats.LeagueDashPlayerStats(
+            season=season,
+            per_mode_detailed='PerGame',
+            measure_type_detailed_defense='Base'
+        )
+        df = stats.get_data_frames()[0]
+        
+        if df.empty:
+            print(f"WARNING: NBA API returned empty DataFrame for player stats ({season})")
+            return pd.DataFrame()
+            
+        print(f"Fetched {len(df)} player stats rows from NBA API")
+
+        # Calculate TS% if possible (PTS / (2 * (FGA + 0.44 * FTA)))
+        if all(col in df.columns for col in ['PTS', 'FGA', 'FTA']):
+            den = 2 * (df['FGA'] + 0.44 * df['FTA'])
+            df['TS_PCT'] = np.where(den > 0, df['PTS'] / den, 0)
+            
+        # Save to cache
+        cache.save_player_pergame_stats(df, season=season)
+        return df
+        
+    except Exception as e:
+        print(f"Error fetching player per-game stats: {e}")
         return pd.DataFrame()
 
 
@@ -1732,235 +1848,3 @@ def find_similar_players(player_name, season, df_history, model, scaler, feature
             break
         
     return results
-
-
-# ============================================================================
-# LINEUP CHEMISTRY ANALYSIS
-# ============================================================================
-
-def fetch_lineup_data(team_abbr=None, group_quantity=2, min_minutes=50, 
-                      force_refresh=False, season='2024-25'):
-    """
-    Fetches lineup data (duos, trios, etc.) from the NBA API.
-    Uses unified SQLite cache for storage.
-    
-    This function retrieves performance data for player combinations that have
-    played together on the floor. It tracks metrics like Net Rating, Plus/Minus,
-    and minutes played together.
-    
-    Args:
-        team_abbr (str, optional): Filter by team abbreviation (e.g., 'BOS'). None = all teams.
-        group_quantity (int): Number of players in the lineup (2=duos, 3=trios, etc.)
-        min_minutes (int): Minimum minutes played together to be included.
-        force_refresh (bool): If True, bypass cache and fetch fresh data.
-        season (str): NBA season string (e.g., '2024-25').
-        
-    Returns:
-        pd.DataFrame: DataFrame with lineup performance metrics.
-    """
-    # Check unified cache first (unless force refresh)
-    if not force_refresh:
-        df = cache.load_lineups(group_quantity, team_abbr, season, min_minutes)
-        if df is not None and not df.empty:
-            return df
-    
-    # Custom headers to avoid NBA API blocking
-    custom_headers = {
-        'Host': 'stats.nba.com',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/113.0',
-        'Accept': 'application/json, text/plain, */*',
-        'Accept-Language': 'en-US,en;q=0.5',
-        'Accept-Encoding': 'gzip, deflate, br',
-        'x-nba-stats-origin': 'stats',
-        'x-nba-stats-token': 'true',
-        'Connection': 'keep-alive',
-        'Referer': 'https://www.nba.com/',
-        'Origin': 'https://www.nba.com',
-        'Sec-Fetch-Dest': 'empty',
-        'Sec-Fetch-Mode': 'cors',
-        'Sec-Fetch-Site': 'same-site',
-    }
-    
-    # Retry logic for transient failures
-    max_retries = 3
-    retry_delay = 2
-    
-    for attempt in range(max_retries):
-        try:
-            print(f"Fetching {group_quantity}-man lineup data from NBA API (attempt {attempt + 1}/{max_retries})...")
-            
-            # Get Team ID if team_abbr provided
-            team_id = None
-            if team_abbr:
-                nba_teams = teams.get_teams()
-                for t in nba_teams:
-                    if t['abbreviation'] == team_abbr:
-                        team_id = t['id']
-                        break
-            
-            # Add delay before API call to avoid rate limiting
-            time.sleep(1.0)
-            
-            # Fetch lineup data with custom headers and longer timeout
-            lineups = leaguedashlineups.LeagueDashLineups(
-                group_quantity=group_quantity,
-                season=season,
-                season_type_all_star='Regular Season',
-                per_mode_detailed='PerGame',
-                team_id_nullable=team_id if team_id else '',
-                headers=custom_headers,
-                timeout=60  # Increase timeout to 60 seconds
-            )
-            
-            df = lineups.get_data_frames()[0]
-            
-            if df.empty:
-                print(f"Warning: NBA API returned empty data for {group_quantity}-man lineups")
-                if attempt < max_retries - 1:
-                    time.sleep(retry_delay * (attempt + 1))
-                    continue
-                return pd.DataFrame()
-            
-            # Save to unified cache
-            cache.save_lineups(df, group_quantity, team_abbr, season)
-            
-            # Filter by minimum TOTAL minutes
-            # SUM_TIME_PLAYED / 3000 = total minutes played together
-            if 'SUM_TIME_PLAYED' in df.columns:
-                df['TOTAL_MIN'] = df['SUM_TIME_PLAYED'] / 3000  # Convert to minutes
-                df = df[df['TOTAL_MIN'] >= min_minutes]
-            
-            return df
-            
-        except Exception as e:
-            print(f"Attempt {attempt + 1} failed: {e}")
-            if attempt < max_retries - 1:
-                wait_time = retry_delay * (attempt + 1)
-                print(f"Retrying in {wait_time} seconds...")
-                time.sleep(wait_time)
-            else:
-                print(f"All {max_retries} attempts failed for lineup data")
-                # Return empty DataFrame if all retries failed
-                return pd.DataFrame()
-
-
-def get_best_lineups(team_abbr=None, group_quantity=2, min_minutes=50, top_n=15, sort_by='PLUS_MINUS', season='2024-25'):
-    """
-    Gets the best performing lineups (duos/trios) sorted by a given metric.
-    
-    Args:
-        team_abbr (str, optional): Filter by team abbreviation.
-        group_quantity (int): 2 for duos, 3 for trios.
-        min_minutes (int): Minimum TOTAL minutes played together.
-        top_n (int): Number of top lineups to return.
-        sort_by (str): Metric to sort by ('PLUS_MINUS', 'W_PCT', 'PTS').
-        season (str): NBA season (default '2024-25').
-        
-    Returns:
-        pd.DataFrame: Top N lineups with key metrics.
-    """
-    df = fetch_lineup_data(team_abbr=team_abbr, group_quantity=group_quantity, min_minutes=min_minutes, season=season)
-    
-    if df.empty:
-        return pd.DataFrame()
-    
-    # Select relevant columns (use TOTAL_MIN for display)
-    cols_to_keep = [
-        'GROUP_NAME', 'GROUP_ID', 'TEAM_ABBREVIATION', 'GP', 'TOTAL_MIN',
-        'W', 'L', 'W_PCT', 'PLUS_MINUS', 'PTS', 'AST', 'REB', 'FG_PCT'
-    ]
-    cols_available = [c for c in cols_to_keep if c in df.columns]
-    df_filtered = df[cols_available].copy()
-    
-    # Rename TOTAL_MIN to MIN for display consistency
-    if 'TOTAL_MIN' in df_filtered.columns:
-        df_filtered = df_filtered.rename(columns={'TOTAL_MIN': 'MIN'})
-    
-    # Sort by the specified metric (default PLUS_MINUS)
-    if sort_by in df_filtered.columns:
-        df_filtered = df_filtered.sort_values(sort_by, ascending=False)
-    elif 'PLUS_MINUS' in df_filtered.columns:
-        df_filtered = df_filtered.sort_values('PLUS_MINUS', ascending=False)
-    
-    # Get top N
-    return df_filtered.head(top_n)
-
-
-def get_worst_lineups(team_abbr=None, group_quantity=2, min_minutes=50, top_n=15, sort_by='PLUS_MINUS', season='2024-25'):
-    """
-    Gets the worst performing lineups (duos/trios) sorted by a given metric.
-    
-    Args:
-        team_abbr (str, optional): Filter by team abbreviation.
-        group_quantity (int): 2 for duos, 3 for trios.
-        min_minutes (int): Minimum TOTAL minutes played together.
-        top_n (int): Number of worst lineups to return.
-        sort_by (str): Metric to sort by ('PLUS_MINUS', 'W_PCT', 'PTS').
-        season (str): NBA season (default '2024-25').
-        
-    Returns:
-        pd.DataFrame: Bottom N lineups with key metrics.
-    """
-    df = fetch_lineup_data(team_abbr=team_abbr, group_quantity=group_quantity, min_minutes=min_minutes, season=season)
-    
-    if df.empty:
-        return pd.DataFrame()
-    
-    # Select relevant columns (use TOTAL_MIN for display)
-    cols_to_keep = [
-        'GROUP_NAME', 'GROUP_ID', 'TEAM_ABBREVIATION', 'GP', 'TOTAL_MIN',
-        'W', 'L', 'W_PCT', 'PLUS_MINUS', 'PTS', 'AST', 'REB', 'FG_PCT'
-    ]
-    cols_available = [c for c in cols_to_keep if c in df.columns]
-    df_filtered = df[cols_available].copy()
-    
-    # Rename TOTAL_MIN to MIN for display consistency
-    if 'TOTAL_MIN' in df_filtered.columns:
-        df_filtered = df_filtered.rename(columns={'TOTAL_MIN': 'MIN'})
-    
-    # Sort ascending (worst first)
-    if sort_by in df_filtered.columns:
-        df_filtered = df_filtered.sort_values(sort_by, ascending=True)
-    elif 'PLUS_MINUS' in df_filtered.columns:
-        df_filtered = df_filtered.sort_values('PLUS_MINUS', ascending=True)
-    
-    # Get bottom N
-    return df_filtered.head(top_n)
-
-
-def get_team_lineup_summary(team_abbr, min_minutes=30):
-    """
-    Gets a comprehensive lineup summary for a specific team.
-    
-    Returns the best and worst duos and trios for the specified team.
-    
-    Args:
-        team_abbr (str): Team abbreviation (e.g., 'BOS', 'LAL').
-        min_minutes (int): Minimum minutes played together.
-        
-    Returns:
-        dict: Dictionary containing 'best_duos', 'worst_duos', 'best_trios', 'worst_trios'.
-    """
-    return {
-        'best_duos': get_best_lineups(team_abbr=team_abbr, group_quantity=2, 
-                                       min_minutes=min_minutes, top_n=10),
-        'worst_duos': get_worst_lineups(team_abbr=team_abbr, group_quantity=2, 
-                                         min_minutes=min_minutes, top_n=10),
-        'best_trios': get_best_lineups(team_abbr=team_abbr, group_quantity=3, 
-                                        min_minutes=min_minutes, top_n=10),
-        'worst_trios': get_worst_lineups(team_abbr=team_abbr, group_quantity=3, 
-                                          min_minutes=min_minutes, top_n=10)
-    }
-
-
-def get_lineup_teams():
-    """
-    Returns a list of all NBA teams for the lineup dropdown.
-    
-    Returns:
-        list: List of dictionaries with 'label' and 'value' keys.
-    """
-    nba_teams = teams.get_teams()
-    team_options = [{'label': t['full_name'], 'value': t['abbreviation']} 
-                    for t in sorted(nba_teams, key=lambda x: x['full_name'])]
-    return team_options

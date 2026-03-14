@@ -144,23 +144,6 @@ Updates team comparison radar chart.
 
 ---
 
-#### `update_lineup_analysis`
-Updates lineup chemistry visualizations.
-
-**Inputs:**
-- Team dropdown
-- Lineup size radio (2 or 3)
-- Min minutes slider
-
-**Outputs:**
-- chart-best-lineups (figure)
-- chart-worst-lineups (figure)
-- chart-lineup-scatter (figure)
-- table-best-lineups (html)
-- table-worst-lineups (html)
-
----
-
 #### `update_season_dropdown`
 Populates season dropdown for similarity tab.
 
@@ -483,11 +466,6 @@ Player Analysis tab with filters and chart placeholders.
 
 #### `create_team_tab(df_teams, fig_quadrant, fig_grid)`
 Team Analysis tab with quadrant chart and grid.
-
----
-
-#### `create_lineup_tab(team_options)`
-Lineup Chemistry tab with team selector.
 
 ---
 

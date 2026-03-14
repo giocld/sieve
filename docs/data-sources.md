@@ -194,18 +194,18 @@ It's an all-in-one impact metric that measures a player's contribution per 100 p
 | FG3_PCT | 3-point percentage |
 | FT_PCT | Free throw percentage |
 
-#### 3. LeagueDashLineups
+#### 3. LeagueDashPlayerStats (Advanced)
 
-**Purpose:** Lineup chemistry analysis
+**Purpose:** Advanced player statistics for Diamond Finder
 
-**Endpoint:** `leaguedashlineups`
+**Endpoint:** `leaguedashplayerstats`
 
 **Parameters:**
 ```python
 {
     'season': '2024-25',
-    'group_quantity': 2,  # or 3 for trios
-    'per_mode_detailed': 'Totals'
+    'measure_type_detailed_defense': 'Advanced',
+    'per_mode_detailed': 'PerGame'
 }
 ```
 
@@ -252,5 +252,4 @@ It's an all-in-one impact metric that measures a player's contribution per 100 p
 | Contracts | Yearly (or after trades) | `python -m src.scraper --contracts` |
 | Player Stats | Daily during season | `python -m src.manage_cache refresh` |
 | Standings | Daily during season | Auto-fetched when stale |
-| Lineups | On-demand | Fetched per request, cached 24h |
 
