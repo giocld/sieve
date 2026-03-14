@@ -45,6 +45,7 @@ export function ChartPanel({
         ? (parsed.data || []).map((trace: any) => ({
             ...trace,
             hoverinfo: 'none',
+            hovertemplate: null,
           }))
         : (parsed.data || []);
 
