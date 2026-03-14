@@ -490,12 +490,11 @@ def create_underpaid_bar(filtered):
                 text=[f"{v:.1f}" for v in top_under['value_gap']],
                 textposition='outside',
                 textfont=dict(size=11, color='white'),
-                hovertemplate='<b>%{y}</b><br>' +
-                              'Value Gap: +%{x:.1f}<br>' +
-                              'Salary: $%{customdata.salary:,.0f}<br>' +
-                              'LEBRON: %{customdata.lebron:.2f}<br>' +
-                              'PTS: %{customdata.ppg:.1f} | REB: %{customdata.rpg:.1f} | AST: %{customdata.apg:.1f}' +
-                              '<extra></extra>'
+                hovertext=[
+                    f"<b>{row.player_name}</b><br>Value Gap: +{row.value_gap:.1f}<br>Contract: ${row.current_year_salary:,.0f}"
+                    for row in top_under.itertuples()
+                ],
+                hoverinfo='text'
             ))
             fig.update_layout(
                 # title='<b style="font-size:16px">Top 20 Underpaid Players</b>',
@@ -828,12 +827,11 @@ def create_overpaid_bar(filtered):
                 text=[f"{v:.1f}" for v in top_over['value_gap']],
                 textposition='outside',
                 textfont=dict(size=11, color='white'),
-                hovertemplate='<b>%{y}</b><br>' +
-                              'Value Gap: %{x:.1f}<br>' +
-                              'Salary: $%{customdata.salary:,.0f}<br>' +
-                              'LEBRON: %{customdata.lebron:.2f}<br>' +
-                              'PTS: %{customdata.ppg:.1f} | REB: %{customdata.rpg:.1f} | AST: %{customdata.apg:.1f}' +
-                              '<extra></extra>'
+                hovertext=[
+                    f"<b>{row.player_name}</b><br>Value Gap: {row.value_gap:.1f}<br>Contract: ${row.current_year_salary:,.0f}"
+                    for row in top_over.itertuples()
+                ],
+                hoverinfo='text'
             ))
             fig.update_layout(
                 # title='<b style="font-size:16px">Top 20 Overpaid Players</b>',

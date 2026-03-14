@@ -41,20 +41,18 @@ export function ChartPanel({
     try {
       const parsed = JSON.parse(chartJson);
 
-      // If player hover enabled, disable native Plotly hover text but keep events
       const data = enablePlayerHover
         ? (parsed.data || []).map((trace: any) => ({
-          ...trace,
-          hoverinfo: 'skip', // Disable tooltip but keep hover events
-          hovertemplate: null, // Remove any hovertemplate
-        }))
+            ...trace,
+            hoverinfo: 'none',
+          }))
         : (parsed.data || []);
 
       const mergedLayout = {
         ...parsed.layout,
         paper_bgcolor: 'transparent',
         plot_bgcolor: parsed.layout?.plot_bgcolor || '#141414',
-        hovermode: 'closest', // Ensure we get the closest point
+        hovermode: 'closest',
         font: {
           ...parsed.layout?.font,
           color: parsed.layout?.font?.color || '#999',

@@ -44,9 +44,8 @@ export function PlayerHoverCard({ player, children, manualPosition, className = 
     const [isHovered, setIsHovered] = useState(false);
     const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
 
-    // Use manual position if provided (chart mode), otherwise tracking state (table mode)
-    const show = manualPosition ? true : isHovered;
-    const position = manualPosition || mousePos;
+    const showInline = !manualPosition && isHovered;
+    const showPortal = !!manualPosition;
 
     // Handle auto-closing if no manual position and mouse leaves
     const handleMouseEnter = (e: React.MouseEvent) => {
@@ -69,16 +68,7 @@ export function PlayerHoverCard({ player, children, manualPosition, className = 
         setMousePos({ x: e.clientX, y: e.clientY });
     };
 
-    // Content of the card
-    const cardContent = (
-        <div
-            className="fixed z-[9999] pointer-events-none animate-fade-in"
-            style={{
-                left: position.x,
-                top: position.y - 12, // slightly above cursor
-                transform: 'translate(-50%, -100%)', // Center horizontally, place above
-            }}
-        >
+    const renderCardInner = () => (
             <div className="bg-[#1a1a1a]/95 backdrop-blur-sm border border-[#333] rounded-xl shadow-2xl overflow-hidden min-w-[320px]">
                 {/* Header */}
                 <div className="flex items-center gap-3 p-3 border-b border-[#2a2a2a] bg-[#141414]/50">
@@ -155,20 +145,43 @@ export function PlayerHoverCard({ player, children, manualPosition, className = 
                     </div>
                 )}
             </div>
-        </div>
     );
 
     return (
         <>
             <div
-                className={className}
+                className={`relative inline-block ${className}`}
                 onMouseEnter={handleMouseEnter}
                 onMouseMove={handleMouseMove}
                 onMouseLeave={handleMouseLeave}
             >
                 {children}
+                {showInline && (
+                    <div
+                        className="absolute z-[9999] pointer-events-none animate-fade-in"
+                        style={{
+                            left: '100%',
+                            top: '-8px',
+                            marginLeft: '8px',
+                        }}
+                    >
+                        {renderCardInner()}
+                    </div>
+                )}
             </div>
-            {show && createPortal(cardContent, document.body)}
+            {showPortal && manualPosition && createPortal(
+                <div
+                    className="fixed z-[9999] pointer-events-none animate-fade-in"
+                    style={{
+                        left: manualPosition.x,
+                        top: manualPosition.y - 12,
+                        transform: 'translate(-50%, -100%)',
+                    }}
+                >
+                    {renderCardInner()}
+                </div>,
+                document.body
+            )}
         </>
     );
 }

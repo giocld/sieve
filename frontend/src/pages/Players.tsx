@@ -118,18 +118,20 @@ export function Players({ season }: PlayersProps) {
     {
       key: 'LEBRON',
       header: 'LEBRON',
-      align: 'right' as const,
+      align: 'center' as const,
+      width: '80px',
       render: (value: unknown) => (
         <span className={Number(value) >= 0 ? 'text-green' : 'text-red'}>
           {Number(value) >= 0 ? '+' : ''}{Number(value).toFixed(2)}
         </span>
       ),
     },
-    { key: 'current_year_salary', header: 'Salary', align: 'right' as const, format: 'currency' as const },
+    { key: 'current_year_salary', header: 'Salary', align: 'right' as const, width: '90px', format: 'currency' as const },
     {
       key: 'value_gap',
       header: 'Value Gap',
-      align: 'right' as const,
+      align: 'center' as const,
+      width: '100px',
       render: (value: unknown) => <ValueCell value={Number(value)} />,
     },
   ], []);
