@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import Plot from 'react-plotly.js';
 import type { Config } from 'plotly.js';
 import { PlayerHoverCard } from './PlayerHoverCard';
@@ -34,6 +34,10 @@ export function ChartPanel({
   enablePlayerHover = true,
 }: ChartPanelProps) {
   const [hoverData, setHoverData] = useState<{ player: any; x: number; y: number } | null>(null);
+  const [mobileTapData, setMobileTapData] = useState<{ player: any; x: number; y: number } | null>(null);
+  const panelRef = useRef<HTMLDivElement | null>(null);
+  const plotDivRef = useRef<any>(null);
+  const plotlyClickHandlerRef = useRef<((event: any) => void) | null>(null);
 
   const chartData = useMemo(() => {
     if (!chartJson) return null;
@@ -103,8 +107,66 @@ export function ChartPanel({
     }
   }, [enablePlayerHover]);
 
+  const isTouchDevice = useCallback(() => {
+    if (typeof window === 'undefined' || typeof navigator === 'undefined') return false;
+    const coarsePointer = typeof window.matchMedia === 'function'
+      && window.matchMedia('(hover: none), (pointer: coarse)').matches;
+    return coarsePointer || navigator.maxTouchPoints > 0 || 'ontouchstart' in window;
+  }, []);
+
+  const handleMobilePlotlyClick = useCallback((event: any) => {
+    if (!enablePlayerHover || !isTouchDevice()) return;
+
+    const point = event?.points?.[0];
+    const customdata = point?.customdata as any;
+    if (!(customdata && (customdata.player_name || customdata.player_id))) {
+      return;
+    }
+
+    const x = Math.round(window.innerWidth / 2);
+    const y = Math.max(160, window.innerHeight - 20);
+
+    setMobileTapData({
+      player: customdata,
+      x,
+      y,
+    });
+  }, [enablePlayerHover, isTouchDevice]);
+
+  const bindMobileClickHandler = useCallback((graphDiv: any) => {
+    if (!graphDiv || !graphDiv.on) return;
+
+    if (plotlyClickHandlerRef.current && graphDiv.removeListener) {
+      graphDiv.removeListener('plotly_click', plotlyClickHandlerRef.current);
+    }
+
+    plotlyClickHandlerRef.current = handleMobilePlotlyClick;
+    graphDiv.on('plotly_click', plotlyClickHandlerRef.current);
+  }, [handleMobilePlotlyClick]);
+
+  useEffect(() => {
+    if (!plotDivRef.current) return;
+    bindMobileClickHandler(plotDivRef.current);
+  }, [bindMobileClickHandler, chartData]);
+
+  useEffect(() => {
+    if (!mobileTapData) return;
+
+    const handleOutsideTouch = (event: TouchEvent) => {
+      if (!panelRef.current) return;
+      if (!panelRef.current.contains(event.target as Node)) {
+        setMobileTapData(null);
+      }
+    };
+
+    document.addEventListener('touchstart', handleOutsideTouch, { passive: true });
+    return () => {
+      document.removeEventListener('touchstart', handleOutsideTouch);
+    };
+  }, [mobileTapData]);
+
   return (
-    <div className={`panel overflow-hidden ${className}`}>
+    <div ref={panelRef} className={`panel overflow-hidden ${className}`}>
       {showHeader && (title || subtitle) && (
         <div className="panel-header">
           {title && <span>{title}</span>}
@@ -141,6 +203,14 @@ export function ChartPanel({
             style={{ width: '100%', height: '100%' }}
             onHover={handleHover}
             onUnhover={handleUnhover}
+            onInitialized={(_figure, graphDiv) => {
+              plotDivRef.current = graphDiv;
+              bindMobileClickHandler(graphDiv);
+            }}
+            onUpdate={(_figure, graphDiv) => {
+              plotDivRef.current = graphDiv;
+              bindMobileClickHandler(graphDiv);
+            }}
           />
         )}
 
@@ -155,6 +225,13 @@ export function ChartPanel({
         <PlayerHoverCard
           player={hoverData.player}
           manualPosition={{ x: hoverData.x, y: hoverData.y }}
+        />
+      )}
+
+      {mobileTapData && (
+        <PlayerHoverCard
+          player={mobileTapData.player}
+          manualPosition={{ x: mobileTapData.x, y: mobileTapData.y }}
         />
       )}
     </div>

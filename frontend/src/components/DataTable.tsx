@@ -2,8 +2,10 @@
  * DataTable - Clean trading dashboard style with proper sorting
  */
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { PlayerHoverCard } from './PlayerHoverCard';
+
+const MOBILE_PLAYER_CARD_OPEN_EVENT = 'mobile-player-card-open';
 
 interface Column<T> {
   key: keyof T | string;
@@ -227,6 +229,11 @@ interface PlayerCellProps {
 }
 
 export function PlayerCell({ name, playerId, team, playerData }: PlayerCellProps) {
+  const [mobileTapOpen, setMobileTapOpen] = useState(false);
+  const cellRef = useRef<HTMLDivElement | null>(null);
+  const lastInputWasTouchRef = useRef(false);
+  const cellIdRef = useRef(`${playerId ?? 'no-id'}:${name}:${team ?? ''}`);
+
   // Construct data for hover card if not provided fully
   const data = playerData || {
     player_name: name,
@@ -234,23 +241,87 @@ export function PlayerCell({ name, playerId, team, playerData }: PlayerCellProps
     team: team
   };
 
+  useEffect(() => {
+    if (!mobileTapOpen) return;
+
+    const handleOutsideTouch = (event: TouchEvent) => {
+      if (!cellRef.current) return;
+      if (!cellRef.current.contains(event.target as Node)) {
+        setMobileTapOpen(false);
+      }
+    };
+
+    document.addEventListener('touchstart', handleOutsideTouch, { passive: true });
+    return () => {
+      document.removeEventListener('touchstart', handleOutsideTouch);
+    };
+  }, [mobileTapOpen]);
+
+  useEffect(() => {
+    const handleOtherCardOpened = (event: Event) => {
+      const customEvent = event as CustomEvent<string>;
+      if (customEvent.detail !== cellIdRef.current) {
+        setMobileTapOpen(false);
+      }
+    };
+
+    window.addEventListener(MOBILE_PLAYER_CARD_OPEN_EVENT, handleOtherCardOpened as EventListener);
+    return () => {
+      window.removeEventListener(MOBILE_PLAYER_CARD_OPEN_EVENT, handleOtherCardOpened as EventListener);
+    };
+  }, []);
+
+  const handleClick = (event: React.MouseEvent<HTMLDivElement>) => {
+    if (!lastInputWasTouchRef.current) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    setMobileTapOpen((prev) => {
+      const nextState = !prev;
+      if (nextState) {
+        window.dispatchEvent(new CustomEvent(MOBILE_PLAYER_CARD_OPEN_EVENT, { detail: cellIdRef.current }));
+      }
+      return nextState;
+    });
+  };
+
   return (
-    <PlayerHoverCard player={data}>
-      <div className="flex items-center gap-2 group cursor-default">
-        {playerId && (
-          <img
-            src={`https://cdn.nba.com/headshots/nba/latest/260x190/${playerId}.png`}
-            alt=""
-            className="w-8 h-8 rounded-full object-cover bg-[#1a1a1a] shrink-0"
-            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-          />
-        )}
-        <div className="min-w-0">
-          <div className="text-[#e5e5e5] font-sans truncate group-hover:text-[#3b82f6] transition-colors">{name}</div>
-          {team && <div className="text-[10px] text-[#666]">{team}</div>}
+    <div
+      ref={cellRef}
+      onTouchStart={() => { lastInputWasTouchRef.current = true; }}
+      onPointerDown={(event) => { lastInputWasTouchRef.current = event.pointerType === 'touch'; }}
+      onClick={handleClick}
+    >
+      <PlayerHoverCard player={data}>
+        <div className="flex items-center gap-2 group cursor-default">
+          {playerId && (
+            <img
+              src={`https://cdn.nba.com/headshots/nba/latest/260x190/${playerId}.png`}
+              alt=""
+              className="w-8 h-8 rounded-full object-cover bg-[#1a1a1a] shrink-0"
+              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+            />
+          )}
+          <div className="min-w-0">
+            <div className="text-[#e5e5e5] font-sans truncate group-hover:text-[#3b82f6] transition-colors">{name}</div>
+            {team && <div className="text-[10px] text-[#666]">{team}</div>}
+          </div>
         </div>
-      </div>
-    </PlayerHoverCard>
+      </PlayerHoverCard>
+
+      {mobileTapOpen && (
+        <PlayerHoverCard
+          player={data}
+          manualPosition={{
+            x: Math.round((typeof window !== 'undefined' ? window.innerWidth : 0) / 2),
+            y: Math.max(160, (typeof window !== 'undefined' ? window.innerHeight : 0) - 20),
+          }}
+        />
+      )}
+    </div>
   );
 }
 
