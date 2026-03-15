@@ -108,18 +108,18 @@ export function PlayerHoverCard({ player, children, manualPosition, className = 
 
                 {/* Advanced Metrics */}
                 <div className="grid grid-cols-2 divide-x divide-[#2a2a2a]">
-                    <div className="p-3 flex items-center justify-between">
+                    <div className="px-3 py-2.5 flex items-center gap-2">
                         <span className="text-xs text-[#888] font-medium">LEBRON</span>
-                        <div className="text-right">
-                            <span className={`text-lg font-bold ${getScoreColor(player.lebron)}`}>
+                        <div className="ml-auto pr-1 text-right">
+                            <span className={`text-lg font-bold tabular-nums ${getScoreColor(player.lebron)}`}>
                                 {formatVal(player.lebron)}
                             </span>
                         </div>
                     </div>
-                    <div className="p-3 flex items-center justify-between">
+                    <div className="px-3 py-2.5 flex items-center gap-2">
                         <span className="text-xs text-[#888] font-medium">Value Gap</span>
-                        <div className="text-right">
-                            <span className={`text-lg font-bold ${getValColor(player.value_gap)}`}>
+                        <div className="ml-auto pr-1 text-right">
+                            <span className={`text-lg font-bold tabular-nums ${getValColor(player.value_gap)}`}>
                                 {player.value_gap && player.value_gap > 0 ? '+' : ''}{formatVal(player.value_gap, 1)}
                             </span>
                         </div>
