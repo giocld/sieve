@@ -141,14 +141,36 @@ function SimilarityTab() {
 
 interface SimilarPlayerCardProps {
   rank: number;
-  player: { Player: string; Season: string; id: number; Stats: Record<string, number>; MatchScore?: number };
+  player: {
+    Player: string;
+    Season: string;
+    id: number;
+    Stats: Record<string, number>;
+    MatchScore?: number;
+    Position?: string;
+    fg_pct?: number;
+    fg3_pct?: number;
+    ts_pct?: number;
+  };
 }
 
 function SimilarPlayerCard({ rank, player }: SimilarPlayerCardProps) {
+  const s = player.Stats ?? {};
   const hoverData = {
     player_name: player.Player,
     player_id: player.id,
-    lebron: player.Stats?.LEBRON, // Assuming LEBRON might be in stats
+    role: player.Position,
+    // Per-100-possession stats (best proxy available for historical seasons)
+    ppg: s.PTS,
+    rpg: s.REB,
+    apg: s.AST,
+    spg: s.STL,
+    bpg: s.BLK,
+    // Shooting splits
+    fg_pct: player.fg_pct,
+    three_pct: player.fg3_pct,
+    ft_pct: s.FT_PCT,
+    ts_pct: player.ts_pct,
   };
 
   return (
@@ -289,7 +311,34 @@ function DiamondFinderTab({ season }: DiamondFinderTabProps) {
 
 interface ReplacementCardProps {
   rank: number;
-  replacement: { player_name: string; PLAYER_ID?: number; salary: number; LEBRON: number; match_score: number; archetype?: string; defense_role?: string };
+  replacement: {
+    player_name: string;
+    PLAYER_ID?: number;
+    salary: number;
+    LEBRON: number;
+    value_gap?: number;
+    match_score: number;
+    archetype?: string;
+    defense_role?: string;
+    PTS?: number;
+    REB?: number;
+    AST?: number;
+    STL?: number;
+    BLK?: number;
+    FG_PCT?: number;
+    FG3_PCT?: number;
+    FT_PCT?: number;
+    TS_PCT?: number;
+    PTS_PCT?: number;
+    REB_PCT?: number;
+    AST_PCT?: number;
+    STL_PCT?: number;
+    BLK_PCT?: number;
+    FG_PCT_PCT?: number;
+    FG3_PCT_PCT?: number;
+    FT_PCT_PCT?: number;
+    TS_PCT_PCT?: number;
+  };
   targetSalary: number;
 }
 
@@ -303,6 +352,25 @@ function ReplacementCard({ rank, replacement, targetSalary }: ReplacementCardPro
     player_id: replacement.PLAYER_ID,
     salary: replacement.salary,
     lebron: replacement.LEBRON,
+    value_gap: replacement.value_gap,
+    ppg: replacement.PTS,
+    rpg: replacement.REB,
+    apg: replacement.AST,
+    spg: replacement.STL,
+    bpg: replacement.BLK,
+    fg_pct: replacement.FG_PCT,
+    three_pct: replacement.FG3_PCT,
+    ft_pct: replacement.FT_PCT,
+    ts_pct: replacement.TS_PCT,
+    ppg_pct: replacement.PTS_PCT,
+    rpg_pct: replacement.REB_PCT,
+    apg_pct: replacement.AST_PCT,
+    spg_pct: replacement.STL_PCT,
+    bpg_pct: replacement.BLK_PCT,
+    fg_pct_pct: replacement.FG_PCT_PCT,
+    three_pct_pct: replacement.FG3_PCT_PCT,
+    ft_pct_pct: replacement.FT_PCT_PCT,
+    ts_pct_pct: replacement.TS_PCT_PCT,
     archetype: replacement.archetype,
     role: replacement.defense_role
   };

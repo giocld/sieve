@@ -161,6 +161,12 @@ function NavCard({ to, title, desc }: { to: string; title: string; desc: string 
 }
 
 // Player list panel
+function playersDeepLink(type: 'value' | 'lebron' | 'overpaid'): string {
+  if (type === 'value') return '/players#top-value';
+  if (type === 'overpaid') return '/players#worst-value';
+  return '/players#all-players';
+}
+
 function PlayerList({
   title,
   badge,
@@ -245,7 +251,11 @@ function PlayerList({
           </tbody>
         </table>
         <div className="px-4 py-3 border-t border-[#2a2a2a] mt-auto">
-          <Link to="/players" className="text-xs text-[#666] hover:text-[#3b82f6]">View all players</Link>
+          <Link to={playersDeepLink(type)} className="text-xs text-[#666] hover:text-[#3b82f6]">
+            {type === 'value' && 'View top value players'}
+            {type === 'overpaid' && 'View worst value players'}
+            {type === 'lebron' && 'View all players'}
+          </Link>
         </div>
       </div>
     </div>

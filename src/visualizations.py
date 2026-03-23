@@ -302,12 +302,17 @@ def create_team_grid(df_teams):
                 tickmode='linear',
                 tick0=-3,
                 dtick=1,
-                thickness=15,
-                len=0.7,
+                orientation='h',
+                x=0.5,
+                xanchor='center',
+                y=-0.08,
+                yanchor='top',
+                thickness=14,
+                len=0.82,
                 bgcolor='#1a202c',
                 bordercolor='#2c3e50',
                 borderwidth=1,
-                tickfont=dict(color='#e4e6eb', size=11)
+                tickfont=dict(color='#e4e6eb', size=11),
             ),
             line=dict(width=2, color='#1a2332'),
             opacity=0.9
@@ -335,7 +340,8 @@ def create_team_grid(df_teams):
     fig_grid.update_layout(
         # title='<b>Team Efficiency Rankings</b><br><sub style="color:#adb5bd">Sorted by Efficiency • Green = Good Value • Red = Overpaying</sub>',
         height=650,
-        margin=dict(l=40, r=20, t=20, b=50),
+        # Extra bottom margin for horizontal colorbar (avoids right-shifted plot on narrow/mobile)
+        margin=dict(l=24, r=24, t=20, b=100),
         paper_bgcolor='#0d1117',
         plot_bgcolor='#161b22',
         font=dict(size=11),

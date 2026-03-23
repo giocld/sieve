@@ -69,14 +69,19 @@ def fig_to_json(fig) -> str:
             return [convert_arrays(item, parent_key=parent_key) for item in obj]
         elif isinstance(obj, np.ndarray):
             return obj.tolist()
-        elif isinstance(obj, (np.generic, np.integer)):
-            return int(obj)
-        elif isinstance(obj, (np.generic, np.floating)):
-            return float(obj)
         elif isinstance(obj, np.bool_):
             return bool(obj)
-        elif pd.isna(obj):
-            return None
+        elif isinstance(obj, np.floating):
+            return float(obj)
+        elif isinstance(obj, np.integer):
+            return int(obj)
+        elif isinstance(obj, np.generic):
+            return obj.item()
+        try:
+            if pd.isna(obj):
+                return None
+        except (TypeError, ValueError):
+            pass
         return obj
     
     return json.dumps(convert_arrays(fig_dict))
@@ -87,16 +92,21 @@ def convert_numpy_types(obj: Any) -> Any:
         return {k: convert_numpy_types(v) for k, v in obj.items()}
     elif isinstance(obj, list):
         return [convert_numpy_types(item) for item in obj]
-    elif isinstance(obj, (np.generic, np.integer)):
-        return int(obj)
-    elif isinstance(obj, (np.generic, np.floating)):
-        return float(obj)
-    elif isinstance(obj, np.ndarray):
-        return obj.tolist()
     elif isinstance(obj, np.bool_):
         return bool(obj)
-    elif pd.isna(obj):
-        return None
+    elif isinstance(obj, np.floating):
+        return float(obj)
+    elif isinstance(obj, np.integer):
+        return int(obj)
+    elif isinstance(obj, np.ndarray):
+        return obj.tolist()
+    elif isinstance(obj, np.generic):
+        return obj.item()
+    try:
+        if pd.isna(obj):
+            return None
+    except (TypeError, ValueError):
+        pass
     return obj
     
 app = FastAPI(
@@ -278,14 +288,19 @@ def fig_to_json(fig) -> str:
             return [convert_arrays(item, parent_key=parent_key) for item in obj]
         elif isinstance(obj, np.ndarray):
             return obj.tolist()
-        elif isinstance(obj, (np.generic, np.integer)):
-            return int(obj)
-        elif isinstance(obj, (np.generic, np.floating)):
-            return float(obj)
         elif isinstance(obj, np.bool_):
             return bool(obj)
-        elif pd.isna(obj):
-            return None
+        elif isinstance(obj, np.floating):
+            return float(obj)
+        elif isinstance(obj, np.integer):
+            return int(obj)
+        elif isinstance(obj, np.generic):
+            return obj.item()
+        try:
+            if pd.isna(obj):
+                return None
+        except (TypeError, ValueError):
+            pass
         return obj
     
     return json.dumps(convert_arrays(fig_dict))
@@ -296,16 +311,21 @@ def convert_numpy_types(obj: Any) -> Any:
         return {k: convert_numpy_types(v) for k, v in obj.items()}
     elif isinstance(obj, list):
         return [convert_numpy_types(item) for item in obj]
-    elif isinstance(obj, (np.generic, np.integer)):
-        return int(obj)
-    elif isinstance(obj, (np.generic, np.floating)):
-        return float(obj)
-    elif isinstance(obj, np.ndarray):
-        return obj.tolist()
     elif isinstance(obj, np.bool_):
         return bool(obj)
-    elif pd.isna(obj):
-        return None
+    elif isinstance(obj, np.floating):
+        return float(obj)
+    elif isinstance(obj, np.integer):
+        return int(obj)
+    elif isinstance(obj, np.ndarray):
+        return obj.tolist()
+    elif isinstance(obj, np.generic):
+        return obj.item()
+    try:
+        if pd.isna(obj):
+            return None
+    except (TypeError, ValueError):
+        pass
     return obj
 
 app = FastAPI(
@@ -487,14 +507,19 @@ def fig_to_json(fig) -> str:
             return [convert_arrays(item, parent_key=parent_key) for item in obj]
         elif isinstance(obj, np.ndarray):
             return obj.tolist()
-        elif isinstance(obj, (np.generic, np.integer)):
-            return int(obj)
-        elif isinstance(obj, (np.generic, np.floating)):
-            return float(obj)
         elif isinstance(obj, np.bool_):
             return bool(obj)
-        elif pd.isna(obj):
-            return None
+        elif isinstance(obj, np.floating):
+            return float(obj)
+        elif isinstance(obj, np.integer):
+            return int(obj)
+        elif isinstance(obj, np.generic):
+            return obj.item()
+        try:
+            if pd.isna(obj):
+                return None
+        except (TypeError, ValueError):
+            pass
         return obj
     
     return json.dumps(convert_arrays(fig_dict))
@@ -505,16 +530,21 @@ def convert_numpy_types(obj: Any) -> Any:
         return {k: convert_numpy_types(v) for k, v in obj.items()}
     elif isinstance(obj, list):
         return [convert_numpy_types(item) for item in obj]
-    elif isinstance(obj, (np.generic, np.integer)):
-        return int(obj)
-    elif isinstance(obj, (np.generic, np.floating)):
-        return float(obj)
-    elif isinstance(obj, np.ndarray):
-        return obj.tolist()
     elif isinstance(obj, np.bool_):
         return bool(obj)
-    elif pd.isna(obj):
-        return None
+    elif isinstance(obj, np.floating):
+        return float(obj)
+    elif isinstance(obj, np.integer):
+        return int(obj)
+    elif isinstance(obj, np.ndarray):
+        return obj.tolist()
+    elif isinstance(obj, np.generic):
+        return obj.item()
+    try:
+        if pd.isna(obj):
+            return None
+    except (TypeError, ValueError):
+        pass
     return obj
 
 app = FastAPI(
@@ -718,14 +748,19 @@ def fig_to_json(fig) -> str:
             return [convert_arrays(item, parent_key=parent_key) for item in obj]
         elif isinstance(obj, np.ndarray):
             return obj.tolist()
-        elif isinstance(obj, (np.generic, np.integer)):
-            return int(obj)
-        elif isinstance(obj, (np.generic, np.floating)):
-            return float(obj)
         elif isinstance(obj, np.bool_):
             return bool(obj)
-        elif pd.isna(obj) if hasattr(pd, 'isna') else False:
-            return None
+        elif isinstance(obj, np.floating):
+            return float(obj)
+        elif isinstance(obj, np.integer):
+            return int(obj)
+        elif isinstance(obj, np.generic):
+            return obj.item()
+        try:
+            if pd.isna(obj):
+                return None
+        except (TypeError, ValueError):
+            pass
         return obj
     
     return json.dumps(convert_arrays(fig_dict))
@@ -737,16 +772,21 @@ def convert_numpy_types(obj: Any) -> Any:
         return {k: convert_numpy_types(v) for k, v in obj.items()}
     elif isinstance(obj, list):
         return [convert_numpy_types(item) for item in obj]
-    elif isinstance(obj, (np.generic, np.integer)):
-        return int(obj)
-    elif isinstance(obj, (np.generic, np.floating)):
-        return float(obj)
-    elif isinstance(obj, np.ndarray):
-        return obj.tolist()
     elif isinstance(obj, np.bool_):
         return bool(obj)
-    elif pd.isna(obj):
-        return None
+    elif isinstance(obj, np.floating):
+        return float(obj)
+    elif isinstance(obj, np.integer):
+        return int(obj)
+    elif isinstance(obj, np.ndarray):
+        return obj.tolist()
+    elif isinstance(obj, np.generic):
+        return obj.item()
+    try:
+        if pd.isna(obj):
+            return None
+    except (TypeError, ValueError):
+        pass
     return obj
 
 
@@ -812,14 +852,19 @@ def fig_to_json(fig) -> str:
             return [convert_arrays(item, parent_key=parent_key) for item in obj]
         elif isinstance(obj, np.ndarray):
             return obj.tolist()
-        elif isinstance(obj, (np.generic, np.integer, np.int64, np.int32)):
-            return int(obj)
-        elif isinstance(obj, (np.generic, np.floating, np.float64, np.float32)):
-            return float(obj)
         elif isinstance(obj, np.bool_):
             return bool(obj)
-        elif pd.isna(obj) if hasattr(pd, 'isna') else False:
-            return None
+        elif isinstance(obj, (np.floating, np.float64, np.float32)):
+            return float(obj)
+        elif isinstance(obj, (np.integer, np.int64, np.int32)):
+            return int(obj)
+        elif isinstance(obj, np.generic):
+            return obj.item()
+        try:
+            if pd.isna(obj):
+                return None
+        except (TypeError, ValueError):
+            pass
         return obj
     
     return json.dumps(convert_arrays(fig_dict))
@@ -908,14 +953,19 @@ def fig_to_json(fig) -> str:
             return [convert_arrays(item, parent_key=parent_key) for item in obj]
         elif isinstance(obj, np.ndarray):
             return obj.tolist()
-        elif isinstance(obj, (np.generic, np.integer, np.int64, np.int32)):
-            return int(obj)
-        elif isinstance(obj, (np.generic, np.floating, np.float64, np.float32)):
-            return float(obj)
         elif isinstance(obj, np.bool_):
             return bool(obj)
-        elif pd.isna(obj) if hasattr(pd, 'isna') else False:
-            return None
+        elif isinstance(obj, (np.floating, np.float64, np.float32)):
+            return float(obj)
+        elif isinstance(obj, (np.integer, np.int64, np.int32)):
+            return int(obj)
+        elif isinstance(obj, np.generic):
+            return obj.item()
+        try:
+            if pd.isna(obj):
+                return None
+        except (TypeError, ValueError):
+            pass
         return obj
     
     return json.dumps(convert_arrays(fig_dict))
@@ -1023,16 +1073,21 @@ def convert_numpy_types(obj: Any) -> Any:
         return {k: convert_numpy_types(v) for k, v in obj.items()}
     elif isinstance(obj, list):
         return [convert_numpy_types(item) for item in obj]
-    elif isinstance(obj, (np.generic, np.integer, np.int64, np.int32)):
-        return int(obj)
-    elif isinstance(obj, (np.generic, np.floating, np.float64, np.float32)):
-        return float(obj)
-    elif isinstance(obj, np.ndarray):
-        return obj.tolist()
     elif isinstance(obj, np.bool_):
         return bool(obj)
-    elif pd.isna(obj):
-        return None
+    elif isinstance(obj, (np.floating, np.float64, np.float32)):
+        return float(obj)
+    elif isinstance(obj, (np.integer, np.int64, np.int32)):
+        return int(obj)
+    elif isinstance(obj, np.ndarray):
+        return obj.tolist()
+    elif isinstance(obj, np.generic):
+        return obj.item()
+    try:
+        if pd.isna(obj):
+            return None
+    except (TypeError, ValueError):
+        pass
     return obj
 from . import visualizations
 from .config import CURRENT_SEASON
@@ -1307,6 +1362,7 @@ def get_overview(season: str = Query(default=CURRENT_SEASON)):
             "bpg_pct": row.get('BLK_PCT'),
             "fg_pct_pct": row.get('FG_PCT_PCT'),
             "three_pct_pct": row.get('FG3_PCT_PCT'),
+            "ft_pct_pct": row.get('FT_PCT_PCT'),
             "ts_pct_pct": row.get('TS_PCT_PCT'),
         }
         if 'PLAYER_ID' in row and pd.notna(row['PLAYER_ID']):
@@ -1404,7 +1460,11 @@ def get_team_grid_chart(season: str = Query(default=CURRENT_SEASON)):
         raise HTTPException(status_code=404, detail=f"No team data for season {season}")
 
     fig = visualizations.create_team_grid(df_teams)
-    return Response(content=fig_to_json(fig), media_type="application/json")
+    return Response(
+        content=fig_to_json(fig),
+        media_type="application/json",
+        headers={"Cache-Control": "no-store, no-cache, must-revalidate"},
+    )
 
 
 @app.get("/api/charts/salary-impact")

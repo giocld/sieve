@@ -2,7 +2,8 @@
  * Players Page - Clean trading dashboard style
  */
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import {
   usePlayers,
   useSalaryImpactChart,
@@ -28,6 +29,7 @@ interface PlayersProps {
 }
 
 export function Players({ season }: PlayersProps) {
+  const location = useLocation();
   const [minLebron, setMinLebron] = useState(-5);
   const [maxLebron, setMaxLebron] = useState(10);
   const [minSalary, setMinSalary] = useState(0);
@@ -136,6 +138,16 @@ export function Players({ season }: PlayersProps) {
     },
   ], []);
 
+  useEffect(() => {
+    if (isLoading) return;
+    const id = location.hash.replace(/^#/, '');
+    if (!id) return;
+    const t = window.setTimeout(() => {
+      document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 0);
+    return () => window.clearTimeout(t);
+  }, [location.hash, isLoading]);
+
   if (isLoading) return <PageLoading />;
   if (error) return <ErrorDisplay message={error.message} />;
 
@@ -168,29 +180,35 @@ export function Players({ season }: PlayersProps) {
 
       {/* Tables */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <DataTable title="Top Value Players" data={underpaid} columns={columns} maxHeight="350px" rowKey="PLAYER_ID" />
-        <DataTable title="Worst Value Players" data={overpaid} columns={columns} maxHeight="350px" rowKey="PLAYER_ID" />
+        <div id="top-value" className="scroll-mt-20 min-w-0">
+          <DataTable title="Top Value Players" data={underpaid} columns={columns} maxHeight="350px" rowKey="PLAYER_ID" />
+        </div>
+        <div id="worst-value" className="scroll-mt-20 min-w-0">
+          <DataTable title="Worst Value Players" data={overpaid} columns={columns} maxHeight="350px" rowKey="PLAYER_ID" />
+        </div>
       </div>
 
       {/* All Players with search */}
-      <DataTable
-        title="All Players"
-        subtitle={`${displayedPlayers.length} players${searchQuery ? ` matching "${searchQuery}"` : ''}`}
-        data={displayedPlayers}
-        columns={columns}
-        maxHeight="500px"
-        rowKey={(row) => row.PLAYER_ID ? String(row.PLAYER_ID) : row.player_name || 'unknown'}
-        headerRight={
-          <div className="w-64">
-            <Input
-              placeholder="Search player..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              leftIcon={<SearchIcon />}
-            />
-          </div>
-        }
-      />
+      <div id="all-players" className="scroll-mt-20">
+        <DataTable
+          title="All Players"
+          subtitle={`${displayedPlayers.length} players${searchQuery ? ` matching "${searchQuery}"` : ''}`}
+          data={displayedPlayers}
+          columns={columns}
+          maxHeight="500px"
+          rowKey={(row) => row.PLAYER_ID ? String(row.PLAYER_ID) : row.player_name || 'unknown'}
+          headerRight={
+            <div className="w-64">
+              <Input
+                placeholder="Search player..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                leftIcon={<SearchIcon />}
+              />
+            </div>
+          }
+        />
+      </div>
     </div>
   );
 }

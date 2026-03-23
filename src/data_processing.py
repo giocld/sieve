@@ -1673,8 +1673,29 @@ def find_replacement_players(player_name, df, model, scaler, feature_info, max_r
             'PLAYER_ID': match_row.get('PLAYER_ID'),
             'salary': match_salary,
             'LEBRON': match_row.get('LEBRON', 0),
+            'value_gap': match_row.get('value_gap'),
             'O-LEBRON': match_row.get('O-LEBRON', 0),
             'D-LEBRON': match_row.get('D-LEBRON', 0),
+            # Per-game box stats for frontend hover cards
+            'PTS': match_row.get('PTS'),
+            'REB': match_row.get('REB'),
+            'AST': match_row.get('AST'),
+            'STL': match_row.get('STL'),
+            'BLK': match_row.get('BLK'),
+            # Shooting splits for frontend hover cards
+            'FG_PCT': match_row.get('FG_PCT'),
+            'FG3_PCT': match_row.get('FG3_PCT'),
+            'FT_PCT': match_row.get('FT_PCT'),
+            # Percentile fields used by hover stat bars
+            'PTS_PCT': match_row.get('PTS_PCT'),
+            'REB_PCT': match_row.get('REB_PCT'),
+            'AST_PCT': match_row.get('AST_PCT'),
+            'STL_PCT': match_row.get('STL_PCT'),
+            'BLK_PCT': match_row.get('BLK_PCT'),
+            'FG_PCT_PCT': match_row.get('FG_PCT_PCT'),
+            'FG3_PCT_PCT': match_row.get('FG3_PCT_PCT'),
+            'FT_PCT_PCT': match_row.get('FT_PCT_PCT'),
+            'TS_PCT_PCT': match_row.get('TS_PCT_PCT'),
             'archetype': match_archetype,
             'defense_role': match_defense,
             'position_group': match_position,
@@ -1838,9 +1859,13 @@ def find_similar_players(player_name, season, df_history, model, scaler, feature
             'Season': match_season,
             'id': match_row['PLAYER_ID'],
             'MatchScore': round(match_score, 1),
-            'Distance': round(dist, 4),  # Include raw distance for debugging
+            'Distance': round(dist, 4),
             'Position': match_position.title(),
-            'Stats': match_row[available_features].to_dict()
+            'Stats': match_row[available_features].to_dict(),
+            # Shooting splits for hover card (raw proportions, not features)
+            'fg_pct': match_row.get('FG_PCT'),
+            'fg3_pct': match_row.get('FG3_PCT'),
+            'ts_pct': match_row.get('TS_PCT'),
         })
         
         # Stop after 5 matches

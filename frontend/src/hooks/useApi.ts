@@ -17,7 +17,7 @@ export const queryKeys = {
 
   // Charts
   quadrantChart: (season: string) => ['chart', 'quadrant', season] as const,
-  teamGridChart: (season: string) => ['chart', 'team-grid', season] as const,
+  teamGridChart: (season: string) => ['chart', 'team-grid', 'h-colorbar', season] as const,
   salaryImpactChart: (season: string, filters: { minLebron: number; maxLebron: number; minSalary: number; maxSalary: number }) =>
     ['chart', 'salary-impact', season, filters] as const,
   underpaidChart: (season: string, filters: { minLebron: number; maxLebron: number; minSalary: number; maxSalary: number }) =>

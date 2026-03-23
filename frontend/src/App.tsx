@@ -128,7 +128,7 @@ function AppContent() {
     );
   }
 
-  const seasons = seasonsData?.seasons || [];
+  const seasons = (seasonsData?.seasons || []).filter(s => s !== '2024-25');
 
   return (
     <Layout

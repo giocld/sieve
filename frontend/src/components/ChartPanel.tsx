@@ -166,7 +166,7 @@ export function ChartPanel({
   }, [mobileTapData]);
 
   return (
-    <div ref={panelRef} className={`panel overflow-hidden ${className}`}>
+    <div ref={panelRef} className={`panel overflow-hidden min-w-0 max-w-full ${className}`}>
       {showHeader && (title || subtitle) && (
         <div className="panel-header">
           {title && <span>{title}</span>}
@@ -174,7 +174,7 @@ export function ChartPanel({
         </div>
       )}
 
-      <div className="relative" style={{ height: typeof height === 'string' ? height : `${height}px` }}>
+      <div className="relative min-w-0 w-full max-w-full" style={{ height: typeof height === 'string' ? height : `${height}px` }}>
         {isLoading && (
           <div className="absolute inset-0 flex items-center justify-center bg-[#141414]">
             <div className="flex flex-col items-center gap-3">
@@ -254,5 +254,5 @@ export function ChartGrid({ children, cols = 2, className = '' }: ChartGridProps
     3: 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3',
   };
 
-  return <div className={`grid ${gridCols[cols]} gap-4 ${className}`}>{children}</div>;
+  return <div className={`grid min-w-0 ${gridCols[cols]} gap-4 ${className}`}>{children}</div>;
 }

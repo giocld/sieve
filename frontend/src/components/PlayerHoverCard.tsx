@@ -99,10 +99,10 @@ export function PlayerHoverCard({ player, children, manualPosition, className = 
                 <div className="px-3 py-2 border-b border-[#2a2a2a] bg-[#141414]/30">
                     <div className="text-[10px] text-[#666] mb-1 font-semibold uppercase tracking-wider">Shooting Efficiency</div>
                     <div className="grid grid-cols-4 gap-2 text-center">
-                        <StatBox label="FG%" value={player.fg_pct && player.fg_pct * 100} pct={player.fg_pct_pct} suffix="%" fixed={1} />
-                        <StatBox label="3P%" value={player.three_pct && player.three_pct * 100} pct={player.three_pct_pct} suffix="%" fixed={1} />
-                        <StatBox label="FT%" value={player.ft_pct && player.ft_pct * 100} pct={player.ft_pct_pct} suffix="%" fixed={1} />
-                        <StatBox label="TS%" value={player.ts_pct && player.ts_pct * 100} pct={player.ts_pct_pct} suffix="%" fixed={1} highlight />
+                        <StatBox label="FG%" value={player.fg_pct != null ? player.fg_pct * 100 : undefined} pct={player.fg_pct_pct} suffix="%" fixed={1} />
+                        <StatBox label="3P%" value={player.three_pct != null ? player.three_pct * 100 : undefined} pct={player.three_pct_pct} suffix="%" fixed={1} />
+                        <StatBox label="FT%" value={player.ft_pct != null ? player.ft_pct * 100 : undefined} pct={player.ft_pct_pct} suffix="%" fixed={1} />
+                        <StatBox label="TS%" value={player.ts_pct != null ? player.ts_pct * 100 : undefined} pct={player.ts_pct_pct} suffix="%" fixed={1} highlight />
                     </div>
                 </div>
 
@@ -212,21 +212,21 @@ function StatBox({ label, value, pct, suffix = '', fixed = 1, highlight = false 
     );
 }
 
-const getScoreColor = (val?: number) => {
-    if (val === undefined) return 'text-[#888]';
+const getScoreColor = (val?: number | null) => {
+    if (val == null) return 'text-[#888]';
     if (val >= 2.0) return 'text-[#06d6a0]';
     if (val >= 0) return 'text-[#ffd166]';
     return 'text-[#ef4444]';
 };
 
-const getValColor = (val?: number) => {
-    if (val === undefined) return 'text-[#888]';
+const getValColor = (val?: number | null) => {
+    if (val == null) return 'text-[#888]';
     if (val > 5.0) return 'text-[#06d6a0]';
     if (val > 0) return 'text-[#ffd166]';
     return 'text-[#ef4444]';
 };
 
-const formatVal = (val?: number, fixed = 2) => {
-    if (val === undefined) return '-';
+const formatVal = (val?: number | null, fixed = 2) => {
+    if (val == null) return '-';
     return val.toFixed(fixed);
 };
