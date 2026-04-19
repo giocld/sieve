@@ -841,17 +841,25 @@ def parse_lebron_csv(csv_path='data/LEBRON.csv', season=None):
     df.columns = df.columns.str.strip()
     
     # Standardize column names
+    # Supports both the legacy BBall Index export and the 2025+ export
+    # (nba_id, Player, Seasons, Team, Pos, MPG, LEBRON, O-LEBRON, D-LEBRON, WAR, OffRole, DefRole)
     col_map = {}
     for col in df.columns:
         col_lower = col.lower().strip()
         if col_lower in ['player', 'name']:
             col_map[col] = 'Player'
+        elif col_lower in ['nba_id', 'player_id', 'playerid']:
+            col_map[col] = 'PLAYER_ID'
         elif col_lower in ['team', 'team(s)', 'tm', 'teams']:
             col_map[col] = 'Team(s)'
+        elif col_lower in ['pos', 'position']:
+            col_map[col] = 'Position'
         elif col_lower == 'age':
             col_map[col] = 'Age'
         elif col_lower in ['min', 'minutes']:
             col_map[col] = 'Minutes'
+        elif col_lower == 'mpg':
+            col_map[col] = 'MPG'
         elif col_lower in ['lebron war', 'war']:
             col_map[col] = 'LEBRON WAR'
         elif col_lower == 'lebron':
@@ -860,14 +868,29 @@ def parse_lebron_csv(csv_path='data/LEBRON.csv', season=None):
             col_map[col] = 'O-LEBRON'
         elif col_lower == 'd-lebron':
             col_map[col] = 'D-LEBRON'
+        elif col_lower in ['season', 'seasons']:
+            col_map[col] = 'Season'
         elif 'rotation' in col_lower:
             col_map[col] = 'Rotation Role'
-        elif 'offensive' in col_lower:
+        elif col_lower in ['offrole', 'offensive archetype'] or 'offensive' in col_lower:
             col_map[col] = 'Offensive Archetype'
-        elif 'defensive' in col_lower:
+        elif col_lower in ['defrole', 'defensive role'] or 'defensive' in col_lower:
             col_map[col] = 'Defensive Role'
     
     df = df.rename(columns=col_map)
+    
+    # Normalize Season values. The 2025+ export stores a year like "2026";
+    # convert it to the canonical "YYYY-YY" string used everywhere else.
+    if 'Season' in df.columns:
+        def _normalize_season(val):
+            s = str(val).strip()
+            if re.match(r'^\d{4}-\d{2}$', s):
+                return s
+            if re.match(r'^\d{4}$', s):
+                year = int(s)
+                return f"{year - 1}-{str(year)[-2:]}"
+            return s
+        df['Season'] = df['Season'].apply(_normalize_season)
     
     # Detect season from data or use provided value
     if season:
@@ -879,15 +902,29 @@ def parse_lebron_csv(csv_path='data/LEBRON.csv', season=None):
     
     print(f"Season: {detected_season}")
     
-    # Ensure Season column exists
-    if 'Season' not in df.columns:
+    # When the caller specifies a season explicitly, trust it over whatever is
+    # in the CSV (prevents mismatches like CSV=2025-26 but --season 2024-25).
+    if season:
+        df['Season'] = detected_season
+    elif 'Season' not in df.columns:
         df['Season'] = detected_season
     
     # Convert numeric columns
-    numeric_cols = ['LEBRON WAR', 'LEBRON', 'O-LEBRON', 'D-LEBRON', 'Minutes', 'Age']
+    numeric_cols = ['LEBRON WAR', 'LEBRON', 'O-LEBRON', 'D-LEBRON',
+                    'Minutes', 'Age', 'MPG', 'PLAYER_ID']
     for col in numeric_cols:
         if col in df.columns:
             df[col] = pd.to_numeric(df[col], errors='coerce')
+    
+    # The 2025+ export only provides MPG. Downstream code (calculate_player_value_metrics,
+    # similarity model) requires a "Minutes" column and filters on Minutes >= 200.
+    # Estimate total minutes from MPG using ~70 games, matching parse_lebron_txt.py.
+    if 'MPG' in df.columns and (
+        'Minutes' not in df.columns or df['Minutes'].isna().all()
+    ):
+        estimated = (df['MPG'].fillna(0) * 70).round()
+        df['Minutes'] = estimated.astype('Int64')
+        print("Derived 'Minutes' from MPG (estimated over ~70 games)")
     
     # Remove empty/invalid rows
     df = df.dropna(how='all')
@@ -898,8 +935,9 @@ def parse_lebron_csv(csv_path='data/LEBRON.csv', season=None):
         df = df[~df['Player'].str.lower().isin(['player', 'name', 'number'])]
     
     # Reorder columns for consistency
-    desired_order = ['Season', 'Player', 'Age', 'Team(s)', 'Minutes', 'Rotation Role',
-                     'Offensive Archetype', 'Defensive Role', 'LEBRON WAR', 'LEBRON', 
+    desired_order = ['Season', 'Player', 'PLAYER_ID', 'Age', 'Team(s)', 'Position',
+                     'MPG', 'Minutes', 'Rotation Role',
+                     'Offensive Archetype', 'Defensive Role', 'LEBRON WAR', 'LEBRON',
                      'O-LEBRON', 'D-LEBRON']
     existing_cols = [c for c in desired_order if c in df.columns]
     other_cols = [c for c in df.columns if c not in desired_order]

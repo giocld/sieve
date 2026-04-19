@@ -6,6 +6,7 @@ numpy
 gunicorn
 nba_api
 selenium
+beautifulsoup4
 scikit-learn
 rapidfuzz
 fastapi

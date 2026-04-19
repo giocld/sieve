@@ -13,6 +13,12 @@ if [ ! -f "requirements.txt" ]; then
     exit 1
 fi
 
+if [ ! -d "frontend/node_modules" ]; then
+    echo "Error: Frontend dependencies are missing."
+    echo "Install them from the repo root with:  cd frontend && npm install"
+    exit 1
+fi
+
 # Activate virtual environment if it exists
 if [ -d "venv" ]; then
     echo "Activating virtual environment..."

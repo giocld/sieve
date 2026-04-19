@@ -57,13 +57,29 @@ def cmd_refresh(args):
     from src.scraper import scrape_lebron, parse_lebron_csv
     
     season = args.season
+    force = getattr(args, 'force', False)
     
     print("=" * 70)
     print(f"SIEVE DATA REFRESH PIPELINE")
     print(f"Season: {season}")
+    if force:
+        print("Force refresh: pulling standings / per-game / team advanced from NBA API")
     print("=" * 70)
     
     success = True
+    
+    # Step 0 (optional): Force re-fetch NBA API data before merge/metrics
+    # Without --force, these fetchers short-circuit on the cached rows and the
+    # pipeline silently reuses stale PPG/AST/standings.
+    if force:
+        print("\n[Step 0/5] Forcing NBA API refresh...")
+        try:
+            data_processing.fetch_player_pergame_stats(force_refresh=True, season=season)
+            data_processing.fetch_standings(force_refresh=True, season=season)
+            data_processing.fetch_nba_advanced_stats(force_refresh=True, season=season)
+        except Exception as e:
+            print(f"  WARNING: NBA API refresh failed: {e}")
+            print("  Continuing with cached data.")
     
     # Step 1: Get LEBRON data
     print("\n[Step 1/5] Loading LEBRON data...")
@@ -316,6 +332,8 @@ def main():
     refresh_parser.add_argument('--season', default=CURRENT_SEASON, help=f'NBA season (default: {CURRENT_SEASON})')
     refresh_parser.add_argument('--lebron-csv', help='Path to LEBRON CSV file (if not scraping)')
     refresh_parser.add_argument('--scrape', action='store_true', help='Attempt to scrape LEBRON data')
+    refresh_parser.add_argument('--force', action='store_true',
+                                help='Force re-fetch of NBA API data (standings, per-game stats, team advanced) instead of using DB cache')
     refresh_parser.add_argument('--debug', action='store_true', help='Show browser (non-headless) for debugging')
     refresh_parser.set_defaults(func=cmd_refresh)
     

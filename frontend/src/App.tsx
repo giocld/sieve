@@ -19,16 +19,19 @@ import { PageLoading, ErrorDisplay } from './components/Loading';
 const THIRTY_MINUTES = 1000 * 60 * 30;
 const TWO_HOURS = 1000 * 60 * 60 * 2;
 const CACHE_KEY = 'sieve-query-cache';
-const CACHE_VERSION = 'v3'; // Bump this to invalidate old cached data
+const CACHE_VERSION = 'v4'; // Bump this to invalidate old cached data
 
-// Create React Query client with aggressive caching
+const IS_DEV = import.meta.env.DEV;
+
+// Create React Query client. In production we cache aggressively for fast loads;
+// in dev we always revalidate so refreshed backend data shows up immediately.
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: THIRTY_MINUTES,
+      staleTime: IS_DEV ? 0 : THIRTY_MINUTES,
       gcTime: TWO_HOURS,
-      refetchOnWindowFocus: false,
-      refetchOnReconnect: false,
+      refetchOnWindowFocus: IS_DEV,
+      refetchOnReconnect: IS_DEV,
       retry: 2,
     },
   },
@@ -80,11 +83,20 @@ function restoreCache() {
   }
 }
 
-// Initialize cache
-restoreCache();
-setInterval(saveCache, 30000);
-if (typeof window !== 'undefined') {
-  window.addEventListener('beforeunload', saveCache);
+// Initialize cache. Skip localStorage hydration entirely in dev so we never
+// serve stale data off disk while iterating on the backend / pipeline.
+if (!IS_DEV) {
+  restoreCache();
+  setInterval(saveCache, 30000);
+  if (typeof window !== 'undefined') {
+    window.addEventListener('beforeunload', saveCache);
+  }
+} else if (typeof window !== 'undefined') {
+  try {
+    localStorage.removeItem(CACHE_KEY);
+  } catch {
+    // ignore
+  }
 }
 
 

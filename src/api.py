@@ -1239,6 +1239,26 @@ def health_check():
     return {"status": "ok", "version": "1.0.0"}
 
 
+@app.post("/api/admin/reload")
+def admin_reload_caches():
+    """
+    Clear the in-memory caches used by the data endpoints. Call this after
+    running `python -m src.manage_cache refresh ...` so the API stops serving
+    the pre-refresh snapshot without needing a full server restart.
+
+    Clears: _season_data_cache, _similarity_model_cache, _diamond_finder_cache.
+    """
+    cleared = {
+        "season_data": len(_season_data_cache),
+        "similarity_model": len(_similarity_model_cache),
+        "diamond_finder": len(_diamond_finder_cache),
+    }
+    _season_data_cache.clear()
+    _similarity_model_cache.clear()
+    _diamond_finder_cache.clear()
+    return {"status": "ok", "cleared": cleared}
+
+
 @app.get("/api/logo/{team_id}")
 def get_team_logo(team_id: int):
     """Proxy endpoint to serve NBA team logos (bypasses CORS restrictions)."""
