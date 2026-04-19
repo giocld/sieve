@@ -188,12 +188,16 @@ def create_efficiency_quadrant(df_teams):
         marker=dict(opacity=0)
     ))
 
-    # 3. Add Team Logos as Images (using proxy URL to bypass CORS)
+    # 3. Add Team Logos as Images (using proxy URL to bypass CORS).
+    # Use a same-origin relative path so the browser resolves it against the
+    # current page (dev: Vite proxies /api -> localhost:8000; prod: same host).
+    # Hardcoding http://localhost:8000 here breaks the hosted build and trips
+    # Chrome's Private Network Access prompt for users not running the backend.
     logo_images = []
     if 'TeamID' in df_teams.columns:
         for _, row in df_teams.iterrows():
             if pd.notna(row['TeamID']):
-                proxy_url = f"http://localhost:8000/api/logo/{int(row['TeamID'])}"
+                proxy_url = f"/api/logo/{int(row['TeamID'])}"
                 logo_images.append(dict(
                     source=proxy_url,
                     xref="x", yref="y",
@@ -322,12 +326,13 @@ def create_team_grid(df_teams):
         hovertemplate='<b>%{text}</b><br>Eff Index: %{customdata[0]:.2f}<br>Payroll: $%{customdata[1]:,.0f}<br>Wins: %{customdata[2]}<extra></extra>'
     ))
 
-    # Add Team Logos on top of the tiles (using proxy URL to bypass CORS)
+    # Add Team Logos on top of the tiles. Same-origin relative path so it
+    # works in both dev (Vite proxy) and prod (Render same-origin).
     grid_images = []
     if 'TeamID' in df_grid.columns:
         for _, row in df_grid.iterrows():
             if pd.notna(row['TeamID']):
-                proxy_url = f"http://localhost:8000/api/logo/{int(row['TeamID'])}"
+                proxy_url = f"/api/logo/{int(row['TeamID'])}"
                 grid_images.append(dict(
                     source=proxy_url,
                     xref="x", yref="y",
